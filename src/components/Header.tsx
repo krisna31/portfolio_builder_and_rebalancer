@@ -17,6 +17,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
+import { FormattedNumberInput } from './FormattedNumberInput';
 
 export interface SavedPortfolioSnapshot {
   id: string;
@@ -279,14 +280,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* USD/IDR Exchange Rate */}
             <div className="ui-subtle flex items-center gap-1 rounded-md px-2 py-1 text-xs">
               <span className="ui-text-muted">USD:</span>
-              <input
-                type="number"
+              <FormattedNumberInput
+                step={100}
+                min={1000}
                 value={usdIdrRate}
-                onChange={(e) =>
-                  setUsdIdrRate(Math.max(1000, Number(e.target.value)))
-                }
+                onChange={(val) => setUsdIdrRate(val)}
                 className="ui-text-main w-14 bg-transparent font-mono font-semibold focus:outline-none"
-                aria-label="USD to IDR Exchange Rate"
+                ariaLabel="USD to IDR Exchange Rate"
               />
             </div>
 

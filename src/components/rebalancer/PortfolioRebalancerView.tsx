@@ -8,6 +8,7 @@ import {
 } from '../../lib/quant/types';
 import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
+import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
   Scale,
   TrendingDown,
@@ -390,20 +391,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         </div>
 
         <div className="ui-card rounded-xl p-4">
-          <div className="ui-text-muted text-xs font-medium">
-            Top-Up Kas Baru (DCA Injection)
+          <div className="flex items-center justify-between">
+            <span className="ui-text-muted text-xs font-medium">
+              Top-Up Kas Baru (DCA Injection)
+            </span>
+            <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              {formatIdr(cashInjectionIdr, true)}
+            </span>
           </div>
           <div className="mt-1 flex items-center gap-1.5">
             <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
-            <input
-              type="number"
+            <FormattedNumberInput
               step={1_000_000}
+              min={0}
               value={cashInjectionIdr}
-              onChange={(e) =>
-                setCashInjectionIdr(Math.max(0, Number(e.target.value)))
-              }
+              onChange={(val) => setCashInjectionIdr(val)}
               className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
-              aria-label="Top-up Cash Injection in IDR"
+              ariaLabel="Top-up Cash Injection in IDR"
             />
           </div>
           <div className="mt-1.5 flex gap-1 text-[11px]">
@@ -608,17 +612,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
                       <td className="ui-border border-b px-3 py-2.5 text-right">
                         {inputMode === 'nominal' ? (
-                          <input
-                            type="number"
+                          <FormattedNumberInput
                             step={1_000_000}
+                            min={0}
                             value={h.currentValueIdr}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               onUpdateHolding(item.assetId, {
-                                currentValueIdr: Math.max(0, Number(e.target.value)),
+                                currentValueIdr: val,
                               })
                             }
                             className="ui-input w-32 rounded px-2 py-1 text-right font-mono text-xs font-medium"
-                            aria-label={`Nominal value in IDR for ${item.symbol}`}
+                            ariaLabel={`Nominal value in IDR for ${item.symbol}`}
                           />
                         ) : (
                           <div className="flex flex-col items-end gap-1">

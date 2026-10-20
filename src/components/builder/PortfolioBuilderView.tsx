@@ -7,6 +7,7 @@ import {
   SolvedPortfolio,
 } from '../../lib/quant/types';
 import { formatIdr, getRiskTierBadge } from '../../lib/formatters';
+import { FormattedNumberInput } from '../FormattedNumberInput';
 import { simulateWealthToGoal } from '../../lib/quant/wealthSimulator';
 import {
   lookupCustomYahooTicker,
@@ -491,19 +492,22 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             {/* Editable Initial Capital (Default Rp 100 Jt) & Target Goal Selector (Default Rp 1 Miliar / Pilihan Rp 10 Miliar) */}
             <div className="mt-2.5 grid grid-cols-2 gap-2">
               <div className="ui-subtle rounded-lg p-2">
-                <label className="ui-text-muted block text-[10px] font-medium">
-                  Modal Awal (Rp)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="ui-text-muted block text-[10px] font-medium">
+                    Modal Awal (Rp)
+                  </label>
+                  <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {formatIdr(initialCapitalIdr, true)}
+                  </span>
+                </div>
                 <div className="mt-0.5 flex items-center justify-between gap-1">
-                  <input
-                    type="number"
+                  <FormattedNumberInput
                     step={10_000_000}
+                    min={0}
                     value={initialCapitalIdr}
-                    onChange={(e) =>
-                      setInitialCapitalIdr(Math.max(0, Number(e.target.value)))
-                    }
+                    onChange={(val) => setInitialCapitalIdr(val)}
                     className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
-                    aria-label="Initial Capital in IDR"
+                    ariaLabel="Initial Capital in IDR"
                   />
                 </div>
                 <div className="mt-1 flex gap-1 text-[10px]">
@@ -514,7 +518,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       onClick={() => setInitialCapitalIdr(v)}
                       className={`rounded px-1.5 py-0.5 font-mono ${
                         initialCapitalIdr === v
-                          ? 'bg-emerald-600 text-white font-semibold'
+                          ? 'bg-emerald-600 font-semibold text-white'
                           : 'ui-card ui-text-muted'
                       }`}
                     >
@@ -525,19 +529,22 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               </div>
 
               <div className="ui-subtle rounded-lg p-2">
-                <label className="ui-text-muted block text-[10px] font-medium">
-                  Target Kekayaan (Rp)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="ui-text-muted block text-[10px] font-medium">
+                    Target Kekayaan (Rp)
+                  </label>
+                  <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    {formatIdr(targetGoalIdr, true)}
+                  </span>
+                </div>
                 <div className="mt-0.5 flex items-center justify-between gap-1">
-                  <input
-                    type="number"
+                  <FormattedNumberInput
                     step={500_000_000}
+                    min={10_000_000}
                     value={targetGoalIdr}
-                    onChange={(e) =>
-                      setTargetGoalIdr(Math.max(10_000_000, Number(e.target.value)))
-                    }
+                    onChange={(val) => setTargetGoalIdr(val)}
                     className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
-                    aria-label="Target Wealth Goal in IDR"
+                    ariaLabel="Target Wealth Goal in IDR"
                   />
                 </div>
                 <div className="mt-1 flex gap-1 text-[10px]">
@@ -552,7 +559,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       onClick={() => setTargetGoalIdr(t.val)}
                       className={`flex-1 rounded px-1.5 py-0.5 font-mono ${
                         targetGoalIdr === t.val
-                          ? 'bg-emerald-600 text-white font-semibold'
+                          ? 'bg-emerald-600 font-semibold text-white'
                           : 'ui-card ui-text-muted'
                       }`}
                     >
