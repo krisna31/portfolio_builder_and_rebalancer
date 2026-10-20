@@ -516,7 +516,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 30.84,
     maxDrawdown: 17.89,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 32, BBCA: 12, GLD: 10, SPY: 14, QQQ: 11, BTC: 18, ETH: 2 },
+    weights: { RDPU: 0, RDPT: 32, BBCA: 12, GLD: 10, SPY: 14, QQQ: 11, BTC: 18, ETH: 3 },
     videoNote: 'Contoh utama yang dipakai di simulasi Rebalancing Rp 1 Miliar pada menit 09:38 & 14:58.',
   },
   {
@@ -530,7 +530,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 25.36,
     maxDrawdown: 13.89,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 35, BBCA: 13, GLD: 11, SPY: 15, QQQ: 12, BTC: 3, ETH: 10 },
+    weights: { RDPU: 0, RDPT: 36, BBCA: 13, GLD: 11, SPY: 15, QQQ: 12, BTC: 3, ETH: 10 },
     videoNote: 'Unggul telak dibanding All-In QQQ: drawdown mirip (~13%) tapi return jauh lebih tinggi (25.36% vs 21.3%) (10:38).',
   },
   {
@@ -544,7 +544,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 24.14,
     maxDrawdown: 12.64,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 35, BBCA: 13, GLD: 11, SPY: 15, QQQ: 12, BTC: 10, ETH: 3 },
+    weights: { RDPU: 0, RDPT: 36, BBCA: 13, GLD: 11, SPY: 15, QQQ: 12, BTC: 10, ETH: 3 },
     videoNote: 'Sweet spot High Risk: eksposur 10% BTC + 3% ETH memberikan CAGR 24.14% dengan drawdown hanya 12.64%.',
   },
   {
@@ -558,6 +558,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 20.01,
     maxDrawdown: 13.03,
     isOptimal15: true,
+    dominatedByReason: 'Di tabel 15 strategi video, namun secara matematis terdominasi oleh Risk Budgeting BTC 70% (CAGR 24.14% > 20.01% dengan Max DD -12.64% < -13.03%).',
     weights: { RDPU: 0, RDPT: 28, BBCA: 10, GLD: 9, SPY: 12, QQQ: 37, BTC: 2, ETH: 2 },
     videoNote: 'Conviction di saham teknologi US (37% QQQ + 12% SPY) dengan bantalan 28% RDPT.',
   },
@@ -584,7 +585,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 17.90,
     maxDrawdown: 9.01,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 38, BBCA: 14, GLD: 12, SPY: 16, QQQ: 13, BTC: 3, ETH: 3 },
+    weights: { RDPU: 0, RDPT: 39, BBCA: 14, GLD: 12, SPY: 16, QQQ: 13, BTC: 3, ETH: 3 },
     videoNote: 'Portfolio All-Weather terbaik (08:40): membagi risiko rata ke 7 aset. CAGR 17.90% dengan Max Drawdown cuma 9.01%!',
   },
   {
@@ -598,8 +599,8 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 17.60,
     maxDrawdown: 7.61,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 29, BBCA: 10, GLD: 34, SPY: 12, QQQ: 10, BTC: 2, ETH: 2 },
-    videoNote: 'Medium Risk defensif dengan bias 34% di Emas (GLD), menjaga drawdown di 7.61%.',
+    weights: { RDPU: 0, RDPT: 30, BBCA: 10, GLD: 34, SPY: 12, QQQ: 10, BTC: 2, ETH: 2 },
+    videoNote: 'Medium Risk defensif dengan bias 34% di Emas (GLD), menjaga drawdown di 7.61% (Rasio Calmar tertinggi 2.31x).',
   },
   {
     id: 'opt-11-rp-indo-crypto',
@@ -610,6 +611,7 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 17.35,
     maxDrawdown: 8.38,
     isOptimal15: true,
+    dominatedByReason: 'Optimal untuk investor tanpa akses ETF US/Emas, namun secara global kalah efisien dibanding Risk Budgeting GLD 70% (CAGR 17.60% > 17.35% dengan Max DD -7.61% < -8.38%).',
     weights: { RDPU: 0, RDPT: 66, BBCA: 24, GLD: 0, SPY: 0, QQQ: 0, BTC: 5, ETH: 5 },
     videoNote: 'Khusus pengguna aplikasi lokal Indonesia (tanpa ETF US/Emas): hanya RDPT (66%), BBCA (24%), BTC (5%), ETH (5%).',
   },
@@ -624,7 +626,8 @@ export const VIDEO_PORTFOLIO_PRESETS: PortfolioPreset[] = [
     cagr: 17.17,
     maxDrawdown: 7.80,
     isOptimal15: true,
-    weights: { RDPU: 0, RDPT: 22, BBCA: 8, GLD: 51, SPY: 9, QQQ: 7, BTC: 2, ETH: 2 },
+    dominatedByReason: 'Terdominasi tipis oleh Risk Budgeting GLD 70% yang memberikan return lebih tinggi (17.60% vs 17.17%) sekaligus drawdown lebih rendah (-7.61% vs -7.80%).',
+    weights: { RDPU: 0, RDPT: 21, BBCA: 8, GLD: 51, SPY: 9, QQQ: 7, BTC: 2, ETH: 2 },
     videoNote: '51% modal di Emas untuk perlindungan nilai maksimum di saat ketidakpastian makro.',
   },
   {

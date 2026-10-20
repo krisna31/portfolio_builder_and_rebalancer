@@ -215,7 +215,23 @@ export function App() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved.activeWeights) setActiveWeights(saved.activeWeights);
+        if (saved.activeWeights) {
+          const matchedPreset = saved.activePresetId
+            ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === saved.activePresetId)
+            : null;
+          const sumW = Object.values(
+            saved.activeWeights as Record<string, number>
+          ).reduce((a, b) => a + b, 0);
+          if (
+            matchedPreset &&
+            (!saved.allocationMethod || saved.allocationMethod === 'preset') &&
+            Math.abs(sumW - 100) >= 0.5
+          ) {
+            setActiveWeights({ ...matchedPreset.weights });
+          } else {
+            setActiveWeights(saved.activeWeights);
+          }
+        }
         if (saved.activePresetId !== undefined)
           setActivePresetId(saved.activePresetId);
         if (saved.allocationMethod) setAllocationMethod(saved.allocationMethod);
@@ -371,15 +387,21 @@ export function App() {
 
   const solvedMetrics = useMemo(
     () =>
-      evaluatePortfolioMetrics(activeWeights, allAssets, dynamicPresets, {
-        rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
-        exactPresetMatch,
-        hasCustomAssetAssumptions,
-      }),
+      evaluatePortfolioMetrics(
+        activeWeights,
+        allAssets,
+        [...dynamicPresets, ...customTableRows],
+        {
+          rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
+          exactPresetMatch,
+          hasCustomAssetAssumptions,
+        }
+      ),
     [
       activeWeights,
       allAssets,
       dynamicPresets,
+      customTableRows,
       rdptPromoActive,
       exactPresetMatch,
       hasCustomAssetAssumptions,

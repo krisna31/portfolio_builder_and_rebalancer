@@ -85,6 +85,15 @@ export interface PortfolioPreset {
   videoNote?: string;
 }
 
+export interface DominatingPresetInfo {
+  presetId: string;
+  name: string;
+  cagr: number;
+  maxDrawdown: number;
+  cagrDiff: number; // positive means higher CAGR
+  maxDdDiff: number; // positive means lower drawdown (safer)
+}
+
 export interface SolvedPortfolio {
   weights: Record<string, number>; // Capital weights summing to 100%
   riskContributions: Record<string, number>; // Risk contributions summing to 100%
@@ -95,6 +104,7 @@ export interface SolvedPortfolio {
   riskTier: RiskTier;
   isParetoDominated: boolean;
   dominatingPresets: string[];
+  dominatingPresetItems?: DominatingPresetInfo[];
 }
 
 export interface SubAssetSplit {

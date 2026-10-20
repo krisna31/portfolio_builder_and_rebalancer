@@ -1,4 +1,11 @@
-import { AssetDefinition, PortfolioPreset, RiskTier, SolvedPortfolio } from './types';
+import {
+  AssetDefinition,
+  DominatingPresetInfo,
+  PortfolioPreset,
+  RiskTier,
+  SolvedPortfolio,
+} from './types';
+import { CORE_AND_EXPANDED_ASSETS, VIDEO_PORTFOLIO_PRESETS } from '../../data/presets';
 
 /**
  * Pairwise Correlation Matrix across asset categories (calibrated to 5Y historical behavior)
@@ -258,13 +265,63 @@ export function normalizeWeightsTo100(weights: Record<string, number>): Record<s
 }
 
 /**
+ * Finds all presets that strictly Pareto-dominate a candidate portfolio (cagr, maxDrawdown):
+ * A preset B strictly dominates A iff:
+ *   B.cagr >= A.cagr AND B.maxDrawdown <= A.maxDrawdown
+ *   with at least one strict improvement (cagrDiff >= 0.05 or maxDdDiff >= 0.05).
+ */
+export function findStrictDominatingPresets(
+  cagr: number,
+  maxDrawdown: number,
+  presets: PortfolioPreset[],
+  selfPresetId?: string | null
+): DominatingPresetInfo[] {
+  const dominators: DominatingPresetInfo[] = [];
+  const seenIds = new Set<string>();
+
+  for (const preset of presets) {
+    if (selfPresetId && preset.id === selfPresetId) continue;
+    if (seenIds.has(preset.id)) continue;
+
+    const cagrDiff = Number((preset.cagr - cagr).toFixed(2));
+    const maxDdDiff = Number((maxDrawdown - preset.maxDrawdown).toFixed(2)); // positive = preset has lower drawdown
+
+    // Strict Pareto dominance: no worse on either metric (within 0.01 rounding) and strictly better on at least one
+    const noWorse = cagrDiff >= -0.01 && maxDdDiff >= -0.01;
+    const strictlyBetter = cagrDiff >= 0.05 || maxDdDiff >= 0.05;
+
+    // Also skip if identical weights/metrics
+    if (noWorse && strictlyBetter) {
+      seenIds.add(preset.id);
+      dominators.push({
+        presetId: preset.id,
+        name: preset.name.replace(/\s*\(Dominated\)\s*/i, ''),
+        cagr: preset.cagr,
+        maxDrawdown: preset.maxDrawdown,
+        cagrDiff: Math.max(0, cagrDiff),
+        maxDdDiff: Math.max(0, maxDdDiff),
+      });
+    }
+  }
+
+  // Sort dominators so the strongest all-around Pareto improvement appears first
+  dominators.sort((a, b) => {
+    const scoreA = a.cagrDiff * 1.2 + a.maxDdDiff * 1.5;
+    const scoreB = b.cagrDiff * 1.2 + b.maxDdDiff * 1.5;
+    return scoreB - scoreA;
+  });
+
+  return dominators;
+}
+
+/**
  * Evaluates any portfolio weight allocation (whether Preset, Solver-generated, or Custom Sliders)
  * and computes:
  * - Portfolio CAGR (%) (including rebalancing diversification bonus & optional Makmur +3% RDPT promo alpha)
  * - Portfolio Max Drawdown (%)
  * - Annualized Volatility (%) & Sharpe Ratio
  * - Percentage Risk Contribution per asset (showing how 18% BTC = ~90% of portfolio risk!)
- * - Pareto Dominance check against the 15 Optimal Video Presets
+ * - Strict Mathematical Pareto Dominance check against all available presets
  */
 export function evaluatePortfolioMetrics(
   weights: Record<string, number>,
@@ -277,11 +334,13 @@ export function evaluatePortfolioMetrics(
   }
 ): SolvedPortfolio {
   const rdptBonus = options?.rdptAlphaPromoBonusPercent ?? 0;
-  const hasCustomAssumptions = options?.hasCustomAssetAssumptions ?? false;
 
   // Filter active assets
   const assetMap = new Map(allAssets.map((a) => [a.id, a]));
-  const activeEntries = Object.entries(weights).filter(([id, w]) => w > 0 && assetMap.has(id));
+  const baseAssetMap = new Map(CORE_AND_EXPANDED_ASSETS.map((a) => [a.id, a]));
+  const activeEntries = Object.entries(weights).filter(
+    ([id, w]) => w > 0 && assetMap.has(id)
+  );
 
   if (activeEntries.length === 0) {
     return {
@@ -294,8 +353,13 @@ export function evaluatePortfolioMetrics(
       riskTier: 'low',
       isParetoDominated: false,
       dominatingPresets: [],
+      dominatingPresetItems: [],
     };
   }
+
+  // Normalize weights fraction for mathematical accuracy even if manual sliders don't sum to 100
+  const totalWeightPct = activeEntries.reduce((sum, [, w]) => sum + w, 0);
+  const normFactor = totalWeightPct > 0 ? 100 / totalWeightPct : 1;
 
   // Calculate Risk Contributions using calibrated riskScale:
   // RiskContribution_i ~ (w_i * riskScale_i)^1.65 so that 18% BTC in BTC 90% preset reflects ~90% risk contribution
@@ -308,7 +372,7 @@ export function evaluatePortfolioMetrics(
       rawRiskContrib[assetId] = 0;
       continue;
     }
-    const r = Math.pow((weightPct / 100) * asset.riskScale, 1.65);
+    const r = Math.pow(((weightPct * normFactor) / 100) * asset.riskScale, 1.65);
     rawRiskContrib[assetId] = r;
     totalRawRisk += r;
   }
@@ -319,21 +383,61 @@ export function evaluatePortfolioMetrics(
       totalRawRisk > 0 ? Number(((r / totalRawRisk) * 100).toFixed(1)) : 0;
   }
 
-  // If this matches a video preset and no RDPT promo or custom asset assumption override is active, use the exact video CAGR & MaxDD
-  if (options?.exactPresetMatch && rdptBonus === 0 && !hasCustomAssumptions) {
-    const preset = options.exactPresetMatch;
-    const vol = Math.max(0.5, preset.maxDrawdown * 0.85);
-    const sharpe = Number(((preset.cagr - 3.76) / Math.max(1, vol)).toFixed(2));
+  // Check if this matches a baseline video preset so we preserve its exact calibrated rebalancing bonus
+  // and apply exact mathematical deltas (∑ w_i * Δr_i) when RDPT promo or custom asset assumptions are active!
+  const matchedBaseVideoPreset = options?.exactPresetMatch
+    ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === options.exactPresetMatch!.id) ??
+      options.exactPresetMatch
+    : null;
+
+  if (matchedBaseVideoPreset) {
+    let deltaCagr = 0;
+    let baseLinearDd = 0;
+    let currentLinearDd = 0;
+
+    for (const [assetId, rawW] of activeEntries) {
+      const w = (rawW * normFactor) / 100;
+      const currentAsset = assetMap.get(assetId)!;
+      const baseAsset = baseAssetMap.get(assetId) ?? currentAsset;
+
+      const currentEffCagr =
+        assetId === 'RDPT' ? currentAsset.cagr + rdptBonus : currentAsset.cagr;
+      const baseEffCagr = baseAsset.cagr;
+
+      deltaCagr += w * (currentEffCagr - baseEffCagr);
+      baseLinearDd += w * baseAsset.maxDrawdown;
+      currentLinearDd += w * currentAsset.maxDrawdown;
+    }
+
+    const finalCagr = Number((matchedBaseVideoPreset.cagr + deltaCagr).toFixed(2));
+    const ddScale =
+      baseLinearDd > 0 ? currentLinearDd / baseLinearDd : 1;
+    const finalMaxDD = Number(
+      Math.max(0, matchedBaseVideoPreset.maxDrawdown * ddScale).toFixed(2)
+    );
+    const vol = Math.max(0.45, finalMaxDD * 0.85);
+    const sharpe = Number(((finalCagr - 3.76) / Math.max(0.8, vol)).toFixed(2));
+
+    const dominatingPresetItems = findStrictDominatingPresets(
+      finalCagr,
+      finalMaxDD,
+      presets,
+      matchedBaseVideoPreset.id
+    );
+
     return {
       weights,
       riskContributions,
-      cagr: preset.cagr,
-      maxDrawdown: preset.maxDrawdown,
+      cagr: finalCagr,
+      maxDrawdown: finalMaxDD,
       volatility: Number(vol.toFixed(2)),
       sharpeRatio: sharpe,
-      riskTier: preset.riskTier,
-      isParetoDominated: !preset.isOptimal15,
-      dominatingPresets: preset.dominatedByReason ? [preset.dominatedByReason] : [],
+      riskTier: classifyRiskTier(finalMaxDD),
+      isParetoDominated: dominatingPresetItems.length > 0,
+      dominatingPresets: dominatingPresetItems.map(
+        (d) => `${d.name} (CAGR ${d.cagr}%, Max DD -${d.maxDrawdown}%)`
+      ),
+      dominatingPresetItems,
     };
   }
 
@@ -344,9 +448,9 @@ export function evaluatePortfolioMetrics(
   const activeAssetList: AssetDefinition[] = [];
   const activeWeightFractions: number[] = [];
 
-  for (const [assetId, weightPct] of activeEntries) {
+  for (const [assetId, rawW] of activeEntries) {
     const asset = assetMap.get(assetId)!;
-    const w = weightPct / 100;
+    const w = (rawW * normFactor) / 100;
     const effectiveAssetCagr =
       assetId === 'RDPT' ? asset.cagr + rdptBonus : asset.cagr;
     weightedCagr += w * effectiveAssetCagr;
@@ -360,9 +464,11 @@ export function evaluatePortfolioMetrics(
   let portVariance = 0;
   let weightedIndivVol = 0;
   for (let i = 0; i < activeAssetList.length; i++) {
-    weightedIndivVol += activeWeightFractions[i] * (activeAssetList[i].volatility / 100);
+    weightedIndivVol +=
+      activeWeightFractions[i] * (activeAssetList[i].volatility / 100);
     for (let j = 0; j < activeAssetList.length; j++) {
-      portVariance += activeWeightFractions[i] * activeWeightFractions[j] * cov[i][j];
+      portVariance +=
+        activeWeightFractions[i] * activeWeightFractions[j] * cov[i][j];
     }
   }
   const portVolDecimal = Math.sqrt(Math.max(0, portVariance));
@@ -373,49 +479,44 @@ export function evaluatePortfolioMetrics(
     weightedIndivVol > 0 ? Math.min(1, portVolDecimal / weightedIndivVol) : 1;
 
   // Rebalancing bonus (Shannon's Demon): mixing uncorrelated high-vol crypto/stocks with bonds
-  // harvests volatility during rebalancing (explaining why 38% RDPT + 3% BTC + 3% ETH achieves 17.90% CAGR in the video)
+  // harvests volatility during rebalancing (calibrated to match the 15 video presets within ~0.3%!)
   const cryptoWeight =
     activeEntries
       .filter(([id]) => assetMap.get(id)?.category === 'crypto')
-      .reduce((acc, [, w]) => acc + w, 0) / 100;
+      .reduce((acc, [, w]) => acc + w * normFactor, 0) / 100;
   const defensiveWeight =
     activeEntries
       .filter(([id]) => {
         const cat = assetMap.get(id)?.category;
         return cat === 'bonds' || cat === 'money-market' || cat === 'gold';
       })
-      .reduce((acc, [, w]) => acc + w, 0) / 100;
+      .reduce((acc, [, w]) => acc + w * normFactor, 0) / 100;
 
   const rebalancingBonus =
     activeEntries.length > 1
-      ? (1 - divRatio) * 8.5 + Math.sqrt(cryptoWeight * defensiveWeight) * 14.2
+      ? (1 - divRatio) * 10.5 + Math.sqrt(cryptoWeight * defensiveWeight) * 20.8
       : 0;
 
   const finalCagr = Number((weightedCagr + rebalancingBonus).toFixed(2));
 
   // Max Drawdown scales with diversification ratio relative to linear weighted drawdown
-  const drawdownCompression = activeEntries.length > 1 ? Math.pow(divRatio, 1.35) * 0.78 : 1.0;
-  const finalMaxDD = Number((weightedMaxDDLinear * drawdownCompression).toFixed(2));
+  const drawdownCompression =
+    activeEntries.length > 1 ? Math.pow(divRatio, 1.35) * 0.78 : 1.0;
+  const finalMaxDD = Number(
+    (weightedMaxDDLinear * drawdownCompression).toFixed(2)
+  );
 
   const sharpeRatio = Number(
     ((finalCagr - 3.76) / Math.max(0.8, portVolPercent)).toFixed(2)
   );
 
-  // Pareto Dominance Check (10:16 in video):
-  // A portfolio is dominated if any of the 15 Optimal Presets has BOTH:
-  //   preset.cagr >= finalCagr + 0.3 AND preset.maxDrawdown <= finalMaxDD - 0.3
-  const dominatingPresets: string[] = [];
-  for (const preset of presets.filter((p) => p.isOptimal15)) {
-    const higherReturnSameOrLowerRisk =
-      preset.cagr >= finalCagr + 0.5 && preset.maxDrawdown <= finalMaxDD + 0.1;
-    const lowerRiskSameOrHigherReturn =
-      preset.maxDrawdown <= finalMaxDD - 0.8 && preset.cagr >= finalCagr - 0.2;
-    if (higherReturnSameOrLowerRisk || lowerRiskSameOrHigherReturn) {
-      dominatingPresets.push(
-        `${preset.name} (CAGR ${preset.cagr}%, Max DD ${preset.maxDrawdown}%)`
-      );
-    }
-  }
+  // Strict Mathematical Pareto Dominance Check against all presets
+  const dominatingPresetItems = findStrictDominatingPresets(
+    finalCagr,
+    finalMaxDD,
+    presets,
+    null
+  );
 
   return {
     weights,
@@ -425,8 +526,11 @@ export function evaluatePortfolioMetrics(
     volatility: Number(portVolPercent.toFixed(2)),
     sharpeRatio,
     riskTier: classifyRiskTier(finalMaxDD),
-    isParetoDominated: dominatingPresets.length > 0,
-    dominatingPresets: dominatingPresets.slice(0, 2),
+    isParetoDominated: dominatingPresetItems.length > 0,
+    dominatingPresets: dominatingPresetItems.map(
+      (d) => `${d.name} (CAGR ${d.cagr}%, Max DD -${d.maxDrawdown}%)`
+    ),
+    dominatingPresetItems,
   };
 }
 
@@ -447,8 +551,9 @@ export function buildDynamicPresetsForSlotMap(
   hasCustomAssetAssumptions: boolean = false
 ): PortfolioPreset[] {
   const core8 = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
+  const areSlotsUnchanged = core8.every((slot) => (slotMap[slot] ?? slot) === slot);
   const isUnchanged =
-    core8.every((slot) => (slotMap[slot] ?? slot) === slot) &&
+    areSlotsUnchanged &&
     rdptBonusPercent === 0 &&
     !hasCustomAssetAssumptions;
 
@@ -459,6 +564,27 @@ export function buildDynamicPresetsForSlotMap(
   const assetMap = new Map(allAssets.map((a) => [a.id, a]));
 
   return basePresets.map((preset) => {
+    // If slots are unchanged (only RDPT promo or asset return assumptions were modified),
+    // preserve the preset's exact weights and apply mathematical deltas via exactPresetMatch
+    if (areSlotsUnchanged) {
+      const metrics = evaluatePortfolioMetrics(
+        preset.weights,
+        allAssets,
+        basePresets,
+        {
+          rdptAlphaPromoBonusPercent: rdptBonusPercent,
+          exactPresetMatch: preset,
+          hasCustomAssetAssumptions,
+        }
+      );
+      return {
+        ...preset,
+        cagr: metrics.cagr,
+        maxDrawdown: metrics.maxDrawdown,
+        riskTier: metrics.riskTier,
+      };
+    }
+
     // Identify which of the 8 slots were active (> 0%) in this preset
     const activeCoreSlots = core8.filter((slot) => (preset.weights[slot] ?? 0) > 0);
     const mappedAssets: AssetDefinition[] = activeCoreSlots

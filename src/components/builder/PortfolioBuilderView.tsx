@@ -9,6 +9,7 @@ import {
 import { formatIdr, getRiskTierBadge } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import { simulateWealthToGoal } from '../../lib/quant/wealthSimulator';
+import { findStrictDominatingPresets } from '../../lib/quant/riskParitySolver';
 import {
   lookupCustomYahooTicker,
   POPULAR_TICKER_ESTIMATES,
@@ -271,8 +272,14 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const filterByZoom = (maxDd: number) =>
     paretoZoomMode === 'cluster-35' ? maxDd <= 36 : true;
 
-  const scatterOptimalData = [...customTableRows, ...presets.filter((p) => p.isOptimal15)]
-    .filter((p) => filterByZoom(p.maxDrawdown))
+  const allCandidatePresets = [...customTableRows, ...presets];
+
+  const isPresetStrictlyOptimal = (p: PortfolioPreset) =>
+    findStrictDominatingPresets(p.cagr, p.maxDrawdown, allCandidatePresets, p.id)
+      .length === 0;
+
+  const scatterOptimalData = allCandidatePresets
+    .filter((p) => isPresetStrictlyOptimal(p) && filterByZoom(p.maxDrawdown))
     .map((p) => ({
       id: p.id,
       name: p.name,
@@ -290,22 +297,34 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const scatterDominatedData =
     paretoZoomMode === 'optimal-only'
       ? []
-      : presets
-          .filter((p) => !p.isOptimal15 && filterByZoom(p.maxDrawdown))
-          .map((p) => ({
-            id: p.id,
-            name: p.name,
-            maxDrawdown: p.maxDrawdown,
-            cagr: p.cagr,
-            calmar: Number((p.cagr / Math.max(0.5, p.maxDrawdown)).toFixed(2)),
-            topWeights: formatTopWeights(p.weights),
-            isOptimal: false,
-            dominatedByReason: p.dominatedByReason,
-            preset: p,
-          }));
+      : allCandidatePresets
+          .filter((p) => !isPresetStrictlyOptimal(p) && filterByZoom(p.maxDrawdown))
+          .map((p) => {
+            const doms = findStrictDominatingPresets(
+              p.cagr,
+              p.maxDrawdown,
+              allCandidatePresets,
+              p.id
+            );
+            return {
+              id: p.id,
+              name: p.name,
+              maxDrawdown: p.maxDrawdown,
+              cagr: p.cagr,
+              calmar: Number((p.cagr / Math.max(0.5, p.maxDrawdown)).toFixed(2)),
+              topWeights: formatTopWeights(p.weights),
+              isOptimal: false,
+              dominatedByReason:
+                p.dominatedByReason ??
+                (doms.length > 0
+                  ? `Kalah efisien dibanding ${doms[0].name} (CAGR ${doms[0].cagr}%, Max DD -${doms[0].maxDrawdown}%).`
+                  : undefined),
+              preset: p,
+            };
+          });
 
   const activePresetObj =
-    [...customTableRows, ...presets].find((p) => p.id === activePresetId) ?? null;
+    allCandidatePresets.find((p) => p.id === activePresetId) ?? null;
 
   const activePointData = filterByZoom(solvedMetrics.maxDrawdown)
     ? [
@@ -327,13 +346,39 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       ]
     : [];
 
-  // Ordered optimal presets from lowest drawdown (conservative) to highest return (aggressive) for 1-click stepping
-  const sortedOptimalPresets = [...presets]
-    .filter((p) => p.isOptimal15)
+  // Ordered strictly Pareto-optimal presets from lowest drawdown (conservative) to highest return (aggressive)
+  const sortedOptimalPresets = allCandidatePresets
+    .filter((p) => isPresetStrictlyOptimal(p))
     .sort((a, b) => a.maxDrawdown - b.maxDrawdown);
   const currentOptimalIdx = sortedOptimalPresets.findIndex(
     (p) => p.id === activePresetId
   );
+
+  // Compute neighboring optimal alternatives & highest Calmar efficiency champion for 1-click switching
+  const saferAlternativePreset =
+    [...sortedOptimalPresets]
+      .reverse()
+      .find(
+        (p) =>
+          p.id !== activePresetId &&
+          p.maxDrawdown < solvedMetrics.maxDrawdown - 0.15
+      ) ?? null;
+
+  const higherReturnAlternativePreset =
+    sortedOptimalPresets.find(
+      (p) =>
+        p.id !== activePresetId &&
+        p.cagr > solvedMetrics.cagr + 0.15
+    ) ?? null;
+
+  const bestCalmarPreset =
+    [...sortedOptimalPresets]
+      .filter((p) => p.maxDrawdown >= 3.0 && p.id !== activePresetId)
+      .sort(
+        (a, b) =>
+          b.cagr / Math.max(1, b.maxDrawdown) -
+          a.cagr / Math.max(1, a.maxDrawdown)
+      )[0] ?? null;
 
   const handleYahooLookup = async (overrideSymbol?: string) => {
     const query = (overrideSymbol ?? tickerInput).trim();
@@ -436,12 +481,15 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const getEffectiveAssetCagr = (asset: AssetDefinition): number =>
     asset.id === 'RDPT' && rdptPromoActive ? asset.cagr + 3.0 : asset.cagr;
 
+  const normWeightMultiplier = manualSum > 0 ? 100 / manualSum : 1;
+
   const activeReturnBreakdown = allAssets
     .filter((asset) => (activeWeights[asset.id] ?? 0) > 0)
     .map((asset) => {
       const weightPct = activeWeights[asset.id] ?? 0;
+      const effectiveWeightPct = Number((weightPct * normWeightMultiplier).toFixed(2));
       const effectiveCagr = getEffectiveAssetCagr(asset);
-      const weightedReturnContrib = (weightPct / 100) * effectiveCagr;
+      const weightedReturnContrib = (effectiveWeightPct / 100) * effectiveCagr;
       return {
         asset,
         weightPct,
@@ -654,29 +702,150 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Pareto Efficiency Alert */}
+          {/* Pareto Efficiency Alert & Interactive Clickable Alternatives */}
           <div className="mt-4">
             {solvedMetrics.isParetoDominated ? (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div>
-                  <span className="font-semibold">
-                    Filter Pareto (Menit 10:16): Portfolio ini Kalah Efisien.
-                  </span>{' '}
-                  Alternatif yang lebih unggul:{' '}
-                  <span className="font-semibold underline">
-                    {solvedMetrics.dominatingPresets.join(' atau ')}
-                  </span>
-                  .
+              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="flex-1">
+                    <div>
+                      <span className="font-bold">
+                        Filter Matematis Pareto (Menit 10:16): Portfolio Ini Terdominasi (Kalah Efisien).
+                      </span>{' '}
+                      Ditemukan strategi lain di tabel yang memiliki{' '}
+                      <strong>Return (CAGR) lebih tinggi</strong> sekaligus{' '}
+                      <strong>Max Drawdown lebih rendah/setara</strong>:
+                    </div>
+
+                    {activePresetObj?.dominatedByReason && (
+                      <div className="mt-1 text-[11px] opacity-90">
+                        💡 {activePresetObj.dominatedByReason}
+                      </div>
+                    )}
+
+                    {/* Clickable Dominating Preset Chips */}
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+                        Klik untuk pindah ke strategi yang lebih unggul:
+                      </span>
+                      {(solvedMetrics.dominatingPresetItems ?? []).map((dom) => {
+                        const targetPreset = allCandidatePresets.find(
+                          (p) => p.id === dom.presetId
+                        );
+                        if (!targetPreset) return null;
+                        return (
+                          <button
+                            key={dom.presetId}
+                            type="button"
+                            onClick={() => onSelectPreset(targetPreset)}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 font-mono text-[11px] font-semibold text-amber-950 transition hover:bg-amber-500 hover:text-white dark:text-amber-100 dark:hover:bg-amber-500 dark:hover:text-zinc-950"
+                          >
+                            <span>⚡ {dom.name}</span>
+                            <span className="rounded bg-emerald-500/20 px-1 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                              CAGR {dom.cagr.toFixed(2)}% (+{dom.cagrDiff.toFixed(2)}%)
+                            </span>
+                            <span className="rounded bg-sky-500/20 px-1 py-0.2 text-[10px] font-bold text-sky-700 dark:text-sky-300">
+                              DD -{dom.maxDrawdown.toFixed(2)}% (
+                              {dom.maxDdDiff > 0
+                                ? `-${dom.maxDdDiff.toFixed(2)}% lebih aman`
+                                : 'setara'}
+                              )
+                            </span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>
-                  <strong>Optimal Pareto Frontier:</strong> Tidak ada preset lain yang
-                  mengalahkan return portfolio ini pada tingkat drawdown yang sama.
-                </span>
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:text-emerald-200">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex-1">
+                    <div>
+                      <strong>Optimal Pareto Frontier (Terverifikasi Matematis):</strong>{' '}
+                      Tidak ada preset lain di tabel yang mengalahkan return portfolio ini (
+                      <span className="font-mono font-bold">
+                        {solvedMetrics.cagr.toFixed(2)}%/thn
+                      </span>
+                      ) dengan Max Drawdown{' '}
+                      <span className="font-mono font-bold">
+                        ≤ -{solvedMetrics.maxDrawdown.toFixed(2)}%
+                      </span>
+                      .
+                    </div>
+
+                    {/* Interactive Trade-Off Alternatives on the Frontier */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+                        Alternatif Optimal (Klik untuk pindah):
+                      </span>
+
+                      {saferAlternativePreset && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectPreset(saferAlternativePreset)}
+                          title={`Turunkan risiko Max Drawdown dari -${solvedMetrics.maxDrawdown.toFixed(2)}% ke -${saferAlternativePreset.maxDrawdown.toFixed(2)}%`}
+                          className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                        >
+                          <span>🛡️ Lebih Aman:</span>
+                          <strong className="font-semibold">
+                            {saferAlternativePreset.name}
+                          </strong>
+                          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                            (CAGR {saferAlternativePreset.cagr.toFixed(2)}% • DD -
+                            {saferAlternativePreset.maxDrawdown.toFixed(2)}%)
+                          </span>
+                        </button>
+                      )}
+
+                      {higherReturnAlternativePreset && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectPreset(higherReturnAlternativePreset)}
+                          title={`Tingkatkan potensi CAGR dari ${solvedMetrics.cagr.toFixed(2)}% ke ${higherReturnAlternativePreset.cagr.toFixed(2)}%`}
+                          className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                        >
+                          <span>🚀 Return Lebih Tinggi:</span>
+                          <strong className="font-semibold">
+                            {higherReturnAlternativePreset.name}
+                          </strong>
+                          <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                            (CAGR {higherReturnAlternativePreset.cagr.toFixed(2)}% • DD -
+                            {higherReturnAlternativePreset.maxDrawdown.toFixed(2)}%)
+                          </span>
+                        </button>
+                      )}
+
+                      {bestCalmarPreset &&
+                        bestCalmarPreset.id !== saferAlternativePreset?.id &&
+                        bestCalmarPreset.id !== higherReturnAlternativePreset?.id && (
+                          <button
+                            type="button"
+                            onClick={() => onSelectPreset(bestCalmarPreset)}
+                            title="Strategi dengan Rasio Return / Drawdown (Calmar) paling efisien"
+                            className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                          >
+                            <span>🏆 Juara Efisiensi (Calmar):</span>
+                            <strong className="font-semibold">
+                              {bestCalmarPreset.name}
+                            </strong>
+                            <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                              (
+                              {(
+                                bestCalmarPreset.cagr /
+                                Math.max(1, bestCalmarPreset.maxDrawdown)
+                              ).toFixed(2)}
+                              x • CAGR {bestCalmarPreset.cagr.toFixed(2)}%)
+                            </span>
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
