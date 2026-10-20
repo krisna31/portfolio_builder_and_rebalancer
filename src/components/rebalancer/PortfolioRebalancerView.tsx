@@ -814,6 +814,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       borderRadius: '0.5rem',
                       fontSize: '12px',
                     }}
+                    itemStyle={{ color: 'var(--text-main)' }}
+                    labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
                     formatter={(val: number, name: string) => [`${val}%`, name]}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
@@ -1024,6 +1026,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           borderRadius: '0.5rem',
                           fontSize: '12px',
                         }}
+                        itemStyle={{ color: 'var(--text-main)' }}
+                        labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
                         formatter={(val: number) => [
                           `Rp ${val.toLocaleString('id-ID')} Juta`,
                           'Total Portfolio',

@@ -400,6 +400,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       borderRadius: '0.5rem',
                       fontSize: '12px',
                     }}
+                    itemStyle={{ color: 'var(--text-main)' }}
+                    labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
                     formatter={(val: number, name: string) => [
                       `Rp ${val.toLocaleString('id-ID')} Juta`,
                       name,
@@ -787,6 +789,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   borderRadius: '0.5rem',
                   fontSize: '12px',
                 }}
+                itemStyle={{ color: 'var(--text-main)' }}
+                labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
                 formatter={(val: number, name: string) => [
                   `Rp ${val.toLocaleString('id-ID')} Juta`,
                   name,

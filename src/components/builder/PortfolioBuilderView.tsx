@@ -203,43 +203,98 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   });
 
   const tierBadge = getRiskTierBadge(solvedMetrics.riskTier);
+  const [paretoZoomMode, setParetoZoomMode] = useState<
+    'all' | 'cluster-35' | 'optimal-only'
+  >('all');
+
+  const formatTopWeights = (wMap: Record<string, number>) =>
+    Object.entries(wMap)
+      .filter(([, w]) => w > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, w]) => `${id} ${w}%`)
+      .join(' • ');
 
   const weightVsRiskData = allAssets
     .filter((a) => (activeWeights[a.id] ?? 0) > 0 || selectedUniverseIds.includes(a.id))
     .map((a) => ({
+      assetId: a.id,
       symbol: a.shortName,
       name: a.name,
       capitalWeight: Number((activeWeights[a.id] ?? 0).toFixed(1)),
       riskContribution: Number((solvedMetrics.riskContributions[a.id] ?? 0).toFixed(1)),
+      assetCagr: a.cagr,
+      assetMaxDd: a.maxDrawdown,
       color: a.color,
     }))
     .filter((d) => d.capitalWeight > 0 || d.riskContribution > 0);
 
-  const scatterOptimalData = presets
-    .filter((p) => p.isOptimal15)
+  const filterByZoom = (maxDd: number) =>
+    paretoZoomMode === 'cluster-35' ? maxDd <= 36 : true;
+
+  const scatterOptimalData = [...customTableRows, ...presets.filter((p) => p.isOptimal15)]
+    .filter((p) => filterByZoom(p.maxDrawdown))
     .map((p) => ({
+      id: p.id,
       name: p.name,
+      rank: p.rank,
       maxDrawdown: p.maxDrawdown,
       cagr: p.cagr,
+      calmar: Number((p.cagr / Math.max(0.5, p.maxDrawdown)).toFixed(2)),
+      topWeights: formatTopWeights(p.weights),
       isOptimal: true,
+      isCustomRow: Boolean(p.isCustomRow),
+      videoNote: p.videoNote,
+      preset: p,
     }));
 
-  const scatterDominatedData = presets
-    .filter((p) => !p.isOptimal15)
-    .map((p) => ({
-      name: p.name,
-      maxDrawdown: p.maxDrawdown,
-      cagr: p.cagr,
-      isOptimal: false,
-    }));
+  const scatterDominatedData =
+    paretoZoomMode === 'optimal-only'
+      ? []
+      : presets
+          .filter((p) => !p.isOptimal15 && filterByZoom(p.maxDrawdown))
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            maxDrawdown: p.maxDrawdown,
+            cagr: p.cagr,
+            calmar: Number((p.cagr / Math.max(0.5, p.maxDrawdown)).toFixed(2)),
+            topWeights: formatTopWeights(p.weights),
+            isOptimal: false,
+            dominatedByReason: p.dominatedByReason,
+            preset: p,
+          }));
 
-  const activePointData = [
-    {
-      name: 'Active Portfolio Anda',
-      maxDrawdown: solvedMetrics.maxDrawdown,
-      cagr: solvedMetrics.cagr,
-    },
-  ];
+  const activePresetObj =
+    [...customTableRows, ...presets].find((p) => p.id === activePresetId) ?? null;
+
+  const activePointData = filterByZoom(solvedMetrics.maxDrawdown)
+    ? [
+        {
+          id: 'active-point',
+          name: activePresetObj
+            ? `Aktif: ${activePresetObj.name}`
+            : 'Portfolio Aktif Anda (Custom)',
+          maxDrawdown: solvedMetrics.maxDrawdown,
+          cagr: solvedMetrics.cagr,
+          calmar: Number(
+            (solvedMetrics.cagr / Math.max(0.5, solvedMetrics.maxDrawdown)).toFixed(2)
+          ),
+          topWeights: formatTopWeights(activeWeights),
+          isOptimal: !solvedMetrics.isParetoDominated,
+          isActivePoint: true,
+          preset: activePresetObj,
+        },
+      ]
+    : [];
+
+  // Ordered optimal presets from lowest drawdown (conservative) to highest return (aggressive) for 1-click stepping
+  const sortedOptimalPresets = [...presets]
+    .filter((p) => p.isOptimal15)
+    .sort((a, b) => a.maxDrawdown - b.maxDrawdown);
+  const currentOptimalIdx = sortedOptimalPresets.findIndex(
+    (p) => p.id === activePresetId
+  );
 
   const handleYahooLookup = async (overrideSymbol?: string) => {
     const query = (overrideSymbol ?? tickerInput).trim();
@@ -1406,6 +1461,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
         {/* Right 5 Cols: Visual Quant Charts */}
         <div className="space-y-5 lg:col-span-5">
+          {/* Chart 1: Bobot Modal vs Porsi Risiko */}
           <div className="ui-card rounded-xl p-5">
             <div className="flex items-center justify-between">
               <h3 className="ui-text-main text-sm font-bold">
@@ -1415,7 +1471,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
             <p className="ui-text-muted mt-1 text-xs">
               Menjelaskan kenapa bobot modal 18% di BTC setara dengan ~90% risiko
-              portfolio (09:20).
+              portfolio (09:20).{' '}
+              <span className="ui-text-secondary font-medium">
+                Klik batang aset untuk menjadikannya Conviction Risk Budgeting.
+              </span>
             </p>
 
             <div className="mt-4 h-60 w-full">
@@ -1436,14 +1495,44 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     tickFormatter={(v) => `${v}%`}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-card)',
-                      borderColor: 'var(--border-subtle)',
-                      color: 'var(--text-main)',
-                      borderRadius: '0.5rem',
-                      fontSize: '12px',
+                    cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const d = payload[0]?.payload;
+                      if (!d) return null;
+                      return (
+                        <div className="ui-card ui-border rounded-lg border p-3 text-xs shadow-xl">
+                          <div className="ui-text-main font-bold">
+                            {d.symbol} — {d.name}
+                          </div>
+                          <div className="mt-1.5 space-y-1 font-mono">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="ui-text-secondary">Bobot Modal:</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                {d.capitalWeight}%
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="ui-text-secondary">
+                                Kontribusi Risiko:
+                              </span>
+                              <span className="font-bold text-amber-500">
+                                {d.riskContribution}%
+                              </span>
+                            </div>
+                            <div className="ui-border flex items-center justify-between gap-4 border-t pt-1 text-[11px]">
+                              <span className="ui-text-muted">5Y CAGR / Max DD:</span>
+                              <span className="ui-text-main">
+                                {d.assetCagr}% / -{d.assetMaxDd}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                            👆 Klik batang untuk set Conviction {d.symbol}
+                          </div>
+                        </div>
+                      );
                     }}
-                    formatter={(value: number, name: string) => [`${value}%`, name]}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <Bar
@@ -1451,62 +1540,166 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     name="Bobot Modal (%)"
                     fill="#10b981"
                     radius={[3, 3, 0, 0]}
+                    className="cursor-pointer"
+                    onClick={(data) => {
+                      if (data?.assetId) {
+                        setConvictionAssetId(data.assetId);
+                        setAllocationMethod('risk-budgeting');
+                      }
+                    }}
                   />
                   <Bar
                     dataKey="riskContribution"
                     name="Kontribusi Risiko (%)"
                     fill="#f59e0b"
                     radius={[3, 3, 0, 0]}
+                    className="cursor-pointer"
+                    onClick={(data) => {
+                      if (data?.assetId) {
+                        setConvictionAssetId(data.assetId);
+                        setAllocationMethod('risk-budgeting');
+                      }
+                    }}
                   />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
+          {/* Chart 2: Interactive Pareto Frontier ScatterChart */}
           <div className="ui-card rounded-xl p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="ui-text-main text-sm font-bold">
-                Spektrum Return vs Risiko (Pareto Frontier)
-              </h3>
-              <ShieldAlert className="ui-text-muted h-4 w-4" />
-            </div>
-            <p className="ui-text-muted mt-1 text-xs">
-              15 Portfolio Optimal (hijau) vs 10 portfolio tereliminasi (merah).
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="ui-text-main text-sm font-bold">
+                  Spektrum Return vs Risiko (Pareto Frontier)
+                </h3>
+                <p className="ui-text-muted mt-0.5 text-xs">
+                  Klik titik mana saja di grafik untuk langsung menerapkan portfolio
+                  tersebut:
+                </p>
+              </div>
 
-            <div className="mt-4 h-64 w-full">
+              {/* Zoom / Filter Controls */}
+              <div className="ui-subtle flex rounded-lg p-0.5 text-[11px]">
+                {[
+                  { id: 'all', label: 'Semua' },
+                  { id: 'cluster-35', label: 'Zoom <35% DD' },
+                  { id: 'optimal-only', label: '15 Optimal' },
+                ].map((z) => (
+                  <button
+                    key={z.id}
+                    type="button"
+                    onClick={() =>
+                      setParetoZoomMode(z.id as typeof paretoZoomMode)
+                    }
+                    className={`rounded-md px-2 py-0.5 font-medium transition ${
+                      paretoZoomMode === z.id
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    {z.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 10, right: 15, bottom: 10, left: -15 }}>
                   <XAxis
                     type="number"
                     dataKey="maxDrawdown"
                     name="Max Drawdown"
-                    unit="%"
                     stroke="#71717a"
                     fontSize={11}
+                    tickFormatter={(v) => `${v}%`}
                   />
                   <YAxis
                     type="number"
                     dataKey="cagr"
                     name="CAGR"
-                    unit="%"
                     stroke="#71717a"
                     fontSize={11}
+                    tickFormatter={(v) => `${v}%`}
                   />
-                  <ZAxis range={[50, 50]} />
+                  <ZAxis range={[65, 65]} />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-card)',
-                      borderColor: 'var(--border-subtle)',
-                      color: 'var(--text-main)',
-                      borderRadius: '0.5rem',
-                      fontSize: '12px',
+                    content={({ active, payload }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const pt = payload[0]?.payload;
+                      if (!pt) return null;
+                      return (
+                        <div className="ui-card ui-border max-w-xs rounded-lg border p-3 text-xs shadow-xl">
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                                pt.isActivePoint
+                                  ? 'bg-sky-500/15 text-sky-500'
+                                  : pt.isCustomRow
+                                    ? 'bg-emerald-600 text-white'
+                                    : pt.isOptimal
+                                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {pt.isActivePoint
+                                ? 'PORTFOLIO AKTIF'
+                                : pt.isCustomRow
+                                  ? 'CUSTOM ROW'
+                                  : pt.isOptimal
+                                    ? `OPTIMAL #${pt.rank ?? ''}`
+                                    : 'TERELIMINASI (KALAH PARETO)'}
+                            </span>
+                            <span className="ui-text-muted font-mono text-[10px]">
+                              Efisiensi {pt.calmar}x
+                            </span>
+                          </div>
+
+                          <div className="ui-text-main mt-1.5 font-bold">
+                            {pt.name}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-2 rounded-md bg-zinc-500/10 p-2 font-mono">
+                            <div>
+                              <div className="ui-text-muted text-[10px]">
+                                Expected CAGR
+                              </div>
+                              <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                {Number(pt.cagr).toFixed(2)}% / thn
+                              </div>
+                            </div>
+                            <div>
+                              <div className="ui-text-muted text-[10px]">
+                                Max Drawdown
+                              </div>
+                              <div className="font-bold text-rose-600 dark:text-rose-400">
+                                -{Number(pt.maxDrawdown).toFixed(2)}%
+                              </div>
+                            </div>
+                          </div>
+
+                          {pt.topWeights && (
+                            <div className="ui-text-secondary mt-2 font-mono text-[10px]">
+                              <strong>Bobot:</strong> {pt.topWeights}
+                            </div>
+                          )}
+
+                          {pt.dominatedByReason && (
+                            <div className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                              ⚠️ {pt.dominatedByReason}
+                            </div>
+                          )}
+
+                          {pt.preset && (
+                            <div className="mt-2 border-t border-zinc-500/20 pt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                              👆 Klik titik ini untuk menerapkan portfolio
+                            </div>
+                          )}
+                        </div>
+                      );
                     }}
-                    formatter={(val: number, name: string) => [`${val}%`, name]}
-                    labelFormatter={(_, payload) =>
-                      payload?.[0]?.payload?.name ?? 'Portfolio'
-                    }
                   />
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <ReferenceLine
@@ -1523,12 +1716,26 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     name="15 Optimal"
                     data={scatterOptimalData}
                     fill="#10b981"
+                    className="cursor-pointer"
+                    onClick={(pt) => {
+                      if (pt?.preset) {
+                        onSelectPreset(pt.preset);
+                      }
+                    }}
                   />
-                  <Scatter
-                    name="10 Dominated"
-                    data={scatterDominatedData}
-                    fill="#f43f5e"
-                  />
+                  {paretoZoomMode !== 'optimal-only' && (
+                    <Scatter
+                      name="10 Dominated"
+                      data={scatterDominatedData}
+                      fill="#f43f5e"
+                      className="cursor-pointer"
+                      onClick={(pt) => {
+                        if (pt?.preset) {
+                          onSelectPreset(pt.preset);
+                        }
+                      }}
+                    />
+                  )}
                   <Scatter
                     name="Active Portfolio"
                     data={activePointData}
@@ -1540,6 +1747,71 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>
+            </div>
+
+            {/* Interactive Frontier Stepper Bar below Chart */}
+            <div className="ui-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs">
+              <div className="min-w-0 flex-1">
+                <div className="ui-text-muted text-[10px] uppercase">
+                  Titik Aktif di Kurva Pareto:
+                </div>
+                <div className="ui-text-main truncate font-semibold">
+                  {activePresetObj ? activePresetObj.name : 'Custom Racikan Anda'} (
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                    +{solvedMetrics.cagr.toFixed(2)}%
+                  </span>{' '}
+                  /{' '}
+                  <span className="font-mono text-rose-600 dark:text-rose-400">
+                    -{solvedMetrics.maxDrawdown.toFixed(2)}%
+                  </span>
+                  )
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prevIdx =
+                      currentOptimalIdx > 0
+                        ? currentOptimalIdx - 1
+                        : sortedOptimalPresets.findIndex(
+                            (p) => p.maxDrawdown >= solvedMetrics.maxDrawdown
+                          ) - 1;
+                    const target =
+                      sortedOptimalPresets[Math.max(0, prevIdx)] ??
+                      sortedOptimalPresets[0];
+                    if (target) onSelectPreset(target);
+                  }}
+                  title="Geser ke titik portfolio optimal yang lebih konservatif (Drawdown lebih rendah)"
+                  className="ui-card ui-text-main rounded px-2 py-1 text-[11px] font-medium hover:opacity-80"
+                >
+                  ◀ Lebih Aman
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextIdx =
+                      currentOptimalIdx >= 0
+                        ? Math.min(
+                            sortedOptimalPresets.length - 1,
+                            currentOptimalIdx + 1
+                          )
+                        : sortedOptimalPresets.findIndex(
+                            (p) => p.maxDrawdown > solvedMetrics.maxDrawdown
+                          );
+                    const target =
+                      sortedOptimalPresets[
+                        nextIdx >= 0 ? nextIdx : sortedOptimalPresets.length - 1
+                      ];
+                    if (target) onSelectPreset(target);
+                  }}
+                  title="Geser ke titik portfolio optimal dengan return lebih tinggi"
+                  className="ui-card ui-text-main rounded px-2 py-1 text-[11px] font-medium hover:opacity-80"
+                >
+                  Lebih Agresif ▶
+                </button>
+              </div>
             </div>
           </div>
         </div>
