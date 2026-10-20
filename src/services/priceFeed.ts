@@ -309,7 +309,7 @@ export const POPULAR_TICKER_ESTIMATES: Record<
  */
 export async function fetchLiveMarketPrices(
   assets: AssetDefinition[],
-  currentUsdIdr: number = 15600
+  currentUsdIdr: number = 18000
 ): Promise<LivePriceUpdateResult> {
   const pricesByAssetId: Record<string, number> = {};
   let usdIdrRate = currentUsdIdr;

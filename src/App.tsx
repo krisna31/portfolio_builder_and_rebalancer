@@ -127,7 +127,8 @@ export function App() {
   const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(3_000_000);
 
   // Rebalancer State (Default starting holdings scaled to Rp 100 Juta Initial Capital!)
-  const [usdIdrRate, setUsdIdrRate] = useState<number>(15600);
+  // Default USD/IDR assumption set to Rp 18,000 per user request
+  const [usdIdrRate, setUsdIdrRate] = useState<number>(18000);
   const [inputMode, setInputMode] = useState<'nominal' | 'units'>('nominal');
   const [rebalanceMode, setRebalanceMode] =
     useState<RebalanceMode>('sell-and-buy');
@@ -142,7 +143,7 @@ export function App() {
       const weightPct = defaultPreset.weights[a.id] ?? 0;
       const valIdr = Math.round(100_000_000 * (weightPct / 100));
       const unitPriceIdr =
-        a.currency === 'USD' ? a.defaultPrice * 15600 : a.defaultPrice;
+        a.currency === 'USD' ? a.defaultPrice * 18000 : a.defaultPrice;
       init[a.id] = {
         assetId: a.id,
         currentValueIdr: valIdr,
@@ -251,7 +252,15 @@ export function App() {
         }
         if (saved.isHoldingsSyncedWithMenu1 !== undefined)
           setIsHoldingsSyncedWithMenu1(saved.isHoldingsSyncedWithMenu1);
-        if (saved.usdIdrRate) setUsdIdrRate(saved.usdIdrRate);
+        if (saved.usdIdrRate) {
+          const migratedUsd18k = localStorage.getItem('quantporto_usd_18k_default_v1');
+          if (!migratedUsd18k && (saved.usdIdrRate === 15600 || saved.usdIdrRate === 15500)) {
+            setUsdIdrRate(18000);
+            localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
+          } else {
+            setUsdIdrRate(saved.usdIdrRate);
+          }
+        }
         if (saved.slotMap) setSlotMap(saved.slotMap);
         if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
         if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
