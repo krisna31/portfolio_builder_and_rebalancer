@@ -1,0 +1,22 @@
+{
+  "updatedAt": "2024-09-19T00:00:00Z",
+  "source": "Leon Hartono - Cara Dapet Rp10 MILIAR PERTAMA Baseline + GitHub Actions Auto-Updater",
+  "usdIdrRate": 15500,
+  "assets": {
+    "RDPU": { "price": 1850, "cagr5y": 3.76, "maxDrawdown5y": 0.0, "volatility5y": 0.45 },
+    "RDPT": { "price": 54200, "cagr5y": 6.85, "maxDrawdown5y": 3.2, "volatility5y": 4.1 },
+    "BBCA": { "price": 10250, "cagr5y": 14.2, "maxDrawdown5y": 21.5, "volatility5y": 18.4 },
+    "GLD": { "price": 245.5, "cagr5y": 11.4, "maxDrawdown5y": 18.2, "volatility5y": 14.8 },
+    "SPY": { "price": 562.0, "cagr5y": 15.1, "maxDrawdown5y": 24.5, "volatility5y": 17.9 },
+    "QQQ": { "price": 478.0, "cagr5y": 21.3, "maxDrawdown5y": 32.6, "volatility5y": 22.8 },
+    "BTC": { "price": 63500, "cagr5y": 49.39, "maxDrawdown5y": 70.61, "volatility5y": 68.5 },
+    "ETH": { "price": 2650, "cagr5y": 76.55, "maxDrawdown5y": 76.15, "volatility5y": 82.0 },
+    "BMRI": { "price": 7100, "cagr5y": 15.8, "maxDrawdown5y": 26.4, "volatility5y": 21.2 },
+    "BBRI": { "price": 4950, "cagr5y": 11.5, "maxDrawdown5y": 28.0, "volatility5y": 22.0 },
+    "BBNI": { "price": 5350, "cagr5y": 12.1, "maxDrawdown5y": 31.0, "volatility5y": 24.5 },
+    "NISP": { "price": 1340, "cagr5y": 16.4, "maxDrawdown5y": 19.8, "volatility5y": 19.5 },
+    "SCHD": { "price": 84.5, "cagr5y": 12.4, "maxDrawdown5y": 21.5, "volatility5y": 16.2 },
+    "SMH": { "price": 248.0, "cagr5y": 34.2, "maxDrawdown5y": 35.8, "volatility5y": 29.5 },
+    "SOL": { "price": 155.0, "cagr5y": 88.5, "maxDrawdown5y": 84.0, "volatility5y": 95.0 }
+  }
+}
