@@ -66,6 +66,16 @@ interface PortfolioRebalancerViewProps {
   rebalanceHistory: RebalanceHistoryEntry[];
   onCommitRebalanceToHoldings: (note?: string) => void;
   onDeleteRebalanceHistoryEntry: (id: string) => void;
+  initialCapitalMenu1Idr: number;
+  monthlySavingsMenu1Idr: number;
+  activePortfolioName: string;
+  isHoldingsSyncedWithMenu1: boolean;
+  onClearHoldingsForManualInput: () => void;
+  onSetupInitialBuyFromMenu1: () => void;
+  onScaleTotalHoldingsIdr: (
+    newTotalIdr: number,
+    distributeBy: 'current' | 'target'
+  ) => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -90,12 +100,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   rebalanceHistory,
   onCommitRebalanceToHoldings,
   onDeleteRebalanceHistoryEntry,
+  initialCapitalMenu1Idr,
+  monthlySavingsMenu1Idr,
+  activePortfolioName,
+  isHoldingsSyncedWithMenu1,
+  onClearHoldingsForManualInput,
+  onSetupInitialBuyFromMenu1,
+  onScaleTotalHoldingsIdr,
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(true);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>('table');
   const [slipCopied, setSlipCopied] = useState(false);
+  const [holdingEntryMode, setHoldingEntryMode] = useState<
+    'nominal' | 'units' | 'percent'
+  >(inputMode);
+  const [quickTotalIdr, setQuickTotalIdr] = useState<number>(initialCapitalMenu1Idr);
 
   // Active assets for the Crash Limit Order Ladder
   const activeCandidateAssets = useMemo(() => {
@@ -312,48 +333,146 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
   return (
     <div className="space-y-6">
-      {/* TOP CONTROL BAR & VIDEO SCENARIO PRESETS */}
+      {/* TOP CONTROL BAR & MENU 1 SYNC / MANUAL ENTRY HUB */}
       <section className="ui-card rounded-xl p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h2 className="ui-text-main text-sm font-bold sm:text-base">
                 Portfolio Rebalancer &amp; Market Crash Simulator
               </h2>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                  isHoldingsSyncedWithMenu1
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                {isHoldingsSyncedWithMenu1
+                  ? `🟢 Auto-Sync Menu 1 (${formatIdr(initialCapitalMenu1Idr, true)})`
+                  : '🔒 Mode Posisi Manual (Terkunci)'}
+              </span>
             </div>
             <p className="ui-text-muted mt-0.5 text-xs">
-              Jual porto yang bobotnya kelebihan, pindahkan ke yang kekurangan (Menit
-              15:55).
+              Target Aktif: <strong className="ui-text-main">{activePortfolioName}</strong>{' '}
+              — Pilih ambil nilai default dari Menu 1, simulasi beli perdana dari Rp 0,
+              atau ketik saldo nyata Anda saat ini per aset.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              onClick={() => onPopulateCapital(100_000_000)}
+              onClick={() => {
+                setQuickTotalIdr(initialCapitalMenu1Idr);
+                onPopulateCapital(initialCapitalMenu1Idr);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                isHoldingsSyncedWithMenu1
+                  ? 'border-emerald-500 bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-main hover:opacity-80'
+              }`}
+            >
+              <Coins className="h-3.5 w-3.5" />
+              <span>
+                Ambil Default Menu 1 ({formatIdr(initialCapitalMenu1Idr, true)})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onSetupInitialBuyFromMenu1}
+              title="Set posisi aset saat ini ke Rp 0 dan masukkan Modal Awal Menu 1 sebagai Kas Baru untuk merinci daftar order BELI perdana"
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:border-emerald-500/50"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>
+                Beli Perdana dari Rp 0 ({formatIdr(initialCapitalMenu1Idr, true)})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClearHoldingsForManualInput}
+              title="Kosongkan seluruh posisi aset ke Rp 0 untuk mengetik nilai saldo nyata Anda satu per satu"
               className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
             >
-              <Coins className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Set Modal Awal Rp 100 Juta (Sesuai Target Aktif)</span>
+              <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+              <span>Isi Manual (Reset Rp 0)</span>
             </button>
 
             <button
               type="button"
               onClick={onLoadVideo1BExample}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
             >
               <Coins className="h-3.5 w-3.5" />
-              <span>Contoh Video Rp 1M (BTC 90%)</span>
+              <span>Contoh Video Rp 1M</span>
             </button>
 
             <button
               type="button"
               onClick={onApplyPeerDiversification}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
             >
               <Split className="h-3.5 w-3.5" />
-              <span>Split Sub-Bank (BBCA/BMRI/BBRI/NISP)</span>
+              <span>Split Sub-Bank</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick What-If Total Portfolio Value Allocator */}
+        <div className="ui-subtle mt-3 flex flex-col gap-2.5 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="ui-text-main font-semibold">
+              Kalkulator Cepat Total Posisi Saat Ini:
+            </span>
+            <div className="ui-card flex items-center gap-1 rounded-md border px-2 py-1">
+              <span className="ui-text-muted font-mono text-[11px]">Rp</span>
+              <FormattedNumberInput
+                step={10_000_000}
+                min={0}
+                value={quickTotalIdr}
+                onChange={(val) => setQuickTotalIdr(val)}
+                className="ui-text-main w-32 bg-transparent font-mono text-xs font-bold focus:outline-none"
+                ariaLabel="Quick Total Portfolio Value in IDR"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1 text-[10px]">
+              {[50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000].map(
+                (presetTotal) => (
+                  <button
+                    key={presetTotal}
+                    type="button"
+                    onClick={() => {
+                      setQuickTotalIdr(presetTotal);
+                      onScaleTotalHoldingsIdr(presetTotal, 'target');
+                    }}
+                    className="ui-card ui-text-secondary rounded px-1.5 py-0.5 font-mono hover:opacity-80"
+                  >
+                    {formatIdr(presetTotal, true)}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onScaleTotalHoldingsIdr(quickTotalIdr, 'target')}
+              className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+            >
+              Bagi Sesuai Target Menu 1
+            </button>
+            <button
+              type="button"
+              onClick={() => onScaleTotalHoldingsIdr(quickTotalIdr, 'current')}
+              title="Ubah total nilai portofolio dengan mempertahankan proporsi persentase posisi saat ini"
+              className="ui-card ui-text-main rounded-md border px-2.5 py-1 text-xs font-medium hover:opacity-80"
+            >
+              Skalakan Proporsi Saat Ini
             </button>
           </div>
         </div>
@@ -506,15 +625,27 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               ariaLabel="Top-up Cash Injection in IDR"
             />
           </div>
-          <div className="mt-1.5 flex gap-1 text-[11px]">
+          <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+            <button
+              type="button"
+              onClick={() => setCashInjectionIdr(monthlySavingsMenu1Idr)}
+              title="Ambil nilai Custom DCA Bulanan dari Menu 1"
+              className={`rounded px-1.5 py-0.5 font-mono font-semibold ${
+                cashInjectionIdr === monthlySavingsMenu1Idr
+                  ? 'bg-emerald-600 text-white'
+                  : 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              }`}
+            >
+              +DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
+            </button>
             {[0, 5_000_000, 10_000_000, 50_000_000].map((presetCash) => (
               <button
                 key={presetCash}
                 type="button"
                 onClick={() => setCashInjectionIdr(presetCash)}
-                className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5"
+                className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
               >
-                +{presetCash === 0 ? '0' : `${presetCash / 1_000_000}Jt`}
+                {presetCash === 0 ? 'Reset 0' : `+${presetCash / 1_000_000}Jt`}
               </button>
             ))}
           </div>
@@ -627,9 +758,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <div className="ui-subtle flex rounded-md p-0.5 text-xs">
                 <button
                   type="button"
-                  onClick={() => setInputMode('nominal')}
+                  onClick={() => {
+                    setHoldingEntryMode('nominal');
+                    setInputMode('nominal');
+                  }}
                   className={`rounded px-2 py-1 font-medium ${
-                    inputMode === 'nominal'
+                    holdingEntryMode === 'nominal'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted'
                   }`}
@@ -638,9 +772,26 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInputMode('units')}
+                  onClick={() => {
+                    setHoldingEntryMode('percent');
+                    setInputMode('nominal');
+                  }}
                   className={`rounded px-2 py-1 font-medium ${
-                    inputMode === 'units'
+                    holdingEntryMode === 'percent'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted'
+                  }`}
+                >
+                  % Saat Ini
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoldingEntryMode('units');
+                    setInputMode('units');
+                  }}
+                  className={`rounded px-2 py-1 font-medium ${
+                    holdingEntryMode === 'units'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted'
                   }`}
@@ -765,19 +916,84 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </th>
 
                         <td className="ui-border border-b px-3 py-2.5 text-right">
-                          {inputMode === 'nominal' ? (
-                            <FormattedNumberInput
-                              step={1_000_000}
-                              min={0}
-                              value={h.currentValueIdr}
-                              onChange={(val) =>
-                                onUpdateHolding(item.assetId, {
-                                  currentValueIdr: val,
-                                })
-                              }
-                              className="ui-input w-32 rounded px-2 py-1 text-right font-mono text-xs font-medium"
-                              ariaLabel={`Nominal value in IDR for ${item.symbol}`}
-                            />
+                          {holdingEntryMode === 'nominal' ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <FormattedNumberInput
+                                step={1_000_000}
+                                min={0}
+                                value={h.currentValueIdr}
+                                onChange={(val) =>
+                                  onUpdateHolding(item.assetId, {
+                                    currentValueIdr: val,
+                                  })
+                                }
+                                className="ui-input w-32 rounded px-2 py-1 text-right font-mono text-xs font-medium"
+                                ariaLabel={`Nominal value in IDR for ${item.symbol}`}
+                              />
+                              <div className="flex items-center gap-1 text-[9px]">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onUpdateHolding(item.assetId, {
+                                      currentValueIdr: Math.round(
+                                        initialCapitalMenu1Idr *
+                                          ((targetWeights[item.assetId] ?? 0) / 100)
+                                      ),
+                                    })
+                                  }
+                                  title="Isi otomatis sesuai porsi Modal Awal Menu 1"
+                                  className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-emerald-600"
+                                >
+                                  =Default M1
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onUpdateHolding(item.assetId, {
+                                      currentValueIdr: 0,
+                                    })
+                                  }
+                                  className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-rose-500"
+                                >
+                                  Rp 0
+                                </button>
+                              </div>
+                            </div>
+                          ) : holdingEntryMode === 'percent' ? (
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  step={0.5}
+                                  min={0}
+                                  max={100}
+                                  value={Number(item.currentWeightPercent.toFixed(1))}
+                                  onChange={(e) => {
+                                    const pct = Math.max(
+                                      0,
+                                      Math.min(100, Number(e.target.value))
+                                    );
+                                    const baseTotal =
+                                      rebalanceResult.initialTotalIdr > 0
+                                        ? rebalanceResult.initialTotalIdr
+                                        : initialCapitalMenu1Idr;
+                                    onUpdateHolding(item.assetId, {
+                                      currentValueIdr: Math.round(
+                                        baseTotal * (pct / 100)
+                                      ),
+                                    });
+                                  }}
+                                  className="ui-input w-20 rounded px-2 py-1 text-right font-mono text-xs font-semibold"
+                                  aria-label={`Current weight percentage for ${item.symbol}`}
+                                />
+                                <span className="ui-text-muted font-mono text-xs">
+                                  %
+                                </span>
+                              </div>
+                              <span className="ui-text-muted font-mono text-[10px]">
+                                ≈ {formatIdr(h.currentValueIdr, true)}
+                              </span>
+                            </div>
                           ) : (
                             <div className="flex flex-col items-end gap-1">
                               <div className="flex items-center gap-1">
@@ -961,37 +1177,107 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     </div>
 
                     {/* Editable Input Row inside Card */}
-                    <div className="ui-card mt-3 flex items-center justify-between gap-2 rounded-lg p-2.5 text-xs">
-                      <span className="ui-text-secondary font-medium">
-                        {inputMode === 'nominal' ? 'Posisi Awal (Rp):' : 'Jumlah Unit:'}
-                      </span>
-                      {inputMode === 'nominal' ? (
-                        <FormattedNumberInput
-                          step={1_000_000}
-                          min={0}
-                          value={h.currentValueIdr}
-                          onChange={(val) =>
+                    <div className="ui-card mt-3 rounded-lg p-2.5 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="ui-text-secondary font-medium">
+                          {holdingEntryMode === 'nominal'
+                            ? 'Nilai Saat Ini (Rp):'
+                            : holdingEntryMode === 'percent'
+                              ? 'Porsi Saat Ini (%):'
+                              : 'Jumlah Unit:'}
+                        </span>
+                        {holdingEntryMode === 'nominal' ? (
+                          <FormattedNumberInput
+                            step={1_000_000}
+                            min={0}
+                            value={h.currentValueIdr}
+                            onChange={(val) =>
+                              onUpdateHolding(item.assetId, {
+                                currentValueIdr: val,
+                              })
+                            }
+                            className="ui-input w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                            ariaLabel={`Nominal value in IDR for ${item.symbol}`}
+                          />
+                        ) : holdingEntryMode === 'percent' ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step={0.5}
+                              min={0}
+                              max={100}
+                              value={Number(item.currentWeightPercent.toFixed(1))}
+                              onChange={(e) => {
+                                const pct = Math.max(
+                                  0,
+                                  Math.min(100, Number(e.target.value))
+                                );
+                                const baseTotal =
+                                  rebalanceResult.initialTotalIdr > 0
+                                    ? rebalanceResult.initialTotalIdr
+                                    : initialCapitalMenu1Idr;
+                                onUpdateHolding(item.assetId, {
+                                  currentValueIdr: Math.round(
+                                    baseTotal * (pct / 100)
+                                  ),
+                                });
+                              }}
+                              className="ui-input w-24 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                              aria-label={`Current weight percentage for ${item.symbol}`}
+                            />
+                            <span className="ui-text-muted font-mono">%</span>
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            step="any"
+                            value={h.units}
+                            onChange={(e) =>
+                              onUpdateHolding(item.assetId, {
+                                units: Math.max(0, Number(e.target.value)),
+                              })
+                            }
+                            className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                            aria-label={`Units held for ${item.symbol}`}
+                          />
+                        )}
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() =>
                             onUpdateHolding(item.assetId, {
-                              currentValueIdr: val,
+                              currentValueIdr: Math.round(
+                                initialCapitalMenu1Idr *
+                                  ((targetWeights[item.assetId] ?? 0) / 100)
+                              ),
                             })
                           }
-                          className="ui-input w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
-                          ariaLabel={`Nominal value in IDR for ${item.symbol}`}
-                        />
-                      ) : (
-                        <input
-                          type="number"
-                          step="any"
-                          value={h.units}
-                          onChange={(e) =>
+                          className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono hover:text-emerald-600"
+                        >
+                          =Default Menu 1 (
+                          {formatIdr(
+                            Math.round(
+                              initialCapitalMenu1Idr *
+                                ((targetWeights[item.assetId] ?? 0) / 100)
+                            ),
+                            true
+                          )}
+                          )
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
                             onUpdateHolding(item.assetId, {
-                              units: Math.max(0, Number(e.target.value)),
+                              currentValueIdr: 0,
+                              units: 0,
                             })
                           }
-                          className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-bold"
-                          aria-label={`Units held for ${item.symbol}`}
-                        />
-                      )}
+                          className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:text-rose-500"
+                        >
+                          Reset Rp 0
+                        </button>
+                      </div>
                     </div>
 
                     {/* Weight & Target Comparison Row */}

@@ -258,24 +258,30 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </div>
               <input
                 type="range"
-                min={1_000_000}
+                min={500_000}
                 max={100_000_000}
-                step={1_000_000}
+                step={500_000}
                 value={monthlySavingsIdr}
                 onChange={(e) => setMonthlySavingsIdr(Number(e.target.value))}
                 className="mt-1.5 h-1.5 w-full cursor-pointer"
               />
-              <div className="mt-1 flex gap-1.5 text-[11px]">
-                {[5_000_000, 10_000_000, 20_000_000, 50_000_000].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setMonthlySavingsIdr(v)}
-                    className="ui-subtle ui-text-secondary rounded px-2 py-0.5"
-                  >
-                    {formatIdr(v, true)}/bln
-                  </button>
-                ))}
+              <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                {[3_000_000, 5_000_000, 10_000_000, 20_000_000, 50_000_000].map(
+                  (v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setMonthlySavingsIdr(v)}
+                      className={`rounded px-2 py-0.5 font-mono transition ${
+                        monthlySavingsIdr === v
+                          ? 'bg-emerald-600 font-semibold text-white'
+                          : 'ui-subtle ui-text-secondary'
+                      }`}
+                    >
+                      {formatIdr(v, true)}/bln
+                    </button>
+                  )
+                )}
               </div>
             </div>
 

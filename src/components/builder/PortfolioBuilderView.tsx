@@ -129,6 +129,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const [showDominated25, setShowDominated25] = useState(false);
   const [customRowName, setCustomRowName] = useState('');
   const [tableViewMode, setTableViewMode] = useState<'table' | 'cards'>('table');
+  const [cellDisplayMode, setCellDisplayMode] = useState<
+    'both' | 'percent' | 'nominal'
+  >('both');
   const [comparePresetId, setComparePresetId] = useState<string>('opt-4-rb-btc-90');
 
   const [tickerInput, setTickerInput] = useState('');
@@ -178,6 +181,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   ];
 
   // Simulate time to targetGoalIdr (default Rp 1 Miliar, selectable to Rp 10 Miliar) starting from initialCapitalIdr (default Rp 100 Juta)
+  const sim3M = simulateWealthToGoal({
+    initialCapitalIdr,
+    monthlyContributionIdr: 3_000_000,
+    annualCagrPercent: solvedMetrics.cagr,
+    maxDrawdownPercent: solvedMetrics.maxDrawdown,
+    targetWealthIdr: targetGoalIdr,
+  });
   const sim5M = simulateWealthToGoal({
     initialCapitalIdr,
     monthlyContributionIdr: 5_000_000,
@@ -192,13 +202,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
     targetWealthIdr: targetGoalIdr,
   });
-  const sim20M = simulateWealthToGoal({
-    initialCapitalIdr,
-    monthlyContributionIdr: 20_000_000,
-    annualCagrPercent: solvedMetrics.cagr,
-    maxDrawdownPercent: solvedMetrics.maxDrawdown,
-    targetWealthIdr: targetGoalIdr,
-  });
   const simCustom = simulateWealthToGoal({
     initialCapitalIdr,
     monthlyContributionIdr: monthlySavingsIdr,
@@ -206,6 +209,26 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
     targetWealthIdr: targetGoalIdr,
   });
+
+  // Format concise nominal amount (e.g., 25 Jt, 12.5 Jt, 500 Rb) from Initial Capital & weight %
+  const formatNominalCell = (weightPercent: number) => {
+    const nominalIdr = Math.round(initialCapitalIdr * (weightPercent / 100));
+    if (nominalIdr <= 0) return 'Rp 0';
+    if (nominalIdr >= 1_000_000_000) {
+      return `Rp ${(nominalIdr / 1_000_000_000).toLocaleString('id-ID', {
+        maximumFractionDigits: 2,
+      })}M`;
+    }
+    if (nominalIdr >= 1_000_000) {
+      return `${(nominalIdr / 1_000_000).toLocaleString('id-ID', {
+        maximumFractionDigits: 1,
+      })} Jt`;
+    }
+    if (nominalIdr >= 1_000) {
+      return `${Math.round(nominalIdr / 1_000).toLocaleString('id-ID')} Rb`;
+    }
+    return `Rp ${nominalIdr.toLocaleString('id-ID')}`;
+  };
 
   const tierBadge = getRiskTierBadge(solvedMetrics.riskTier);
   const [paretoZoomMode, setParetoZoomMode] = useState<
@@ -633,6 +656,18 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             <div className="mt-2.5 space-y-1.5">
               <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
                 <span className="ui-text-secondary text-xs font-medium">
+                  + Rp 3 Juta / bulan (Default)
+                </span>
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  ➔ {sim3M.exactYearsFloat} Thn{' '}
+                  <span className="ui-text-muted font-normal">
+                    (Pokok {formatIdr(sim3M.totalPrincipalAtGoalIdr, true)})
+                  </span>
+                </span>
+              </div>
+
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
+                <span className="ui-text-secondary text-xs font-medium">
                   + Rp 5 Juta / bulan
                 </span>
                 <span className="ui-text-main font-mono text-xs font-bold">
@@ -647,22 +682,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <span className="ui-text-secondary text-xs font-medium">
                   + Rp 10 Juta / bulan
                 </span>
-                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="ui-text-main font-mono text-xs font-bold">
                   ➔ {sim10M.exactYearsFloat} Thn{' '}
                   <span className="ui-text-muted font-normal">
                     (Pokok {formatIdr(sim10M.totalPrincipalAtGoalIdr, true)})
-                  </span>
-                </span>
-              </div>
-
-              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
-                <span className="ui-text-secondary text-xs font-medium">
-                  + Rp 20 Juta / bulan
-                </span>
-                <span className="ui-text-main font-mono text-xs font-bold">
-                  ➔ {sim20M.exactYearsFloat} Thn{' '}
-                  <span className="ui-text-muted font-normal">
-                    (Pokok {formatIdr(sim20M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
@@ -670,23 +693,51 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
 
           <div className="ui-subtle mt-3 rounded-lg p-2.5">
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="ui-text-secondary font-medium">
-                Custom DCA Bulanan:
+                Custom DCA Bulanan (Rp):
               </span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                {formatIdr(monthlySavingsIdr)}/bln ➔ {simCustom.exactYearsFloat} Thn
-              </span>
+              <div className="flex items-center gap-1.5">
+                <FormattedNumberInput
+                  step={500_000}
+                  min={0}
+                  value={monthlySavingsIdr}
+                  onChange={(val) => setMonthlySavingsIdr(val)}
+                  className="ui-card ui-text-main w-28 rounded px-2 py-0.5 text-right font-mono text-xs font-bold focus:outline-none"
+                  ariaLabel="Custom Monthly DCA in IDR"
+                />
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  ➔ {simCustom.exactYearsFloat} Thn
+                </span>
+              </div>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+              {[1_000_000, 3_000_000, 5_000_000, 10_000_000, 20_000_000].map(
+                (v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setMonthlySavingsIdr(v)}
+                    className={`rounded px-1.5 py-0.5 font-mono transition ${
+                      monthlySavingsIdr === v
+                        ? 'bg-emerald-600 font-semibold text-white'
+                        : 'ui-card ui-text-muted hover:opacity-80'
+                    }`}
+                  >
+                    {v / 1_000_000}Jt/bln
+                  </button>
+                )
+              )}
             </div>
             <input
               type="range"
-              min={1_000_000}
+              min={500_000}
               max={100_000_000}
-              step={1_000_000}
+              step={500_000}
               value={monthlySavingsIdr}
               onChange={(e) => setMonthlySavingsIdr(Number(e.target.value))}
               className="mt-1.5 h-1.5 w-full cursor-pointer"
-              aria-label="Custom Monthly Savings in IDR"
+              aria-label="Custom Monthly Savings Slider in IDR"
             />
           </div>
         </div>
@@ -799,6 +850,34 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               )}
               <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
             </button>
+
+            {/* 3-Mode Cell Value Display Selector (% + Rp | % Bobot | Rp Nominal) */}
+            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
+              {(
+                [
+                  { id: 'both', label: '% + Rp' },
+                  { id: 'percent', label: '% Saja' },
+                  { id: 'nominal', label: 'Rp Juta' },
+                ] as const
+              ).map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setCellDisplayMode(mode.id)}
+                  title={`Tampilkan pembagian porsi aset dari Modal Awal ${formatIdr(
+                    initialCapitalIdr,
+                    true
+                  )}`}
+                  className={`rounded-md px-2 py-1 text-xs font-medium transition ${
+                    cellDisplayMode === mode.id
+                      ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
 
             {/* Hybrid Table vs Mobile Card View Toggle */}
             <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
@@ -914,7 +993,11 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     colSpan={core8Slots.length + extraCustomAssetIds.length}
                     className="ui-border border-b px-3 py-1 text-center"
                   >
-                    Bobot Modal (%) — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
+                    Pembagian Aset dari Modal Awal{' '}
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatIdr(initialCapitalIdr, true)}
+                    </span>{' '}
+                    — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
                   </th>
                 </tr>
                 <tr>
@@ -1050,6 +1133,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       {[...mappedColumnIds, ...extraCustomAssetIds].map(
                         (colAssetId, colIdx) => {
                           const w = preset.weights[colAssetId] ?? 0;
+                          const nominalText = formatNominalCell(w);
                           return (
                             <td
                               key={`${colAssetId}-${colIdx}`}
@@ -1061,7 +1145,22 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                     : 'ui-text-muted opacity-40'
                               }`}
                             >
-                              {w}%
+                              {w === 0 ? (
+                                <span>0%</span>
+                              ) : cellDisplayMode === 'percent' ? (
+                                <span>{w}%</span>
+                              ) : cellDisplayMode === 'nominal' ? (
+                                <span className="text-emerald-600 dark:text-emerald-400">
+                                  {nominalText}
+                                </span>
+                              ) : (
+                                <div className="leading-tight">
+                                  <div>{w}%</div>
+                                  <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {nominalText}
+                                  </div>
+                                </div>
+                              )}
                             </td>
                           );
                         }
@@ -1156,7 +1255,12 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               : 'ui-card ui-text-secondary'
                           }`}
                         >
-                          {assetId} {w}%
+                          {assetId}{' '}
+                          {cellDisplayMode === 'percent'
+                            ? `${w}%`
+                            : cellDisplayMode === 'nominal'
+                              ? formatNominalCell(w)
+                              : `${w}% (${formatNominalCell(w)})`}
                         </span>
                       ))}
                     </div>
@@ -1448,7 +1552,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             {asset.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            {formatNominalCell(capWeight)}
+                          </span>
                           <span className="ui-text-muted text-[11px]">
                             Risk:{' '}
                             <strong className="ui-text-secondary font-mono">

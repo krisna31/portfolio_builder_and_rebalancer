@@ -120,10 +120,11 @@ export function App() {
   // Synchronized Wealth Simulator Defaults:
   // Default Initial Capital = Rp 100 Juta (100,000,000)
   // Default Target Wealth = Rp 1 Miliar (1,000,000,000), with quick toggle to Rp 10 Miliar
+  // Default Custom Monthly DCA = Rp 3 Juta (3,000,000)
   const [initialCapitalIdr, setInitialCapitalIdr] =
     useState<number>(100_000_000);
   const [targetGoalIdr, setTargetGoalIdr] = useState<number>(1_000_000_000);
-  const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(10_000_000);
+  const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(3_000_000);
 
   // Rebalancer State (Default starting holdings scaled to Rp 100 Juta Initial Capital!)
   const [usdIdrRate, setUsdIdrRate] = useState<number>(15600);
@@ -132,6 +133,8 @@ export function App() {
     useState<RebalanceMode>('sell-and-buy');
   const [cashInjectionIdr, setCashInjectionIdr] = useState<number>(0);
   const [driftThresholdPercent, setDriftThresholdPercent] = useState<number>(3);
+  const [isHoldingsSyncedWithMenu1, setIsHoldingsSyncedWithMenu1] =
+    useState<boolean>(true);
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     const init: Record<string, HoldingEntry> = {};
@@ -221,8 +224,17 @@ export function App() {
           setInitialCapitalIdr(saved.initialCapitalIdr);
         if (saved.targetGoalIdr !== undefined)
           setTargetGoalIdr(saved.targetGoalIdr);
-        if (saved.monthlySavingsIdr)
-          setMonthlySavingsIdr(saved.monthlySavingsIdr);
+        if (saved.monthlySavingsIdr !== undefined) {
+          const migratedDca3M = localStorage.getItem('quantporto_dca_3m_default_v1');
+          if (!migratedDca3M && saved.monthlySavingsIdr === 10_000_000) {
+            setMonthlySavingsIdr(3_000_000);
+            localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
+          } else {
+            setMonthlySavingsIdr(saved.monthlySavingsIdr);
+          }
+        }
+        if (saved.isHoldingsSyncedWithMenu1 !== undefined)
+          setIsHoldingsSyncedWithMenu1(saved.isHoldingsSyncedWithMenu1);
         if (saved.usdIdrRate) setUsdIdrRate(saved.usdIdrRate);
         if (saved.slotMap) setSlotMap(saved.slotMap);
         if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
@@ -246,6 +258,7 @@ export function App() {
           initialCapitalIdr,
           targetGoalIdr,
           monthlySavingsIdr,
+          isHoldingsSyncedWithMenu1,
           usdIdrRate,
           slotMap,
           customTableRows,
@@ -263,6 +276,7 @@ export function App() {
     initialCapitalIdr,
     targetGoalIdr,
     monthlySavingsIdr,
+    isHoldingsSyncedWithMenu1,
     usdIdrRate,
     slotMap,
     customTableRows,
@@ -523,8 +537,43 @@ export function App() {
     setIsFetchingPrices(false);
   };
 
+  // Smart Auto-Sync: Keep Rebalancer baseline holdings synchronized with Menu 1's initialCapitalIdr & activeWeights
+  // whenever isHoldingsSyncedWithMenu1 is true (until user manually edits individual holdings in Rebalancer)
+  useEffect(() => {
+    if (!isHoldingsSyncedWithMenu1) return;
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        const w = activeWeights[a.id] ?? 0;
+        const valIdr = Math.round(initialCapitalIdr * (w / 100));
+        const unitPriceIdr =
+          a.currency === 'USD'
+            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : next[a.id]?.currentPrice ?? a.defaultPrice;
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: valIdr,
+          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: next[a.id]?.shockPercent ?? 0,
+        };
+      }
+      return next;
+    });
+  }, [
+    isHoldingsSyncedWithMenu1,
+    initialCapitalIdr,
+    activeWeights,
+    allAssets,
+    usdIdrRate,
+  ]);
+
   // Handler: Update individual holding in Rebalancer
   const handleUpdateHolding = (assetId: string, patch: Partial<HoldingEntry>) => {
+    // If user manually edits currentValueIdr or units, lock manual holdings so Menu 1 changes don't overwrite them
+    if (patch.currentValueIdr !== undefined || patch.units !== undefined) {
+      setIsHoldingsSyncedWithMenu1(false);
+    }
     setHoldings((prev) => ({
       ...prev,
       [assetId]: {
@@ -545,6 +594,7 @@ export function App() {
   const handlePopulateCapital = (capitalIdr: number) => {
     setInitialCapitalIdr(capitalIdr);
     setCashInjectionIdr(0);
+    setIsHoldingsSyncedWithMenu1(true);
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
@@ -566,8 +616,82 @@ export function App() {
     });
   };
 
+  // Handler: Clear all holdings to Rp 0 so user can type their real current holdings manually
+  const handleClearHoldingsForManualInput = () => {
+    setIsHoldingsSyncedWithMenu1(false);
+    setCashInjectionIdr(0);
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: 0,
+          units: 0,
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
+  };
+
+  // Handler: Initial Buy Mode — Set existing holdings to Rp 0 and put Menu 1's Initial Capital into Cash Injection (Buy-Only)
+  const handleSetupInitialBuyFromMenu1 = () => {
+    setIsHoldingsSyncedWithMenu1(false);
+    setRebalanceMode('buy-only-dca');
+    setCashInjectionIdr(initialCapitalIdr);
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: 0,
+          units: 0,
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
+  };
+
+  // Handler: Scale or distribute a new Total Current Portfolio Value across assets
+  const handleScaleTotalHoldingsIdr = (
+    newTotalIdr: number,
+    distributeBy: 'current' | 'target'
+  ) => {
+    setIsHoldingsSyncedWithMenu1(false);
+    setHoldings((prev) => {
+      const next = { ...prev };
+      const currentSum = allAssets.reduce(
+        (acc, a) => acc + (prev[a.id]?.currentValueIdr ?? 0),
+        0
+      );
+      for (const a of allAssets) {
+        const ratio =
+          distributeBy === 'current' && currentSum > 0
+            ? (prev[a.id]?.currentValueIdr ?? 0) / currentSum
+            : (activeWeights[a.id] ?? 0) / 100;
+        const valIdr = Math.round(newTotalIdr * ratio);
+        const unitPriceIdr =
+          a.currency === 'USD'
+            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : next[a.id]?.currentPrice ?? a.defaultPrice;
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: valIdr,
+          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: next[a.id]?.shockPercent ?? 0,
+        };
+      }
+      return next;
+    });
+  };
+
   // Handler: Load Video Rp 1 Billion Rebalance Example (14:58)
   const handleLoadVideo1BExample = () => {
+    setIsHoldingsSyncedWithMenu1(false);
     const btc90 = VIDEO_PORTFOLIO_PRESETS.find(
       (p) => p.id === 'opt-4-rb-btc-90'
     )!;
@@ -983,6 +1107,21 @@ export function App() {
             rebalanceHistory={rebalanceHistory}
             onCommitRebalanceToHoldings={handleCommitRebalanceToHoldings}
             onDeleteRebalanceHistoryEntry={handleDeleteRebalanceHistoryEntry}
+            initialCapitalMenu1Idr={initialCapitalIdr}
+            monthlySavingsMenu1Idr={monthlySavingsIdr}
+            activePortfolioName={
+              exactPresetMatch
+                ? exactPresetMatch.name
+                : allocationMethod === 'risk-parity'
+                  ? 'Custom Equal Risk Parity'
+                  : allocationMethod === 'risk-budgeting'
+                    ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                    : 'Portfolio Custom Anda'
+            }
+            isHoldingsSyncedWithMenu1={isHoldingsSyncedWithMenu1}
+            onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
+            onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
+            onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
           />
         )}
 
