@@ -95,7 +95,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
 
-  // Custom ticker / synthetic asset form state
   const [tickerInput, setTickerInput] = useState('');
   const [isLookingUpTicker, setIsLookingUpTicker] = useState(false);
   const [tickerError, setTickerError] = useState('');
@@ -111,25 +110,20 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
   const core8Ids = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
 
-  // Filter presets based on Investor Archetype & Optimal 15 vs Full 25 toggle
   const displayedPresets = presets.filter((p) => {
     if (!showDominated25 && !p.isOptimal15) return false;
     if (archetypeFilter === 'business-owner') {
-      // 01:22 - Business owners / busy professionals target 6-15% return & low/medium drawdown (<10%)
       return p.maxDrawdown <= 10.5;
     }
     if (archetypeFilter === 'full-time-investor') {
-      // 02:06 - Full-time investors target >18% compounding
       return p.cagr >= 18;
     }
     if (archetypeFilter === 'hybrid-conviction') {
-      // 09:01 & 13:42 - Leon's personal choice: Risk Budgeting 70-90% or Risk Parity 7 Assets
       return p.method === 'risk-budgeting' || p.id === 'opt-9-rp-all-7';
     }
     return true;
   });
 
-  // Simulate time to Rp 10 Billion for Rp 5M, Rp 10M, Rp 20M, and user's custom monthly savings
   const sim5M = simulateWealthToGoal({
     initialCapitalIdr: 0,
     monthlyContributionIdr: 5_000_000,
@@ -157,7 +151,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
   const tierBadge = getRiskTierBadge(solvedMetrics.riskTier);
 
-  // Data for Capital Weight vs Risk Contribution bar chart
   const weightVsRiskData = allAssets
     .filter((a) => (activeWeights[a.id] ?? 0) > 0 || selectedUniverseIds.includes(a.id))
     .map((a) => ({
@@ -169,7 +162,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     }))
     .filter((d) => d.capitalWeight > 0 || d.riskContribution > 0);
 
-  // Data for Efficient Frontier Scatter Chart (CAGR vs Max Drawdown)
   const scatterOptimalData = presets
     .filter((p) => p.isOptimal15)
     .map((p) => ({
@@ -205,7 +197,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     setIsLookingUpTicker(false);
     if (!res) {
       setTickerError(
-        `Ticker "${query.toUpperCase()}" tidak ditemukan di Yahoo/Database. Silakan isi estimasi CAGR & Max DD di form manual di bawah.`
+        `Ticker "${query.toUpperCase()}" tidak ditemukan. Silakan isi estimasi CAGR & Max DD di form manual di bawah.`
       );
       setSynthSymbol(query.toUpperCase().replace('.JK', ''));
       setSynthName(query.toUpperCase());
@@ -230,11 +222,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       allowFractional: !res.symbol.endsWith('.JK'),
       isCoreBenchmark: false,
       yahooSymbol: res.symbol,
-      color: '#22d3ee',
+      color: '#0ea5e9',
       description: `${res.name} — ${res.assumptionNote}`,
     };
     onAddCustomAsset(newAsset);
-    // Also populate manual form so user can tweak the assumptions if they want!
     setSynthSymbol(id);
     setSynthName(res.name);
     setSynthCagr(res.cagr);
@@ -265,7 +256,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       lotSize: 1,
       allowFractional: true,
       isCoreBenchmark: false,
-      color: '#34d399',
+      color: '#10b981',
       description: `Custom Synthetic Asset (${synthCagr}% CAGR, ${synthMaxDd}% Max DD).`,
     };
     onAddCustomAsset(newAsset);
@@ -278,20 +269,18 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* TOP SUMMARY BANNER: Active Portfolio KPI & Time to Rp 10 Billion */}
+      {/* TOP SUMMARY BANNER */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* Left 7 cols: Active Portfolio Metrics & Risk Tier */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl lg:col-span-7">
+        <div className="ui-card flex flex-col justify-between rounded-xl p-5 lg:col-span-7">
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span
-                  className={`rounded-md border px-2.5 py-0.5 text-xs font-extrabold tracking-wider ${tierBadge.bgClass} ${tierBadge.textClass} ${tierBadge.borderClass}`}
+                  className={`rounded border px-2 py-0.5 text-[11px] font-semibold ${tierBadge.bgClass} ${tierBadge.textClass} ${tierBadge.borderClass}`}
                 >
                   {tierBadge.label}
                 </span>
-                <span className="rounded-md bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-300">
-                  Mode:{' '}
+                <span className="ui-subtle ui-text-secondary rounded px-2 py-0.5 text-xs font-medium">
                   {allocationMethod === 'preset'
                     ? 'Video Preset'
                     : allocationMethod === 'risk-parity'
@@ -307,7 +296,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <button
                 type="button"
                 onClick={onGoToRebalancer}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-slate-950 shadow-md shadow-emerald-500/20 transition hover:bg-emerald-400"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
               >
                 <span>Gunakan di Rebalancer</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -316,132 +305,130 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
             {/* Key Quantitative Figures */}
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3.5">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+              <div className="ui-subtle rounded-lg p-3">
+                <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Expected CAGR (5Y)
                 </div>
-                <div className="mt-1 font-mono text-2xl font-extrabold text-emerald-400">
+                <div className="mt-1 font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {solvedMetrics.cagr.toFixed(2)}%
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">Return tahunan</div>
+                <div className="ui-text-muted mt-0.5 text-[11px]">Return tahunan</div>
               </div>
 
-              <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3.5">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+              <div className="ui-subtle rounded-lg p-3">
+                <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Max Drawdown (5Y)
                 </div>
-                <div className="mt-1 font-mono text-2xl font-extrabold text-rose-400">
+                <div className="mt-1 font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
                   -{solvedMetrics.maxDrawdown.toFixed(2)}%
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">
+                <div className="ui-text-muted mt-0.5 text-[11px]">
                   Penurunan terdalam
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3.5">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+              <div className="ui-subtle rounded-lg p-3">
+                <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Return / Drawdown
                 </div>
-                <div className="mt-1 font-mono text-2xl font-extrabold text-sky-400">
+                <div className="ui-text-main mt-1 font-mono text-2xl font-bold">
                   {solvedMetrics.maxDrawdown > 0
                     ? (solvedMetrics.cagr / solvedMetrics.maxDrawdown).toFixed(2)
                     : '∞'}
                   x
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">Calmar efisiensi</div>
+                <div className="ui-text-muted mt-0.5 text-[11px]">Calmar efisiensi</div>
               </div>
 
-              <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3.5">
-                <div className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+              <div className="ui-subtle rounded-lg p-3">
+                <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Sharpe Ratio
                 </div>
-                <div className="mt-1 font-mono text-2xl font-extrabold text-amber-300">
+                <div className="ui-text-main mt-1 font-mono text-2xl font-bold">
                   {solvedMetrics.sharpeRatio.toFixed(2)}
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">
+                <div className="ui-text-muted mt-0.5 text-[11px]">
                   Volatilitas {solvedMetrics.volatility}%
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Pareto Efficiency Alert (10:16 in Video) */}
+          {/* Pareto Efficiency Alert */}
           <div className="mt-4">
             {solvedMetrics.isParetoDominated ? (
-              <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
-                  <span className="font-bold">
-                    Filter Pareto (Menit 10:16): Portfolio ini Kalah Efisien!
+                  <span className="font-semibold">
+                    Filter Pareto (Menit 10:16): Portfolio ini Kalah Efisien.
                   </span>{' '}
-                  Ada kombinasi lain dengan return lebih tinggi dan drawdown lebih rendah:{' '}
-                  <span className="font-semibold text-white">
+                  Alternatif yang lebih unggul:{' '}
+                  <span className="font-semibold underline">
                     {solvedMetrics.dominatingPresets.join(' atau ')}
                   </span>
                   .
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>
-                  <strong className="text-white">Optimal Pareto Frontier:</strong> Tidak
-                  ada preset lain yang mengalahkan return portfolio ini pada tingkat
-                  risiko drawdown yang sama.
+                  <strong>Optimal Pareto Frontier:</strong> Tidak ada preset lain yang
+                  mengalahkan return portfolio ini pada tingkat drawdown yang sama.
                 </span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right 5 cols: "Kapan Dapat 10 Miliar Pertama?" Live Box (matching Video Screenshots 2, 4, 5) */}
-        <div className="flex flex-col justify-between rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 p-5 shadow-xl lg:col-span-5">
+        {/* Right 5 cols: "Kapan Dapat 10 Miliar Pertama?" */}
+        <div className="ui-card flex flex-col justify-between rounded-xl p-5 lg:col-span-5">
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-extrabold text-white">
+              <h2 className="ui-text-main text-sm font-bold">
                 Kapan dapat Rp 10 Miliar pertama?
               </h2>
-              <span className="rounded-lg bg-emerald-500/15 px-2 py-0.5 font-mono text-xs font-bold text-emerald-300">
+              <span className="ui-subtle font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 rounded px-2 py-0.5">
                 @{solvedMetrics.cagr.toFixed(2)}%/thn
               </span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Simulasi nabung rutin bulanan (DCA) + compounding menuju Rp 10.000.000.000:
+            <p className="ui-text-muted mt-1 text-xs">
+              Simulasi nabung rutin bulanan (DCA) + compounding menuju Rp 10 Miliar:
             </p>
 
-            {/* Video's 3 standard tiers: 5 Jt/bln, 10 Jt/bln, 20 Jt/bln */}
-            <div className="mt-3.5 space-y-2">
-              <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-950/80 px-3.5 py-2.5">
-                <span className="text-xs font-semibold text-slate-300">
+            <div className="mt-3 space-y-2">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+                <span className="ui-text-secondary text-xs font-medium">
                   Rp 5 Juta / bulan
                 </span>
-                <span className="font-mono text-sm font-extrabold text-white">
+                <span className="ui-text-main font-mono text-xs font-bold">
                   ➔ {sim5M.exactYearsFloat} Tahun{' '}
-                  <span className="text-[11px] font-normal text-slate-400">
+                  <span className="ui-text-muted font-normal">
                     (Modal {formatIdr(sim5M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-950/80 px-3.5 py-2.5">
-                <span className="text-xs font-semibold text-slate-300">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+                <span className="ui-text-secondary text-xs font-medium">
                   Rp 10 Juta / bulan
                 </span>
-                <span className="font-mono text-sm font-extrabold text-emerald-400">
+                <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   ➔ {sim10M.exactYearsFloat} Tahun{' '}
-                  <span className="text-[11px] font-normal text-slate-400">
+                  <span className="ui-text-muted font-normal">
                     (Modal {formatIdr(sim10M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-slate-800/90 bg-slate-950/80 px-3.5 py-2.5">
-                <span className="text-xs font-semibold text-slate-300">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+                <span className="ui-text-secondary text-xs font-medium">
                   Rp 20 Juta / bulan
                 </span>
-                <span className="font-mono text-sm font-extrabold text-sky-400">
+                <span className="ui-text-main font-mono text-xs font-bold">
                   ➔ {sim20M.exactYearsFloat} Tahun{' '}
-                  <span className="text-[11px] font-normal text-slate-400">
+                  <span className="ui-text-muted font-normal">
                     (Modal {formatIdr(sim20M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
@@ -449,14 +436,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Interactive Custom Monthly Saving Slider */}
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-slate-950/90 p-3">
+          <div className="ui-subtle mt-4 rounded-lg p-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-slate-300">
-                Custom Investasi Bulanan Anda:
+              <span className="ui-text-secondary font-medium">
+                Custom DCA Bulanan:
               </span>
-              <span className="font-mono font-bold text-emerald-400">
-                {formatIdr(monthlySavingsIdr)} / bln ➔ {simCustom.exactYearsFloat} Thn
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                {formatIdr(monthlySavingsIdr)}/bln ➔ {simCustom.exactYearsFloat} Thn
               </span>
             </div>
             <input
@@ -466,40 +452,39 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               step={1_000_000}
               value={monthlySavingsIdr}
               onChange={(e) => setMonthlySavingsIdr(Number(e.target.value))}
-              className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-800 accent-emerald-500"
+              className="mt-2 h-1.5 w-full cursor-pointer"
               aria-label="Custom Monthly Savings in IDR"
             />
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: THE OVERPOST 15 OPTIMAL PORTFOLIOS TABLE (WITH INVESTOR ARCHETYPE FILTER) */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl">
-        <div className="flex flex-col gap-4 border-b border-slate-800 pb-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE */}
+      <section className="ui-card rounded-xl p-5">
+        <div className="ui-border flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-extrabold uppercase tracking-wide text-white sm:text-lg">
+              <h2 className="ui-text-main text-sm font-bold uppercase tracking-wide sm:text-base">
                 Tabel 15 Portfolio Optimal (The Overpost Baseline)
               </h2>
-              <span className="rounded-md bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-300">
-                Klik baris untuk memilih resep
+              <span className="ui-subtle ui-text-muted rounded px-2 py-0.5 text-[11px]">
+                Klik baris untuk memilih
               </span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="ui-text-muted mt-0.5 text-xs">
               Berdasarkan riset kuantitatif 5 tahun atas 8 instrumen benchmark (07:16 –
-              14:05). Pilih profil Anda di kanan untuk memfilter:
+              14:05).
             </p>
           </div>
 
-          {/* Investor Archetype Filter (01:06 - 03:56) + Dominated 25 Toggle */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setArchetypeFilter('all')}
-              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 archetypeFilter === 'all'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-secondary'
               }`}
             >
               Semua ({showDominated25 ? 25 : 15})
@@ -507,120 +492,112 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             <button
               type="button"
               onClick={() => setArchetypeFilter('business-owner')}
-              title="Fokus Active Income / Bisnis / Karir (60 jam/minggu): Target 6-15% return, Drawdown < 10% (01:22)"
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 archetypeFilter === 'business-owner'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-secondary'
               }`}
             >
-              <Briefcase className="h-3.5 w-3.5" />
-              <span>Pebisnis / Profesional</span>
+              <Briefcase className="h-3 w-3" />
+              <span>Pebisnis (&lt;10% DD)</span>
             </button>
             <button
               type="button"
               onClick={() => setArchetypeFilter('hybrid-conviction')}
-              title="Strategi Leon Hartono (Risk Budgeting 70-90% sesuai siklus Bull Market + Risk Parity) (09:05 & 13:42)"
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 archetypeFilter === 'hybrid-conviction'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-secondary'
               }`}
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="h-3 w-3" />
               <span>Risk Budgeting &amp; Parity</span>
             </button>
             <button
               type="button"
               onClick={() => setArchetypeFilter('full-time-investor')}
-              title="Full-time Investor / High Risk: Return > 18% p.a. (02:06)"
-              className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                 archetypeFilter === 'full-time-investor'
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  ? 'bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-secondary'
               }`}
             >
-              <Flame className="h-3.5 w-3.5" />
+              <Flame className="h-3 w-3" />
               <span>High Return (&gt;18%)</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowDominated25(!showDominated25)}
-              title="Tampilkan juga 10 portfolio yang tereliminasi karena kalah efisien (Menit 07:16 & 10:16)"
-              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
-                showDominated25
-                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
-                  : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-200'
-              }`}
+              className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium"
             >
               {showDominated25 ? (
-                <EyeOff className="h-3.5 w-3.5" />
+                <EyeOff className="h-3 w-3" />
               ) : (
-                <Eye className="h-3.5 w-3.5" />
+                <Eye className="h-3 w-3" />
               )}
-              <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Porto Tereliminasi'}</span>
+              <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
             </button>
           </div>
         </div>
 
-        {/* Semantic Responsive Table with Sticky Headers (following modern-web-guidance `responsive-table`) */}
+        {/* Minimalist Data Table */}
         <div
           tabIndex={0}
           role="region"
           aria-labelledby="optimal-portfolios-caption"
-          className="mt-4 max-h-[520px] overflow-auto rounded-xl border border-slate-800"
+          className="ui-border mt-4 max-h-[500px] overflow-auto rounded-lg border"
         >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <caption id="optimal-portfolios-caption" className="sr-only">
               Daftar 15 Portfolio Optimal berdasarkan CAGR, Maximum Drawdown, dan Bobot 8
               Instrumen Benchmark
             </caption>
-            <thead className="sticky top-0 z-20 bg-slate-950 text-[11px] font-bold uppercase tracking-wider text-slate-300 shadow-sm">
+            <thead className="ui-subtle sticky top-0 z-20 text-[11px] font-semibold uppercase">
               <tr>
                 <th
                   rowSpan={2}
-                  className="sticky left-0 z-30 border-b border-r border-slate-800 bg-slate-950 px-3.5 py-2.5"
+                  className="ui-subtle ui-border sticky left-0 z-30 border-b border-r px-3 py-2"
                 >
-                  Investment Strategy
+                  Strategy
                 </th>
                 <th
                   rowSpan={2}
-                  className="border-b border-r border-slate-800 px-3 py-2.5 text-center"
+                  className="ui-border border-b border-r px-2.5 py-2 text-center"
                 >
-                  Risk Profile
+                  Risk
                 </th>
                 <th
                   rowSpan={2}
-                  className="border-b border-r border-slate-800 bg-emerald-950/30 px-3 py-2.5 text-right text-emerald-300"
+                  className="ui-border border-b border-r px-3 py-2 text-right"
                 >
-                  CAGR (%)
+                  CAGR
                 </th>
                 <th
                   rowSpan={2}
-                  className="border-b border-r border-slate-800 bg-rose-950/30 px-3 py-2.5 text-right text-rose-300"
+                  className="ui-border border-b border-r px-3 py-2 text-right"
                 >
-                  Max DD (%)
+                  Max DD
                 </th>
                 <th
                   colSpan={8}
-                  className="border-b border-slate-800 bg-sky-950/40 px-3 py-1.5 text-center text-sky-300"
+                  className="ui-border border-b px-3 py-1 text-center"
                 >
-                  BOBOT MODAL (%) — 8 CORE BENCHMARK
+                  Bobot Modal (%)
                 </th>
               </tr>
               <tr>
                 {core8Ids.map((id) => (
                   <th
                     key={id}
-                    className="border-b border-r border-slate-800 bg-slate-900 px-2.5 py-1.5 text-right font-mono text-[11px] text-slate-300"
+                    className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
                   >
                     {id}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody>
               {displayedPresets.map((preset) => {
                 const isSelected = activePresetId === preset.id;
                 const badge = getRiskTierBadge(preset.riskTier);
@@ -630,35 +607,33 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     onClick={() => onSelectPreset(preset)}
                     className={`cursor-pointer transition ${
                       isSelected
-                        ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/50'
+                        ? 'bg-emerald-500/10'
                         : !preset.isOptimal15
-                          ? 'bg-slate-950/60 opacity-65 hover:opacity-100'
-                          : 'hover:bg-slate-800/70'
+                          ? 'opacity-60 hover:opacity-100'
+                          : 'hover:bg-zinc-500/5'
                     }`}
                   >
                     <th
                       scope="row"
-                      className={`sticky left-0 z-10 border-r border-slate-800/80 px-3.5 py-2.5 font-semibold ${
-                        isSelected
-                          ? 'bg-slate-900 text-emerald-300'
-                          : 'bg-slate-900/95 text-white'
-                      }`}
+                      className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2 font-medium"
                     >
                       <div className="flex items-center gap-2">
                         {preset.rank && (
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-800 font-mono text-[10px] text-slate-400">
+                          <span className="ui-subtle ui-text-muted inline-flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px]">
                             {preset.rank}
                           </span>
                         )}
                         <div>
-                          <div className="text-xs font-bold">{preset.name}</div>
+                          <div className="ui-text-main text-xs font-semibold">
+                            {preset.name}
+                          </div>
                           {preset.videoNote && (
-                            <div className="mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal text-slate-400">
+                            <div className="ui-text-muted mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal">
                               {preset.videoNote}
                             </div>
                           )}
                           {preset.dominatedByReason && (
-                            <div className="mt-0.5 max-w-xs text-[10px] font-normal text-amber-400">
+                            <div className="mt-0.5 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
                               ⚠️ {preset.dominatedByReason}
                             </div>
                           )}
@@ -666,19 +641,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       </div>
                     </th>
 
-                    <td className="border-r border-slate-800/60 px-2.5 py-2 text-center">
+                    <td className="ui-border border-b border-r px-2 py-2 text-center">
                       <span
-                        className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.bgClass} ${badge.textClass}`}
+                        className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}
                       >
                         {badge.label.replace(' RISK', '')}
                       </span>
                     </td>
 
-                    <td className="border-r border-slate-800/60 bg-emerald-500/5 px-3 py-2 text-right font-mono font-bold text-emerald-400">
+                    <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                       {preset.cagr.toFixed(2)}%
                     </td>
 
-                    <td className="border-r border-slate-800/60 bg-rose-500/5 px-3 py-2 text-right font-mono font-bold text-rose-400">
+                    <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-rose-600 dark:text-rose-400">
                       {preset.maxDrawdown.toFixed(2)}%
                     </td>
 
@@ -687,12 +662,12 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       return (
                         <td
                           key={assetId}
-                          className={`border-r border-slate-800/40 px-2.5 py-2 text-right font-mono ${
+                          className={`ui-border border-b border-r px-2.5 py-2 text-right font-mono ${
                             w >= 30
-                              ? 'bg-sky-500/15 font-bold text-sky-300'
+                              ? 'ui-text-main font-bold bg-emerald-500/5'
                               : w > 0
-                                ? 'text-slate-200'
-                                : 'text-slate-600'
+                                ? 'ui-text-secondary'
+                                : 'ui-text-muted opacity-40'
                           }`}
                         >
                           {w}%
@@ -709,34 +684,32 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
       {/* SECTION 3: CUSTOM QUANT SOLVER & MANUAL WEIGHT BUILDER */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left 7 Cols: Custom Risk Parity / Risk Budgeting Solver + Asset Universe Picker + Sliders */}
-        <div className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl lg:col-span-7">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div className="ui-card space-y-5 rounded-xl p-5 lg:col-span-7">
+          <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <div className="flex items-center gap-2">
-              <Sliders className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-base font-extrabold text-white">
+              <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="ui-text-main text-sm font-bold">
                 Custom Portfolio Quant Lab &amp; Bobot Editor
               </h2>
             </div>
 
-            {/* Method Selector Pills */}
-            <div className="flex flex-wrap gap-1 rounded-xl border border-slate-800 bg-slate-950 p-1">
+            <div className="ui-subtle flex flex-wrap gap-1 rounded-lg p-1">
               {(
                 [
-                  { id: 'risk-parity', label: 'Risk Parity (Rata)' },
-                  { id: 'risk-budgeting', label: 'Risk Budgeting (Bias)' },
-                  { id: 'all-in', label: 'All-In 100%' },
-                  { id: 'custom', label: 'Manual Sliders' },
+                  { id: 'risk-parity', label: 'Risk Parity' },
+                  { id: 'risk-budgeting', label: 'Risk Budgeting' },
+                  { id: 'all-in', label: 'All-In' },
+                  { id: 'custom', label: 'Manual' },
                 ] as const
               ).map((m) => (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => setAllocationMethod(m.id)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition ${
                     allocationMethod === m.id
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
                   {m.label}
@@ -748,15 +721,15 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           {/* Step A: Select Active Asset Universe */}
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                1. Pilih Instrumen di Universe Anda (Klik untuk Aktif/Nonaktif):
+              <label className="ui-text-secondary text-xs font-semibold">
+                1. Pilih Instrumen di Universe Anda:
               </label>
-              <span className="text-[11px] text-slate-400">
-                {selectedUniverseIds.length} instrumen aktif
+              <span className="ui-text-muted text-[11px]">
+                {selectedUniverseIds.length} aktif
               </span>
             </div>
 
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {allAssets.map((asset) => {
                 const isSelected = selectedUniverseIds.includes(asset.id);
                 return (
@@ -765,10 +738,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     type="button"
                     onClick={() => onToggleUniverseAsset(asset.id)}
                     title={`${asset.name} • 5Y CAGR: ${asset.cagr}% • Max DD: ${asset.maxDrawdown}%`}
-                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                    className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                       isSelected
-                        ? 'border-emerald-500/50 bg-emerald-500/15 text-white shadow-xs'
-                        : 'border-slate-800 bg-slate-950/60 text-slate-500 hover:border-slate-700 hover:text-slate-300'
+                        ? 'border-emerald-500/50 bg-emerald-500/10 ui-text-main font-semibold'
+                        : 'ui-subtle ui-text-muted opacity-65 hover:opacity-100'
                     }`}
                   >
                     <span
@@ -776,32 +749,25 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       style={{ backgroundColor: asset.color }}
                     />
                     <span>{asset.shortName}</span>
-                    {!asset.isCoreBenchmark && (
-                      <span className="rounded bg-slate-800 px-1 text-[9px] text-slate-400">
-                        +Peer
-                      </span>
-                    )}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Step B: Conviction Risk Budgeting Controls (Shown when method === 'risk-budgeting' or 'all-in') */}
+          {/* Step B: Conviction Risk Budgeting Controls */}
           {(allocationMethod === 'risk-budgeting' || allocationMethod === 'all-in') && (
-            <div className="rounded-xl border border-emerald-500/30 bg-slate-950/90 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="ui-subtle rounded-lg p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-xs font-bold text-emerald-300">
+                  <div className="ui-text-main text-xs font-semibold">
                     2. Pilih Aset Conviction (Bias Bull Market — Menit 09:01):
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Alokasikan persentase <strong>Risiko</strong> (bukan 90% modal!) ke
-                    instrumen yang Anda yakini sedang uptrend.
+                  <p className="ui-text-muted text-[11px]">
+                    Alokasikan persentase <strong>Risiko</strong> ke instrumen utama.
                   </p>
                 </div>
 
-                {/* Solver Algorithm Mode Toggle */}
                 {allocationMethod === 'risk-budgeting' && (
                   <select
                     value={solverMode}
@@ -810,21 +776,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         e.target.value as 'calibrated-video' | 'euler-covariance'
                       )
                     }
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-200"
+                    className="ui-card ui-text-main rounded px-2 py-1 text-xs"
                     aria-label="Quant Solver Algorithm"
                   >
-                    <option value="calibrated-video">
-                      Solver: Video Calibrated (Sander/Leon)
-                    </option>
-                    <option value="euler-covariance">
-                      Solver: Exact Covariance Matrix (Spinu)
-                    </option>
+                    <option value="calibrated-video">Solver: Video Calibrated</option>
+                    <option value="euler-covariance">Solver: Exact Covariance</option>
                   </select>
                 )}
               </div>
 
-              {/* Conviction Asset Selector */}
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {allAssets
                   .filter((a) => selectedUniverseIds.includes(a.id))
                   .map((asset) => (
@@ -832,10 +793,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       key={asset.id}
                       type="button"
                       onClick={() => setConvictionAssetId(asset.id)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      className={`rounded px-2.5 py-1 text-xs font-semibold transition ${
                         convictionAssetId === asset.id
-                          ? 'bg-amber-400 text-slate-950 shadow-sm'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          ? 'bg-emerald-600 text-white'
+                          : 'ui-card ui-text-secondary'
                       }`}
                     >
                       {asset.shortName}
@@ -843,24 +804,22 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   ))}
               </div>
 
-              {/* Risk Budget % Slider */}
               {allocationMethod === 'risk-budgeting' && (
-                <div className="mt-4">
+                <div className="mt-3">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-300">
-                      Target Alokasi Risiko di{' '}
-                      <strong className="text-amber-300">{convictionAssetId}</strong>:
+                    <span className="ui-text-secondary">
+                      Alokasi Risiko di <strong>{convictionAssetId}</strong>:
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {[50, 70, 80, 90].map((presetPct) => (
                         <button
                           key={presetPct}
                           type="button"
                           onClick={() => setConvictionRiskPercent(presetPct)}
-                          className={`rounded px-2 py-0.5 font-mono text-xs font-bold ${
+                          className={`rounded px-2 py-0.5 font-mono text-xs ${
                             convictionRiskPercent === presetPct
-                              ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                              ? 'bg-emerald-600 text-white font-semibold'
+                              : 'ui-card ui-text-secondary'
                           }`}
                         >
                           {presetPct}%
@@ -875,51 +834,45 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     step={5}
                     value={convictionRiskPercent}
                     onChange={(e) => setConvictionRiskPercent(Number(e.target.value))}
-                    className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-800 accent-amber-400"
+                    className="mt-2 h-1.5 w-full cursor-pointer"
                     aria-label="Conviction Risk Budget Percentage"
                   />
-                  <div className="mt-1 flex justify-between text-[11px] text-slate-400">
-                    <span>20% Risiko (Moderat)</span>
-                    <span className="font-mono font-bold text-amber-300">
+                  <div className="ui-text-muted mt-1 flex justify-between text-[11px]">
+                    <span>20% Risiko</span>
+                    <span className="ui-text-main font-mono font-semibold">
                       {convictionRiskPercent}% Risiko ➔{' '}
                       {activeWeights[convictionAssetId] ?? 0}% Bobot Modal
                     </span>
-                    <span>95% Risiko (Agresif)</span>
+                    <span>95% Risiko</span>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step C: Interactive Weight Sliders & Risk Contribution Breakdown */}
+          {/* Step C: Interactive Weight Sliders */}
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <span className="ui-text-secondary text-xs font-semibold">
                 3. Bobot Modal (%) vs Kontribusi Risiko (%):
               </span>
               <div className="flex items-center gap-2">
-                <span
-                  className={`font-mono text-xs font-bold ${
-                    Math.abs(manualSum - 100) > 0.5
-                      ? 'text-amber-400'
-                      : 'text-emerald-400'
-                  }`}
-                >
+                <span className="ui-text-main font-mono text-xs font-semibold">
                   Total: {manualSum.toFixed(1)}%
                 </span>
                 {Math.abs(manualSum - 100) > 0.2 && (
                   <button
                     type="button"
                     onClick={onNormalizeManualWeights}
-                    className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                    className="ui-subtle ui-text-main rounded px-2 py-0.5 text-xs font-medium"
                   >
-                    Auto-Normalize 100%
+                    Normalize 100%
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="mt-3 max-h-80 space-y-2.5 overflow-y-auto pr-1">
+            <div className="mt-2.5 max-h-72 space-y-2 overflow-y-auto pr-1">
               {allAssets
                 .filter(
                   (a) =>
@@ -929,25 +882,24 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   const capWeight = activeWeights[asset.id] ?? 0;
                   const riskContrib = solvedMetrics.riskContributions[asset.id] ?? 0;
                   return (
-                    <div
-                      key={asset.id}
-                      className="rounded-xl border border-slate-800/90 bg-slate-950/70 p-3"
-                    >
+                    <div key={asset.id} className="ui-subtle rounded-lg p-2.5">
                       <div className="flex items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span
-                            className="h-3 w-3 rounded-full"
+                            className="h-2.5 w-2.5 rounded-full"
                             style={{ backgroundColor: asset.color }}
                           />
-                          <span className="font-bold text-white">{asset.shortName}</span>
-                          <span className="hidden text-slate-400 sm:inline">
+                          <span className="ui-text-main font-semibold">
+                            {asset.shortName}
+                          </span>
+                          <span className="ui-text-muted hidden sm:inline">
                             {asset.name}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-[11px] text-slate-400">
-                            Risk Share:{' '}
-                            <strong className="font-mono text-amber-300">
+                          <span className="ui-text-muted text-[11px]">
+                            Risk:{' '}
+                            <strong className="ui-text-secondary font-mono">
                               {riskContrib.toFixed(1)}%
                             </strong>
                           </span>
@@ -964,10 +916,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                   Math.max(0, Math.min(100, Number(e.target.value)))
                                 )
                               }
-                              className="w-14 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-right font-mono text-xs font-bold text-emerald-400"
+                              className="ui-card ui-text-main w-14 rounded px-1.5 py-0.5 text-right font-mono text-xs font-semibold"
                               aria-label={`${asset.shortName} weight percentage`}
                             />
-                            <span className="font-mono text-xs text-slate-400">%</span>
+                            <span className="ui-text-muted font-mono text-xs">%</span>
                           </div>
                         </div>
                       </div>
@@ -981,7 +933,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         onChange={(e) =>
                           onManualWeightChange(asset.id, Number(e.target.value))
                         }
-                        className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-800 accent-emerald-500"
+                        className="mt-1.5 h-1.5 w-full cursor-pointer"
                         aria-label={`${asset.shortName} weight slider`}
                       />
                     </div>
@@ -990,48 +942,49 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Step D: Custom Ticker Lookup (Yahoo Finance) & Synthetic Asset Creator */}
-          <div className="border-t border-slate-800 pt-4">
+          {/* Step D: Custom Ticker Lookup & Synthetic Asset Creator */}
+          <div className="ui-border border-t pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-xs font-bold text-slate-300">
-                Tambah Instrumen Baru ke Universe (Yahoo Ticker / Custom Aset):
+              <div className="ui-text-secondary text-xs font-semibold">
+                Tambah Instrumen Baru (Yahoo Ticker / Custom Aset):
               </div>
               <button
                 type="button"
                 onClick={() => setShowSyntheticForm(!showSyntheticForm)}
-                className="flex items-center gap-1 text-xs font-semibold text-sky-400 hover:text-sky-300"
+                className="ui-text-secondary flex items-center gap-1 text-xs font-medium underline"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>{showSyntheticForm ? 'Tutup Form Manual' : 'Edit Asumsi / Synthetic Asset'}</span>
+                <span>
+                  {showSyntheticForm ? 'Tutup Form Manual' : 'Edit Asumsi / Manual'}
+                </span>
               </button>
             </div>
 
             <div className="mt-2 flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
+                <Search className="ui-text-muted absolute left-3 top-2 h-3.5 w-3.5" />
                 <input
                   type="text"
                   placeholder="Ketik simbol saham Indo/US (contoh: AADI.JK, ADRO, BREN, TLKM, NVDA)..."
                   value={tickerInput}
                   onChange={(e) => setTickerInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleYahooLookup()}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 pl-8 pr-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="ui-input w-full rounded-lg pl-8 pr-3 py-1.5 text-xs"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleYahooLookup()}
                 disabled={isLookingUpTicker}
-                className="rounded-xl bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
               >
-                {isLookingUpTicker ? 'Fetching...' : 'Fetch Ticker'}
+                {isLookingUpTicker ? 'Loading...' : 'Add Ticker'}
               </button>
             </div>
 
-            {/* Quick-Pick Popular Tickers (including IPOs < 5Y with documented assumptions) */}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-semibold text-slate-500">
-                Quick Add (Estimasi &amp; 5Y):
+              <span className="ui-text-muted text-[10px] font-medium">
+                Quick Add:
               </span>
               {Object.keys(POPULAR_TICKER_ESTIMATES)
                 .slice(0, 9)
@@ -1040,7 +993,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     key={sym}
                     type="button"
                     onClick={() => handleYahooLookup(sym)}
-                    className="rounded border border-slate-800 bg-slate-950 px-2 py-0.5 font-mono text-[10px] text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300"
+                    className="ui-subtle ui-text-secondary rounded px-2 py-0.5 font-mono text-[10px] hover:opacity-80"
                   >
                     +{sym.replace('.JK', '')}
                   </button>
@@ -1048,58 +1001,50 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {tickerError && (
-              <p className="mt-2 text-[11px] text-amber-400">{tickerError}</p>
+              <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
+                {tickerError}
+              </p>
             )}
 
-            {/* Display Transparency Card for Assumptions & Estimated Metrics of Fetched Ticker */}
             {lastFetchedTickerInfo && (
-              <div className="mt-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3 text-xs">
+              <div className="ui-subtle mt-3 rounded-lg p-3 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-bold text-white">
-                    ✅ {lastFetchedTickerInfo.symbol} — {lastFetchedTickerInfo.name}
+                  <div className="ui-text-main font-semibold">
+                    {lastFetchedTickerInfo.symbol} — {lastFetchedTickerInfo.name}
                   </div>
-                  <span className="rounded bg-sky-500/20 px-2 py-0.5 font-mono text-[10px] font-semibold text-sky-300">
+                  <span className="ui-card ui-text-muted rounded px-2 py-0.5 font-mono text-[10px]">
                     {lastFetchedTickerInfo.sourceType === 'live-yahoo'
-                      ? `Live Yahoo (${lastFetchedTickerInfo.dataYears} Thn Data)`
-                      : `Curated Quant Estimate (${lastFetchedTickerInfo.dataYears} Thn Histori)`}
+                      ? `Live Yahoo (${lastFetchedTickerInfo.dataYears} Thn)`
+                      : `Quant Estimate (${lastFetchedTickerInfo.dataYears} Thn)`}
                   </span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-4 font-mono text-[11px]">
+                <div className="ui-text-secondary mt-1.5 flex flex-wrap gap-4 font-mono text-[11px]">
                   <span>
-                    Est. CAGR:{' '}
-                    <strong className="text-emerald-400">
-                      {lastFetchedTickerInfo.cagr}%/thn
-                    </strong>
+                    CAGR: <strong>{lastFetchedTickerInfo.cagr}%/thn</strong>
                   </span>
                   <span>
-                    Est. Max Drawdown:{' '}
-                    <strong className="text-rose-400">
-                      -{lastFetchedTickerInfo.maxDrawdown}%
-                    </strong>
+                    Max DD: <strong>-{lastFetchedTickerInfo.maxDrawdown}%</strong>
                   </span>
                   <span>
-                    Volatilitas:{' '}
-                    <strong className="text-amber-300">
-                      {lastFetchedTickerInfo.volatility}%
-                    </strong>
+                    Vol: <strong>{lastFetchedTickerInfo.volatility}%</strong>
                   </span>
                   <span>
                     Harga:{' '}
-                    <strong className="text-white">
+                    <strong>
                       {lastFetchedTickerInfo.currency === 'IDR'
                         ? `Rp ${lastFetchedTickerInfo.price.toLocaleString('id-ID')}`
                         : `$${lastFetchedTickerInfo.price}`}
                     </strong>
                   </span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-slate-300">
-                  <strong>Catatan Asumsi:</strong> {lastFetchedTickerInfo.assumptionNote}{' '}
+                <p className="ui-text-muted mt-1.5 text-[11px]">
+                  <strong>Asumsi:</strong> {lastFetchedTickerInfo.assumptionNote}{' '}
                   <button
                     type="button"
                     onClick={() => setShowSyntheticForm(true)}
-                    className="text-sky-400 underline hover:text-sky-300"
+                    className="ui-text-main underline"
                   >
-                    Ubah angka asumsi ini
+                    Ubah angka
                   </button>
                 </p>
               </div>
@@ -1108,55 +1053,55 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             {showSyntheticForm && (
               <form
                 onSubmit={handleAddSyntheticAsset}
-                className="mt-3 grid grid-cols-2 gap-2.5 rounded-xl border border-slate-800 bg-slate-950 p-3.5 sm:grid-cols-6"
+                className="ui-subtle mt-3 grid grid-cols-2 gap-2.5 rounded-lg p-3 sm:grid-cols-6"
               >
                 <div className="sm:col-span-1">
-                  <label className="block text-[10px] text-slate-400">Simbol</label>
+                  <label className="ui-text-muted block text-[10px]">Simbol</label>
                   <input
                     type="text"
                     required
                     placeholder="SBN"
                     value={synthSymbol}
                     onChange={(e) => setSynthSymbol(e.target.value)}
-                    className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-white"
+                    className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-[10px] text-slate-400">Nama Aset</label>
+                  <label className="ui-text-muted block text-[10px]">Nama Aset</label>
                   <input
                     type="text"
-                    placeholder="Obligasi FR / Properti"
+                    placeholder="Obligasi / Saham"
                     value={synthName}
                     onChange={(e) => setSynthName(e.target.value)}
-                    className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-white"
+                    className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-400">CAGR (%)</label>
+                  <label className="ui-text-muted block text-[10px]">CAGR (%)</label>
                   <input
                     type="number"
                     step="0.5"
                     value={synthCagr}
                     onChange={(e) => setSynthCagr(Number(e.target.value))}
-                    className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-emerald-400"
+                    className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-400">Max DD (%)</label>
+                  <label className="ui-text-muted block text-[10px]">Max DD (%)</label>
                   <input
                     type="number"
                     step="0.5"
                     value={synthMaxDd}
                     onChange={(e) => setSynthMaxDd(Number(e.target.value))}
-                    className="mt-1 w-full rounded border border-slate-800 bg-slate-900 px-2 py-1 text-xs text-rose-400"
+                    className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div className="flex items-end">
                   <button
                     type="submit"
-                    className="w-full rounded bg-emerald-500 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400"
+                    className="w-full rounded bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
                   >
-                    + Tambah
+                    Simpan
                   </button>
                 </div>
               </form>
@@ -1164,19 +1109,18 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
         </div>
 
-        {/* Right 5 Cols: Visual Quant Charts (Capital Weight vs Risk Contribution + Pareto Frontier) */}
+        {/* Right 5 Cols: Visual Quant Charts */}
         <div className="space-y-5 lg:col-span-5">
-          {/* Chart 1: Capital Weight (%) vs Risk Contribution (%) */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl">
+          <div className="ui-card rounded-xl p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-white">
+              <h3 className="ui-text-main text-sm font-bold">
                 Bobot Modal (%) vs Porsi Risiko (%)
               </h3>
-              <Layers className="h-4 w-4 text-sky-400" />
+              <Layers className="ui-text-muted h-4 w-4" />
             </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Menjelaskan konsep menit 09:20: kenapa bobot modal 18% di BTC setara dengan
-              ~90% risiko fluktuasi portfolio Anda.
+            <p className="ui-text-muted mt-1 text-xs">
+              Menjelaskan kenapa bobot modal 18% di BTC setara dengan ~90% risiko
+              portfolio (09:20).
             </p>
 
             <div className="mt-4 h-60 w-full">
@@ -1187,20 +1131,21 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 >
                   <XAxis
                     dataKey="symbol"
-                    stroke="#94a3b8"
+                    stroke="#71717a"
                     fontSize={11}
                     tickLine={false}
                   />
                   <YAxis
-                    stroke="#64748b"
+                    stroke="#71717a"
                     fontSize={11}
                     tickFormatter={(v) => `${v}%`}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#1e293b',
-                      borderRadius: '0.75rem',
+                      backgroundColor: 'var(--bg-card)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-main)',
+                      borderRadius: '0.5rem',
                       fontSize: '12px',
                     }}
                     formatter={(value: number, name: string) => [`${value}%`, name]}
@@ -1210,30 +1155,28 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     dataKey="capitalWeight"
                     name="Bobot Modal (%)"
                     fill="#10b981"
-                    radius={[4, 4, 0, 0]}
+                    radius={[3, 3, 0, 0]}
                   />
                   <Bar
                     dataKey="riskContribution"
                     name="Kontribusi Risiko (%)"
                     fill="#f59e0b"
-                    radius={[4, 4, 0, 0]}
+                    radius={[3, 3, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Chart 2: Efficient Frontier Scatter Plot (CAGR vs Max Drawdown) */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl">
+          <div className="ui-card rounded-xl p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-white">
+              <h3 className="ui-text-main text-sm font-bold">
                 Spektrum Return vs Risiko (Pareto Frontier)
               </h3>
-              <ShieldAlert className="h-4 w-4 text-emerald-400" />
+              <ShieldAlert className="ui-text-muted h-4 w-4" />
             </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Garis hijau adalah 15 Portfolio Optimal. Titik merah muda adalah 10
-              portfolio yang tereliminasi karena kalah efisien (04:15 &amp; 10:16).
+            <p className="ui-text-muted mt-1 text-xs">
+              15 Portfolio Optimal (hijau) vs 10 portfolio tereliminasi (merah).
             </p>
 
             <div className="mt-4 h-64 w-full">
@@ -1244,7 +1187,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     dataKey="maxDrawdown"
                     name="Max Drawdown"
                     unit="%"
-                    stroke="#94a3b8"
+                    stroke="#71717a"
                     fontSize={11}
                   />
                   <YAxis
@@ -1252,16 +1195,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     dataKey="cagr"
                     name="CAGR"
                     unit="%"
-                    stroke="#94a3b8"
+                    stroke="#71717a"
                     fontSize={11}
                   />
-                  <ZAxis range={[55, 55]} />
+                  <ZAxis range={[50, 50]} />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
                     contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#1e293b',
-                      borderRadius: '0.75rem',
+                      backgroundColor: 'var(--bg-card)',
+                      borderColor: 'var(--border-subtle)',
+                      color: 'var(--text-main)',
+                      borderRadius: '0.5rem',
                       fontSize: '12px',
                     }}
                     formatter={(val: number, name: string) => [`${val}%`, name]}
@@ -1272,31 +1216,31 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <ReferenceLine
                     x={solvedMetrics.maxDrawdown}
-                    stroke="#38bdf8"
+                    stroke="#0ea5e9"
                     strokeDasharray="3 3"
                   />
                   <ReferenceLine
                     y={solvedMetrics.cagr}
-                    stroke="#38bdf8"
+                    stroke="#0ea5e9"
                     strokeDasharray="3 3"
                   />
                   <Scatter
-                    name="15 Optimal Presets"
+                    name="15 Optimal"
                     data={scatterOptimalData}
                     fill="#10b981"
                   />
                   <Scatter
-                    name="10 Dominated (Kalah)"
+                    name="10 Dominated"
                     data={scatterDominatedData}
                     fill="#f43f5e"
                   />
                   <Scatter
-                    name="Active Portfolio Anda"
+                    name="Active Portfolio"
                     data={activePointData}
-                    fill="#38bdf8"
+                    fill="#0ea5e9"
                   >
                     {activePointData.map((_, idx) => (
-                      <Cell key={idx} fill="#38bdf8" />
+                      <Cell key={idx} fill="#0ea5e9" />
                     ))}
                   </Scatter>
                 </ScatterChart>

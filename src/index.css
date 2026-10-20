@@ -1,8 +1,102 @@
 @import "tailwindcss";
 
+:root {
+  /* Raw tokens for fallback & light-dark() */
+  --bg-page-light: #fafafa;
+  --bg-page-dark: #09090b;
+
+  --bg-card-light: #ffffff;
+  --bg-card-dark: #121215;
+
+  --bg-subtle-light: #f4f4f5;
+  --bg-subtle-dark: #18181b;
+
+  --bg-muted-light: #e4e4e7;
+  --bg-muted-dark: #27272a;
+
+  --border-light: #e4e4e7;
+  --border-dark: #27272a;
+
+  --text-main-light: #09090b;
+  --text-main-dark: #fafafa;
+
+  --text-secondary-light: #3f3f46;
+  --text-secondary-dark: #d4d4d8;
+
+  --text-muted-light: #71717a;
+  --text-muted-dark: #a1a1aa;
+
+  --brand-accent-light: #059669;
+  --brand-accent-dark: #10b981;
+
+  --scrollbar-track-light: #f4f4f5;
+  --scrollbar-track-dark: #121215;
+  --scrollbar-thumb-light: #d4d4d8;
+  --scrollbar-thumb-dark: #3f3f46;
+
+  /* Default fallback (light) */
+  --bg-page: var(--bg-page-light);
+  --bg-card: var(--bg-card-light);
+  --bg-subtle: var(--bg-subtle-light);
+  --bg-muted: var(--bg-muted-light);
+  --border-subtle: var(--border-light);
+  --text-main: var(--text-main-light);
+  --text-secondary: var(--text-secondary-light);
+  --text-muted: var(--text-muted-light);
+  --accent-color: var(--brand-accent-light);
+  --scrollbar-track: var(--scrollbar-track-light);
+  --scrollbar-thumb: var(--scrollbar-thumb-light);
+
+  /* MANDATORY: Fallback for browsers without light-dark support */
+  @media (prefers-color-scheme: dark) {
+    --bg-page: var(--bg-page-dark);
+    --bg-card: var(--bg-card-dark);
+    --bg-subtle: var(--bg-subtle-dark);
+    --bg-muted: var(--bg-muted-dark);
+    --border-subtle: var(--border-dark);
+    --text-main: var(--text-main-dark);
+    --text-secondary: var(--text-secondary-dark);
+    --text-muted: var(--text-muted-dark);
+    --accent-color: var(--brand-accent-dark);
+    --scrollbar-track: var(--scrollbar-track-dark);
+    --scrollbar-thumb: var(--scrollbar-thumb-dark);
+  }
+
+  /* Use light-dark() when supported so <meta name="color-scheme"> override works automatically */
+  @supports (color: light-dark(white, black)) {
+    --bg-page: light-dark(var(--bg-page-light), var(--bg-page-dark));
+    --bg-card: light-dark(var(--bg-card-light), var(--bg-card-dark));
+    --bg-subtle: light-dark(var(--bg-subtle-light), var(--bg-subtle-dark));
+    --bg-muted: light-dark(var(--bg-muted-light), var(--bg-muted-dark));
+    --border-subtle: light-dark(var(--border-light), var(--border-dark));
+    --text-main: light-dark(var(--text-main-light), var(--text-main-dark));
+    --text-secondary: light-dark(var(--text-secondary-light), var(--text-secondary-dark));
+    --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
+    --accent-color: light-dark(var(--brand-accent-light), var(--brand-accent-dark));
+    --scrollbar-track: light-dark(var(--scrollbar-track-light), var(--scrollbar-track-dark));
+    --scrollbar-thumb: light-dark(var(--scrollbar-thumb-light), var(--scrollbar-thumb-dark));
+  }
+
+  /* MANDATORY: Automatically adapt native UI to user system preferences */
+  color-scheme: light dark;
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+  }
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+  }
+
+  accent-color: var(--accent-color);
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
 @layer base {
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-main);
   }
 
   code, pre, .font-mono {
@@ -10,21 +104,61 @@
   }
 }
 
-/* Custom subtle scrollbars for quant tables */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Semantic Minimalist Utility Classes that adapt seamlessly between Light & Dark */
+.ui-page {
+  background-color: var(--bg-page);
+  color: var(--text-main);
 }
 
-::-webkit-scrollbar-track {
-  background: #090d16;
+.ui-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
+.ui-subtle {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+.ui-input {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+}
+
+.ui-input:focus {
+  border-color: var(--accent-color);
+  outline: none;
+}
+
+.ui-border {
+  border-color: var(--border-subtle);
+}
+
+.ui-text-main {
+  color: var(--text-main);
+}
+
+.ui-text-secondary {
+  color: var(--text-secondary);
+}
+
+.ui-text-muted {
+  color: var(--text-muted);
+}
+
+/* Legacy fallback for WebKit/Blink browsers without scrollbar-color */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
 }

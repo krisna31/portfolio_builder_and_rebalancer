@@ -527,7 +527,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="ui-page min-h-screen">
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -608,19 +608,18 @@ export function App() {
         )}
       </main>
 
-      <footer className="mt-12 border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
+      <footer className="ui-border ui-text-muted mt-12 border-t py-6 text-center text-xs">
         <div className="mx-auto max-w-7xl px-4">
           QuantPorto — Reverse-Engineered dari{' '}
           <a
             href="https://www.youtube.com/watch?v=O8PShy9d484"
             target="_blank"
             rel="noreferrer"
-            className="text-slate-400 underline hover:text-emerald-400"
+            className="underline hover:opacity-80"
           >
             &ldquo;Cara Dapet Rp10 MILIAR PERTAMA&rdquo; (Leon Hartono &amp; Sander)
           </a>
-          . Data historis 5 tahun bukan jaminan kinerja masa depan. Siap di-deploy ke
-          GitHub Pages.
+          . Data historis 5 tahun bukan jaminan kinerja masa depan.
         </div>
       </footer>
     </div>

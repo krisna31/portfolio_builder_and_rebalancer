@@ -47,30 +47,30 @@ export function getRiskTierBadge(tier: 'super-high' | 'high' | 'medium' | 'low')
     case 'super-high':
       return {
         label: 'SUPER HIGH RISK',
-        bgClass: 'bg-rose-500/15',
-        textClass: 'text-rose-400',
-        borderClass: 'border-rose-500/40',
+        bgClass: 'bg-rose-500/10',
+        textClass: 'text-rose-600 dark:text-rose-400',
+        borderClass: 'border-rose-500/30',
       };
     case 'high':
       return {
         label: 'HIGH RISK',
-        bgClass: 'bg-amber-500/15',
-        textClass: 'text-amber-300',
-        borderClass: 'border-amber-500/40',
+        bgClass: 'bg-amber-500/10',
+        textClass: 'text-amber-700 dark:text-amber-400',
+        borderClass: 'border-amber-500/30',
       };
     case 'medium':
       return {
         label: 'MEDIUM RISK',
-        bgClass: 'bg-emerald-500/15',
-        textClass: 'text-emerald-300',
-        borderClass: 'border-emerald-500/40',
+        bgClass: 'bg-emerald-500/10',
+        textClass: 'text-emerald-700 dark:text-emerald-400',
+        borderClass: 'border-emerald-500/30',
       };
     case 'low':
       return {
         label: 'LOW RISK',
-        bgClass: 'bg-sky-500/15',
-        textClass: 'text-sky-300',
-        borderClass: 'border-sky-500/40',
+        bgClass: 'bg-sky-500/10',
+        textClass: 'text-sky-700 dark:text-sky-400',
+        borderClass: 'border-sky-500/30',
       };
   }
 }
