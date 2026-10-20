@@ -24,9 +24,13 @@ import { Header, SavedPortfolioSnapshot } from './components/Header';
 import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView';
 import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
 import { WealthRoadmapView } from './components/roadmap/WealthRoadmapView';
+import { WalkthroughModal } from './components/onboarding/WalkthroughModal';
+import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfolioRecommenderModal';
+import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 
 const STORAGE_KEY = 'quantporto_state_v2';
 const SAVED_PORTFOLIOS_KEY = 'quantporto_saved_portfolios_v1';
+const WALKTHROUGH_SEEN_KEY = 'quantporto_walkthrough_seen_v1';
 
 const DEFAULT_SLOT_MAP: Record<string, string> = {
   RDPU: 'RDPU',
@@ -171,6 +175,25 @@ export function App() {
   const [rebalanceHistory, setRebalanceHistory] = useState<
     RebalanceHistoryEntry[]
   >([]);
+
+  // First-Load Walkthrough Tour & Smart Portfolio Recommender Modal states
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(WALKTHROUGH_SEEN_KEY) !== 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isRecommenderOpen, setIsRecommenderOpen] = useState<boolean>(false);
+
+  const handleCloseWalkthrough = () => {
+    setIsWalkthroughOpen(false);
+    try {
+      localStorage.setItem(WALKTHROUGH_SEEN_KEY, 'true');
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   // Restore state from URL Hash (if shared link) or LocalStorage on first mount
   useEffect(() => {
@@ -783,6 +806,84 @@ export function App() {
     setTimeout(() => setShareCopied(false), 2000);
   };
 
+  // Handler: Apply Recommended Portfolio from Smart Recommender Wizard
+  const handleApplyRecommendation = (
+    rec: PortfolioRecommendationItem,
+    slotMapChoice: Record<string, string>,
+    pinToTable: boolean,
+    goToRebalancer: boolean
+  ) => {
+    setSlotMap(slotMapChoice);
+    setActiveWeights({ ...rec.weights });
+
+    const activeIds = Object.entries(rec.weights)
+      .filter(([, w]) => w > 0)
+      .map(([id]) => id);
+    if (activeIds.length > 0) {
+      setSelectedUniverseIds(activeIds);
+    }
+
+    if (rec.matchingPresetId) {
+      setActivePresetId(rec.matchingPresetId);
+      setAllocationMethod('preset');
+    } else {
+      setAllocationMethod('custom');
+      if (rec.convictionAssetId) {
+        setConvictionAssetId(rec.convictionAssetId);
+      }
+      if (rec.convictionRiskPercent) {
+        setConvictionRiskPercent(rec.convictionRiskPercent);
+      }
+    }
+
+    if (pinToTable && !rec.matchingPresetId) {
+      const pinnedRow: PortfolioPreset = {
+        id: `custom-rec-${Date.now()}`,
+        name: rec.title.replace('Rekomendasi Utama: ', 'Custom '),
+        method: rec.method,
+        convictionAssetId: rec.convictionAssetId,
+        convictionRiskPercent: rec.convictionRiskPercent,
+        riskTier: rec.metrics.riskTier,
+        cagr: rec.metrics.cagr,
+        maxDrawdown: rec.metrics.maxDrawdown,
+        isOptimal15: !rec.metrics.isParetoDominated,
+        isCustomRow: true,
+        weights: { ...rec.weights },
+        videoNote:
+          rec.rationalePoints[0] ?? 'Hasil estimasi Kuis Tanya Quant sesuai profil Anda.',
+      };
+      setCustomTableRows((prev) => [pinnedRow, ...prev]);
+      setActivePresetId(pinnedRow.id);
+    }
+
+    // Also sync Rebalancer holdings to match the recommended weights at Initial Capital
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        const w = rec.weights[a.id] ?? 0;
+        const valIdr = Math.round(initialCapitalIdr * (w / 100));
+        const unitPriceIdr =
+          a.currency === 'USD'
+            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : next[a.id]?.currentPrice ?? a.defaultPrice;
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: valIdr,
+          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
+
+    if (goToRebalancer) {
+      setActiveTab('rebalancer');
+    } else {
+      setActiveTab('builder');
+    }
+  };
+
   return (
     <div className="ui-page min-h-screen">
       <Header
@@ -804,6 +905,8 @@ export function App() {
         onSaveCurrentPortfolio={handleSaveCurrentPortfolio}
         onLoadSavedPortfolio={handleLoadSavedPortfolio}
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
+        onOpenRecommender={() => setIsRecommenderOpen(true)}
+        onOpenWalkthrough={() => setIsWalkthroughOpen(true)}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -842,6 +945,7 @@ export function App() {
             monthlySavingsIdr={monthlySavingsIdr}
             setMonthlySavingsIdr={setMonthlySavingsIdr}
             onGoToRebalancer={() => setActiveTab('rebalancer')}
+            onOpenRecommender={() => setIsRecommenderOpen(true)}
           />
         )}
 
@@ -885,6 +989,28 @@ export function App() {
           />
         )}
       </main>
+
+      {/* First-Load Interactive Walkthrough Tour Modal */}
+      <WalkthroughModal
+        isOpen={isWalkthroughOpen}
+        onClose={handleCloseWalkthrough}
+        onOpenRecommender={() => {
+          handleCloseWalkthrough();
+          setIsRecommenderOpen(true);
+        }}
+      />
+
+      {/* Interactive Multiple-Choice Smart Portfolio Diagnostic & Recommender Modal */}
+      <SmartPortfolioRecommenderModal
+        isOpen={isRecommenderOpen}
+        onClose={() => setIsRecommenderOpen(false)}
+        allAssets={allAssets}
+        presets={dynamicPresets}
+        initialCapitalIdr={initialCapitalIdr}
+        monthlySavingsIdr={monthlySavingsIdr}
+        targetGoalIdr={targetGoalIdr}
+        onApplyRecommendation={handleApplyRecommendation}
+      />
 
       <footer className="ui-border ui-text-muted mt-12 border-t py-6 text-center text-xs">
         <div className="mx-auto max-w-7xl px-4">

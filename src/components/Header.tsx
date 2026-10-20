@@ -13,6 +13,8 @@ import {
   X,
   Sun,
   Moon,
+  Compass,
+  HelpCircle,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 
@@ -44,6 +46,8 @@ interface HeaderProps {
   onSaveCurrentPortfolio: (name: string) => void;
   onLoadSavedPortfolio: (snap: SavedPortfolioSnapshot) => void;
   onDeleteSavedPortfolio: (id: string) => void;
+  onOpenRecommender: () => void;
+  onOpenWalkthrough: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -65,6 +69,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSaveCurrentPortfolio,
   onLoadSavedPortfolio,
   onDeleteSavedPortfolio,
+  onOpenRecommender,
+  onOpenWalkthrough,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -233,6 +239,28 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Global Controls */}
           <div className="flex flex-wrap items-center gap-1.5">
+            {/* Smart Portfolio Recommender Trigger */}
+            <button
+              type="button"
+              onClick={onOpenRecommender}
+              title="Jawab 4 pertanyaan singkat untuk mengestimasi pilihan portfolio terbaik Anda"
+              className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
+            >
+              <Compass className="h-3.5 w-3.5" />
+              <span>Tanya Quant</span>
+            </button>
+
+            {/* Interactive Walkthrough Tour Trigger */}
+            <button
+              type="button"
+              onClick={onOpenWalkthrough}
+              title="Buka panduan fitur interaktif QuantPorto"
+              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Panduan</span>
+            </button>
+
             {/* Makmur RDPT Alpha Promo (+3%) Toggle */}
             <button
               type="button"

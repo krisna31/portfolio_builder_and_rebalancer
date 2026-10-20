@@ -45,6 +45,7 @@ import {
   Trash2,
   RotateCcw,
   Repeat,
+  Compass,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -81,6 +82,7 @@ interface PortfolioBuilderViewProps {
   monthlySavingsIdr: number;
   setMonthlySavingsIdr: (v: number) => void;
   onGoToRebalancer: () => void;
+  onOpenRecommender: () => void;
 }
 
 export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
@@ -117,6 +119,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   monthlySavingsIdr,
   setMonthlySavingsIdr,
   onGoToRebalancer,
+  onOpenRecommender,
 }) => {
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
@@ -360,14 +363,25 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </span>
               </div>
 
-              <button
-                type="button"
-                onClick={onGoToRebalancer}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
-              >
-                <span>Gunakan di Rebalancer</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onOpenRecommender}
+                  className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+                >
+                  <Compass className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Cari Portfolio Ideal Saya (Kuis Quant)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGoToRebalancer}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                >
+                  <span>Gunakan di Rebalancer</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Key Quantitative Figures */}

@@ -10,6 +10,7 @@ import {
   simulateWealthToGoal,
   simulateRebalancingFrequencyBacktest,
 } from '../wealthSimulator';
+import { generatePortfolioRecommendations } from '../portfolioRecommender';
 import { HoldingEntry } from '../types';
 
 describe('Risk Parity & Risk Budgeting Quant Engine', () => {
@@ -257,5 +258,28 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     expect(backtest.finalQuarterlyIdr).toBeGreaterThan(100_000_000);
     // Rebalancing reduces max drawdown compared to never rebalancing
     expect(btc90Preset.maxDrawdown).toBeLessThan(backtest.buyHoldMaxDdPercent);
+  });
+
+  it('estimates tailored portfolio recommendations from user multiple-choice answers', () => {
+    const rec = generatePortfolioRecommendations(
+      {
+        profile: 'balanced-quant',
+        crashTolerance: 'moderat',
+        selectedAssetIds: ['RDPT', 'PTBA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'],
+        assetSelectionPreset: 'all-default',
+        convictionPreference: 'auto-equal',
+        idxEquitySlotChoice: 'PTBA',
+        initialCapitalIdr: 100_000_000,
+        monthlySavingsIdr: 10_000_000,
+        targetGoalIdr: 1_000_000_000,
+      },
+      CORE_AND_EXPANDED_ASSETS,
+      VIDEO_PORTFOLIO_PRESETS
+    );
+
+    expect(rec.recommendedSlotMap.BBCA).toBe('PTBA');
+    expect(rec.primaryRecommendation.weights.PTBA).toBeGreaterThan(0);
+    expect(rec.primaryRecommendation.metrics.cagr).toBeGreaterThan(15);
+    expect(rec.alternativeRecommendations).toHaveLength(3);
   });
 });
