@@ -1,0 +1,19 @@
+{
+  "name": "QuantPorto — Portfolio Builder & Rebalancer",
+  "short_name": "QuantPorto",
+  "description": "Risk Parity & Risk Budgeting Portfolio Builder, Rebalancer, and Rp10M Wealth Simulator.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

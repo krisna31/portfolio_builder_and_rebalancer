@@ -47,6 +47,9 @@ import {
   RotateCcw,
   Repeat,
   Compass,
+  LayoutGrid,
+  Table2,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -125,6 +128,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
   const [customRowName, setCustomRowName] = useState('');
+  const [tableViewMode, setTableViewMode] = useState<'table' | 'cards'>('table');
+  const [comparePresetId, setComparePresetId] = useState<string>('opt-4-rb-btc-90');
 
   const [tickerInput, setTickerInput] = useState('');
   const [isLookingUpTicker, setIsLookingUpTicker] = useState(false);
@@ -794,209 +799,406 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               )}
               <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
             </button>
+
+            {/* Hybrid Table vs Mobile Card View Toggle */}
+            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setTableViewMode('table')}
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                  tableViewMode === 'table'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Table2 className="h-3 w-3" />
+                <span>Tabel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTableViewMode('cards')}
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                  tableViewMode === 'cards'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <LayoutGrid className="h-3 w-3" />
+                <span>Kartu</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Minimalist Data Table with Interactive Column Slot Selector */}
-        <div
-          tabIndex={0}
-          role="region"
-          aria-labelledby="optimal-portfolios-caption"
-          className="ui-border mt-4 max-h-[520px] overflow-auto rounded-lg border"
-        >
-          <table className="w-full border-separate border-spacing-0 text-left text-xs">
-            <caption id="optimal-portfolios-caption" className="sr-only">
-              Daftar 15 Portfolio Optimal dan Custom Rows berdasarkan CAGR, Maximum
-              Drawdown, dan Bobot Instrumen
-            </caption>
-            <thead className="ui-subtle sticky top-0 z-20 text-[11px] font-semibold uppercase">
-              <tr>
-                <th
-                  rowSpan={2}
-                  className="ui-subtle ui-border sticky left-0 z-30 border-b border-r px-3 py-2"
+        {/* Mobile Quick Slot Switcher Bar when in Card View */}
+        {tableViewMode === 'cards' && (
+          <div className="ui-subtle mt-3 flex flex-wrap items-center gap-2 rounded-lg p-2.5 text-xs">
+            <span className="ui-text-secondary font-semibold">
+              Ganti Slot Instrumen:
+            </span>
+            {core8Slots.map((slotId) => {
+              const currentAssetId = slotMap[slotId] ?? slotId;
+              const isSwapped = currentAssetId !== slotId;
+              return (
+                <div
+                  key={slotId}
+                  className={`flex items-center gap-1 rounded border px-2 py-1 font-mono text-[11px] ${
+                    isSwapped
+                      ? 'border-emerald-500/50 bg-emerald-500/15'
+                      : 'ui-card ui-border'
+                  }`}
                 >
-                  Strategy ({combinedRows.length})
-                </th>
-                <th
-                  rowSpan={2}
-                  className="ui-border border-b border-r px-2.5 py-2 text-center"
-                >
-                  Risk
-                </th>
-                <th
-                  rowSpan={2}
-                  className="ui-border border-b border-r px-3 py-2 text-right"
-                >
-                  CAGR
-                </th>
-                <th
-                  rowSpan={2}
-                  className="ui-border border-b border-r px-3 py-2 text-right"
-                >
-                  Max DD
-                </th>
-                <th
-                  colSpan={core8Slots.length + extraCustomAssetIds.length}
-                  className="ui-border border-b px-3 py-1 text-center"
-                >
-                  Bobot Modal (%) — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
-                </th>
-              </tr>
-              <tr>
-                {core8Slots.map((slotId) => {
-                  const currentAssetId = slotMap[slotId] ?? slotId;
-                  const isSwapped = currentAssetId !== slotId;
-                  return (
+                  <span className="ui-text-muted text-[10px]">{slotId}:</span>
+                  <select
+                    value={currentAssetId}
+                    onChange={(e) => onChangeSlotAsset(slotId, e.target.value)}
+                    aria-label={`Slot benchmark ${slotId}`}
+                    className="ui-text-main cursor-pointer bg-transparent font-bold focus:outline-none"
+                  >
+                    {allAssets.map((a) => (
+                      <option
+                        key={a.id}
+                        value={a.id}
+                        className="bg-zinc-900 text-white"
+                      >
+                        {a.shortName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Mode 1: Data Table with Sticky First Column & Scroll Shadow */}
+        {tableViewMode === 'table' ? (
+          <div
+            tabIndex={0}
+            role="region"
+            aria-labelledby="optimal-portfolios-caption"
+            className="ui-border mt-4 max-h-[520px] overflow-auto rounded-lg border"
+          >
+            <table className="w-full border-separate border-spacing-0 text-left text-xs">
+              <caption id="optimal-portfolios-caption" className="sr-only">
+                Daftar 15 Portfolio Optimal dan Custom Rows berdasarkan CAGR, Maximum
+                Drawdown, dan Bobot Instrumen
+              </caption>
+              <thead className="ui-subtle sticky top-0 z-20 text-[11px] font-semibold uppercase">
+                <tr>
+                  <th
+                    rowSpan={2}
+                    className="ui-subtle ui-border sticky left-0 z-30 min-w-[145px] max-w-[180px] border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] sm:max-w-xs sm:px-3"
+                  >
+                    Strategy ({combinedRows.length})
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="ui-border border-b border-r px-2.5 py-2 text-center"
+                  >
+                    Risk
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="ui-border border-b border-r px-3 py-2 text-right"
+                  >
+                    CAGR
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="ui-border border-b border-r px-3 py-2 text-right"
+                  >
+                    Max DD
+                  </th>
+                  <th
+                    colSpan={core8Slots.length + extraCustomAssetIds.length}
+                    className="ui-border border-b px-3 py-1 text-center"
+                  >
+                    Bobot Modal (%) — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
+                  </th>
+                </tr>
+                <tr>
+                  {core8Slots.map((slotId) => {
+                    const currentAssetId = slotMap[slotId] ?? slotId;
+                    const isSwapped = currentAssetId !== slotId;
+                    return (
+                      <th
+                        key={slotId}
+                        className={`ui-border border-b border-r px-1.5 py-1 text-right font-mono text-[11px] ${
+                          isSwapped ? 'bg-emerald-500/15' : 'ui-subtle'
+                        }`}
+                      >
+                        <select
+                          value={currentAssetId}
+                          onChange={(e) => onChangeSlotAsset(slotId, e.target.value)}
+                          title={`Ganti slot benchmark ${slotId} dengan instrumen lain`}
+                          aria-label={`Slot benchmark ${slotId}`}
+                          className="ui-text-main cursor-pointer bg-transparent font-mono text-[11px] font-bold focus:outline-none"
+                        >
+                          {allAssets.map((a) => (
+                            <option
+                              key={a.id}
+                              value={a.id}
+                              className="bg-zinc-900 text-white"
+                            >
+                              {a.shortName}
+                            </option>
+                          ))}
+                        </select>
+                        {isSwapped && (
+                          <div className="ui-text-muted text-[9px] font-normal">
+                            ex-{slotId}
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
+                  {extraCustomAssetIds.map((extraId) => (
                     <th
-                      key={slotId}
-                      className={`ui-border border-b border-r px-1.5 py-1 text-right font-mono text-[11px] ${
-                        isSwapped ? 'bg-emerald-500/15' : 'ui-subtle'
+                      key={extraId}
+                      className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
+                    >
+                      {extraId}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {combinedRows.map((preset) => {
+                  const isSelected = activePresetId === preset.id;
+                  const badge = getRiskTierBadge(preset.riskTier);
+                  return (
+                    <tr
+                      key={preset.id}
+                      onClick={() => onSelectPreset(preset)}
+                      className={`cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-emerald-500/10'
+                          : preset.isCustomRow
+                            ? 'bg-sky-500/5 hover:bg-sky-500/10'
+                            : !preset.isOptimal15
+                              ? 'opacity-60 hover:opacity-100'
+                              : 'hover:bg-zinc-500/5'
                       }`}
                     >
-                      <select
-                        value={currentAssetId}
-                        onChange={(e) => onChangeSlotAsset(slotId, e.target.value)}
-                        title={`Ganti slot benchmark ${slotId} dengan instrumen lain`}
-                        aria-label={`Slot benchmark ${slotId}`}
-                        className="ui-text-main cursor-pointer bg-transparent font-mono text-[11px] font-bold focus:outline-none"
+                      <th
+                        scope="row"
+                        className="ui-card ui-border sticky left-0 z-10 min-w-[145px] max-w-[180px] border-b border-r px-2.5 py-2 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] sm:max-w-xs sm:px-3"
                       >
-                        {allAssets.map((a) => (
-                          <option
-                            key={a.id}
-                            value={a.id}
-                            className="bg-zinc-900 text-white"
-                          >
-                            {a.shortName}
-                          </option>
-                        ))}
-                      </select>
-                      {isSwapped && (
-                        <div className="ui-text-muted text-[9px] font-normal">
-                          ex-{slotId}
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                            {preset.isCustomRow ? (
+                              <span className="shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
+                                CUSTOM
+                              </span>
+                            ) : (
+                              preset.rank && (
+                                <span className="ui-subtle ui-text-muted inline-flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px]">
+                                  {preset.rank}
+                                </span>
+                              )
+                            )}
+                            <div className="min-w-0">
+                              <div className="ui-text-main truncate text-xs font-semibold sm:whitespace-normal">
+                                {preset.name}
+                              </div>
+                              {preset.videoNote && (
+                                <div className="ui-text-muted mt-0.5 hidden line-clamp-1 max-w-xs text-[10px] font-normal sm:block">
+                                  {preset.videoNote}
+                                </div>
+                              )}
+                              {preset.dominatedByReason && (
+                                <div className="mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                                  ⚠️ {preset.dominatedByReason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {preset.isCustomRow && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveCustomTableRow(preset.id);
+                              }}
+                              title="Hapus baris custom ini dari tabel"
+                              className="ui-text-muted shrink-0 rounded p-1 hover:text-rose-500"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
+                      </th>
+
+                      <td className="ui-border border-b border-r px-2 py-2 text-center">
+                        <span
+                          className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}
+                        >
+                          {badge.label.replace(' RISK', '')}
+                        </span>
+                      </td>
+
+                      <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                        {preset.cagr.toFixed(2)}%
+                      </td>
+
+                      <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-rose-600 dark:text-rose-400">
+                        {preset.maxDrawdown.toFixed(2)}%
+                      </td>
+
+                      {[...mappedColumnIds, ...extraCustomAssetIds].map(
+                        (colAssetId, colIdx) => {
+                          const w = preset.weights[colAssetId] ?? 0;
+                          return (
+                            <td
+                              key={`${colAssetId}-${colIdx}`}
+                              className={`ui-border border-b border-r px-2.5 py-2 text-right font-mono ${
+                                w >= 30
+                                  ? 'ui-text-main bg-emerald-500/5 font-bold'
+                                  : w > 0
+                                    ? 'ui-text-secondary'
+                                    : 'ui-text-muted opacity-40'
+                              }`}
+                            >
+                              {w}%
+                            </td>
+                          );
+                        }
                       )}
-                    </th>
+                    </tr>
                   );
                 })}
-                {extraCustomAssetIds.map((extraId) => (
-                  <th
-                    key={extraId}
-                    className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
-                  >
-                    {extraId}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {combinedRows.map((preset) => {
-                const isSelected = activePresetId === preset.id;
-                const badge = getRiskTierBadge(preset.riskTier);
-                return (
-                  <tr
-                    key={preset.id}
-                    onClick={() => onSelectPreset(preset)}
-                    className={`cursor-pointer transition ${
-                      isSelected
-                        ? 'bg-emerald-500/10'
-                        : preset.isCustomRow
-                          ? 'bg-sky-500/5 hover:bg-sky-500/10'
-                          : !preset.isOptimal15
-                            ? 'opacity-60 hover:opacity-100'
-                            : 'hover:bg-zinc-500/5'
-                    }`}
-                  >
-                    <th
-                      scope="row"
-                      className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2 font-medium"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {preset.isCustomRow ? (
-                            <span className="rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
-                              CUSTOM
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Mode 2: Zero-Horizontal-Scroll Responsive Card View */
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {combinedRows.map((preset) => {
+              const isSelected = activePresetId === preset.id;
+              const badge = getRiskTierBadge(preset.riskTier);
+              const nonZeroWeights = Object.entries(preset.weights)
+                .filter(([, w]) => w > 0)
+                .sort((a, b) => b[1] - a[1]);
+
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => onSelectPreset(preset)}
+                  className={`flex cursor-pointer flex-col justify-between rounded-xl border p-3.5 transition ${
+                    isSelected
+                      ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
+                      : 'ui-subtle ui-border hover:border-emerald-500/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {preset.isCustomRow ? (
+                          <span className="rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
+                            CUSTOM
+                          </span>
+                        ) : (
+                          preset.rank && (
+                            <span className="ui-card ui-text-muted inline-flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold">
+                              #{preset.rank}
                             </span>
-                          ) : (
-                            preset.rank && (
-                              <span className="ui-subtle ui-text-muted inline-flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px]">
-                                {preset.rank}
-                              </span>
-                            )
-                          )}
-                          <div>
-                            <div className="ui-text-main text-xs font-semibold">
-                              {preset.name}
-                            </div>
-                            {preset.videoNote && (
-                              <div className="ui-text-muted mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal">
-                                {preset.videoNote}
-                              </div>
-                            )}
-                            {preset.dominatedByReason && (
-                              <div className="mt-0.5 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
-                                ⚠️ {preset.dominatedByReason}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {preset.isCustomRow && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRemoveCustomTableRow(preset.id);
-                            }}
-                            title="Hapus baris custom ini dari tabel"
-                            className="ui-text-muted rounded p-1 hover:text-rose-500"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          )
                         )}
+                        <h3 className="ui-text-main text-xs font-bold">
+                          {preset.name}
+                        </h3>
                       </div>
-                    </th>
-
-                    <td className="ui-border border-b border-r px-2 py-2 text-center">
                       <span
-                        className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}
+                        className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}
                       >
                         {badge.label.replace(' RISK', '')}
                       </span>
-                    </td>
+                    </div>
 
-                    <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                      {preset.cagr.toFixed(2)}%
-                    </td>
+                    {/* Key Metrics Row */}
+                    <div className="ui-card mt-2.5 grid grid-cols-3 gap-2 rounded-lg p-2 text-center font-mono text-xs">
+                      <div>
+                        <div className="ui-text-muted text-[9px] uppercase">
+                          CAGR
+                        </div>
+                        <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                          +{preset.cagr.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="ui-text-muted text-[9px] uppercase">
+                          Max DD
+                        </div>
+                        <div className="font-bold text-rose-600 dark:text-rose-400">
+                          -{preset.maxDrawdown.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="ui-text-muted text-[9px] uppercase">
+                          Calmar
+                        </div>
+                        <div className="ui-text-main font-bold">
+                          {(preset.cagr / Math.max(0.5, preset.maxDrawdown)).toFixed(2)}x
+                        </div>
+                      </div>
+                    </div>
 
-                    <td className="ui-border border-b border-r px-3 py-2 text-right font-mono font-semibold text-rose-600 dark:text-rose-400">
-                      {preset.maxDrawdown.toFixed(2)}%
-                    </td>
+                    {/* Weight Pills */}
+                    <div className="mt-2.5 flex flex-wrap gap-1">
+                      {nonZeroWeights.map(([assetId, w]) => (
+                        <span
+                          key={assetId}
+                          className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                            w >= 30
+                              ? 'bg-emerald-500/15 font-bold text-emerald-700 dark:text-emerald-300'
+                              : 'ui-card ui-text-secondary'
+                          }`}
+                        >
+                          {assetId} {w}%
+                        </span>
+                      ))}
+                    </div>
 
-                    {[...mappedColumnIds, ...extraCustomAssetIds].map(
-                      (colAssetId, colIdx) => {
-                        const w = preset.weights[colAssetId] ?? 0;
-                        return (
-                          <td
-                            key={`${colAssetId}-${colIdx}`}
-                            className={`ui-border border-b border-r px-2.5 py-2 text-right font-mono ${
-                              w >= 30
-                                ? 'ui-text-main bg-emerald-500/5 font-bold'
-                                : w > 0
-                                  ? 'ui-text-secondary'
-                                  : 'ui-text-muted opacity-40'
-                            }`}
-                          >
-                            {w}%
-                          </td>
-                        );
-                      }
+                    {preset.videoNote && (
+                      <p className="ui-text-muted mt-2 text-[11px]">
+                        {preset.videoNote}
+                      </p>
                     )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    {preset.dominatedByReason && (
+                      <p className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                        ⚠️ {preset.dominatedByReason}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="ui-border mt-3 flex items-center justify-between border-t pt-2 text-[11px]">
+                    <span
+                      className={`font-semibold ${
+                        isSelected
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'ui-text-muted'
+                      }`}
+                    >
+                      {isSelected ? '✓ Sedang Aktif' : 'Tap untuk Pakai'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setComparePresetId(preset.id);
+                      }}
+                      className="ui-card ui-text-secondary rounded px-2 py-0.5 text-[10px] font-medium hover:opacity-80"
+                    >
+                      Jadikan Pembanding
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* SECTION 3: CUSTOM QUANT SOLVER & MANUAL WEIGHT BUILDER */}
@@ -1816,6 +2018,300 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* SECTION 4: HEAD-TO-HEAD PORTFOLIO COMPARATOR (BANDINGKAN 2 PORTFOLIO) */}
+      {(() => {
+        const allSelectablePresets = [...customTableRows, ...presets];
+        const compareTarget =
+          allSelectablePresets.find((p) => p.id === comparePresetId) ??
+          allSelectablePresets.find((p) => p.id !== activePresetId) ??
+          presets[0];
+
+        if (!compareTarget) return null;
+
+        const simCompare = simulateWealthToGoal({
+          initialCapitalIdr,
+          monthlyContributionIdr: monthlySavingsIdr,
+          annualCagrPercent: compareTarget.cagr,
+          maxDrawdownPercent: compareTarget.maxDrawdown,
+          targetWealthIdr: targetGoalIdr,
+        });
+
+        const activeCalmar = Number(
+          (solvedMetrics.cagr / Math.max(0.5, solvedMetrics.maxDrawdown)).toFixed(2)
+        );
+        const compareCalmar = Number(
+          (compareTarget.cagr / Math.max(0.5, compareTarget.maxDrawdown)).toFixed(2)
+        );
+
+        const cagrDiff = Number((solvedMetrics.cagr - compareTarget.cagr).toFixed(2));
+        const ddDiff = Number(
+          (solvedMetrics.maxDrawdown - compareTarget.maxDrawdown).toFixed(2)
+        );
+        const yearsDiff = Number(
+          (simCustom.exactYearsFloat - simCompare.exactYearsFloat).toFixed(1)
+        );
+
+        const comparedAssetIds = Array.from(
+          new Set([
+            ...Object.keys(activeWeights).filter((k) => (activeWeights[k] ?? 0) > 0),
+            ...Object.keys(compareTarget.weights).filter(
+              (k) => (compareTarget.weights[k] ?? 0) > 0
+            ),
+          ])
+        );
+
+        return (
+          <section className="ui-card rounded-xl p-5">
+            <div className="ui-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <ArrowLeftRight className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="ui-text-main text-sm font-bold sm:text-base">
+                    Bandingkan 2 Portfolio (Head-to-Head Comparator)
+                  </h2>
+                  <p className="ui-text-muted text-xs">
+                    Bandingkan langsung racikan aktif Anda (Kiri) melawan strategi
+                    lain (Kanan) dari segi Return, Risiko Drawdown, Kecepatan Capai{' '}
+                    {formatIdr(targetGoalIdr, true)}, dan Selisih Bobot.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <label
+                  htmlFor="compare-preset-select"
+                  className="ui-text-secondary text-xs font-semibold"
+                >
+                  Lawan Pembanding:
+                </label>
+                <select
+                  id="compare-preset-select"
+                  value={compareTarget.id}
+                  onChange={(e) => setComparePresetId(e.target.value)}
+                  className="ui-subtle ui-text-main max-w-xs rounded-lg border px-2.5 py-1.5 text-xs font-semibold focus:outline-none"
+                >
+                  {allSelectablePresets.map((p) => (
+                    <option
+                      key={p.id}
+                      value={p.id}
+                      className="bg-zinc-900 text-white"
+                    >
+                      {p.rank ? `#${p.rank} ` : p.isCustomRow ? '[Custom] ' : ''}
+                      {p.name} ({p.cagr}% / -{p.maxDrawdown}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Side-by-Side Metric Cards */}
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Portfolio A: Active */}
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                    Portfolio A • Sedang Aktif
+                  </span>
+                  <span className="ui-text-muted font-mono text-xs">
+                    Efisiensi Calmar {activeCalmar}x
+                  </span>
+                </div>
+                <h3 className="ui-text-main mt-2 text-sm font-bold">
+                  {activePresetObj ? activePresetObj.name : 'Racikan Custom Anda'}
+                </h3>
+
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="ui-card rounded-lg p-2.5">
+                    <div className="ui-text-muted text-[10px] uppercase">
+                      Expected CAGR
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      +{solvedMetrics.cagr.toFixed(2)}%
+                    </div>
+                    <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                      {cagrDiff >= 0 ? `+${cagrDiff}% unggul` : `${cagrDiff}% vs B`}
+                    </div>
+                  </div>
+
+                  <div className="ui-card rounded-lg p-2.5">
+                    <div className="ui-text-muted text-[10px] uppercase">
+                      Max Drawdown
+                    </div>
+                    <div className="mt-0.5 font-mono text-sm font-bold text-rose-600 dark:text-rose-400">
+                      -{solvedMetrics.maxDrawdown.toFixed(2)}%
+                    </div>
+                    <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                      {ddDiff <= 0
+                        ? `${Math.abs(ddDiff)}% lebih aman`
+                        : `+${ddDiff}% lebih fluktuatif`}
+                    </div>
+                  </div>
+
+                  <div className="ui-card rounded-lg p-2.5">
+                    <div className="ui-text-muted text-[10px] uppercase">
+                      Capai {formatIdr(targetGoalIdr, true)}
+                    </div>
+                    <div className="ui-text-main mt-0.5 font-mono text-sm font-bold">
+                      {simCustom.exactYearsFloat} Thn
+                    </div>
+                    <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                      {yearsDiff <= 0
+                        ? `${Math.abs(yearsDiff)} thn lebih cepat`
+                        : `+${yearsDiff} thn lebih lama`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portfolio B: Comparison Target */}
+              <div className="ui-subtle ui-border flex flex-col justify-between rounded-xl border p-4">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-600 dark:text-sky-400">
+                      Portfolio B • Pembanding
+                    </span>
+                    <span className="ui-text-muted font-mono text-xs">
+                      Efisiensi Calmar {compareCalmar}x
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <h3 className="ui-text-main text-sm font-bold">
+                      {compareTarget.name}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => onSelectPreset(compareTarget)}
+                      className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-sky-500"
+                    >
+                      Gunakan B Ini
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="ui-card rounded-lg p-2.5">
+                      <div className="ui-text-muted text-[10px] uppercase">
+                        Expected CAGR
+                      </div>
+                      <div className="mt-0.5 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        +{compareTarget.cagr.toFixed(2)}%
+                      </div>
+                      <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                        / tahun
+                      </div>
+                    </div>
+
+                    <div className="ui-card rounded-lg p-2.5">
+                      <div className="ui-text-muted text-[10px] uppercase">
+                        Max Drawdown
+                      </div>
+                      <div className="mt-0.5 font-mono text-sm font-bold text-rose-600 dark:text-rose-400">
+                        -{compareTarget.maxDrawdown.toFixed(2)}%
+                      </div>
+                      <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                        risiko historis
+                      </div>
+                    </div>
+
+                    <div className="ui-card rounded-lg p-2.5">
+                      <div className="ui-text-muted text-[10px] uppercase">
+                        Capai {formatIdr(targetGoalIdr, true)}
+                      </div>
+                      <div className="ui-text-main mt-0.5 font-mono text-sm font-bold">
+                        {simCompare.exactYearsFloat} Thn
+                      </div>
+                      <div className="ui-text-muted mt-0.5 font-mono text-[10px]">
+                        @{formatIdr(monthlySavingsIdr, true)}/bln
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Side-by-Side Asset Allocation Diff Bars */}
+            <div className="ui-subtle mt-4 rounded-xl p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="ui-text-main font-semibold">
+                  Perbandingan Bobot Modal per Instrumen (A vs B)
+                </span>
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-xs bg-emerald-500" />
+                    <span className="ui-text-secondary">A: Aktif (%)</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-xs bg-sky-500" />
+                    <span className="ui-text-secondary">B: Pembanding (%)</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                {comparedAssetIds.map((assetId) => {
+                  const wA = Number((activeWeights[assetId] ?? 0).toFixed(1));
+                  const wB = Number(
+                    (compareTarget.weights[assetId] ?? 0).toFixed(1)
+                  );
+                  const diff = Number((wA - wB).toFixed(1));
+                  return (
+                    <div key={assetId} className="ui-card rounded-lg p-2.5 text-xs">
+                      <div className="flex items-center justify-between font-mono">
+                        <span className="ui-text-main font-bold">{assetId}</span>
+                        <span
+                          className={`text-[10px] font-semibold ${
+                            diff > 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : diff < 0
+                                ? 'text-sky-600 dark:text-sky-400'
+                                : 'ui-text-muted'
+                          }`}
+                        >
+                          {diff > 0 ? `+${diff}% di A` : diff < 0 ? `${diff}% di A` : 'Sama'}
+                        </span>
+                      </div>
+
+                      <div className="mt-1.5 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="ui-text-muted w-4 font-mono text-[10px]">
+                            A
+                          </span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-500/15">
+                            <div
+                              className="h-full rounded-full bg-emerald-500"
+                              style={{ width: `${Math.min(100, wA)}%` }}
+                            />
+                          </div>
+                          <span className="ui-text-main w-10 text-right font-mono text-[10px] font-semibold">
+                            {wA}%
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="ui-text-muted w-4 font-mono text-[10px]">
+                            B
+                          </span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-500/15">
+                            <div
+                              className="h-full rounded-full bg-sky-500"
+                              style={{ width: `${Math.min(100, wB)}%` }}
+                            />
+                          </div>
+                          <span className="ui-text-secondary w-10 text-right font-mono text-[10px]">
+                            {wB}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
     </div>
   );
 };

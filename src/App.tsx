@@ -907,9 +907,20 @@ export function App() {
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
         onOpenRecommender={() => setIsRecommenderOpen(true)}
         onOpenWalkthrough={() => setIsWalkthroughOpen(true)}
+        activePortfolioName={
+          exactPresetMatch
+            ? exactPresetMatch.name
+            : allocationMethod === 'risk-parity'
+              ? 'Custom Equal Risk Parity'
+              : allocationMethod === 'risk-budgeting'
+                ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                : 'Portfolio Custom Anda'
+        }
+        activeCagr={solvedMetrics.cagr}
+        activeMaxDrawdown={solvedMetrics.maxDrawdown}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
         {activeTab === 'builder' && (
           <PortfolioBuilderView
             allAssets={allAssets}
@@ -1012,7 +1023,7 @@ export function App() {
         onApplyRecommendation={handleApplyRecommendation}
       />
 
-      <footer className="ui-border ui-text-muted mt-12 border-t py-6 text-center text-xs">
+      <footer className="ui-border ui-text-muted mt-12 border-t py-6 pb-24 text-center text-xs lg:pb-6">
         <div className="mx-auto max-w-7xl px-4">
           QuantPorto — Reverse-Engineered dari{' '}
           <a

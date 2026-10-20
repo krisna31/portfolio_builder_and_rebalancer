@@ -15,6 +15,8 @@ import {
   Moon,
   Compass,
   HelpCircle,
+  SlidersHorizontal,
+  ArrowRight,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -49,6 +51,9 @@ interface HeaderProps {
   onDeleteSavedPortfolio: (id: string) => void;
   onOpenRecommender: () => void;
   onOpenWalkthrough: () => void;
+  activePortfolioName?: string;
+  activeCagr?: number;
+  activeMaxDrawdown?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -72,10 +77,14 @@ export const Header: React.FC<HeaderProps> = ({
   onDeleteSavedPortfolio,
   onOpenRecommender,
   onOpenWalkthrough,
+  activePortfolioName = 'Portfolio Aktif',
+  activeCagr = 0,
+  activeMaxDrawdown = 0,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [newSaveName, setNewSaveName] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Track currently rendered scheme ('light' | 'dark') for the icon display
   const [renderedScheme, setRenderedScheme] = useState<'light' | 'dark'>(() => {
@@ -166,24 +175,29 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, []);
 
+  const calmarRatio =
+    activeMaxDrawdown > 0
+      ? (activeCagr / Math.max(0.5, activeMaxDrawdown)).toFixed(2)
+      : '0.00';
+
   return (
-    <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0">
-      <div className="mx-auto max-w-7xl px-4 py-2.5 sm:px-6">
-        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-          {/* Minimalist Brand Title */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <BrandLogo className="h-8 w-8 shrink-0" />
+    <>
+      <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
+        <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-2.5">
+          <div className="flex items-center justify-between gap-2">
+            {/* Minimalist Brand Title */}
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <BrandLogo className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="ui-text-main text-base font-bold tracking-tight">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="ui-text-main text-sm font-bold tracking-tight sm:text-base">
                     QuantPorto
                   </h1>
                   <span className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono text-[10px] font-medium">
                     Rp10M
                   </span>
                 </div>
-                <p className="ui-text-muted text-[11px]">
+                <p className="ui-text-muted hidden text-[11px] sm:block">
                   Risk Parity &amp; Rebalancer •{' '}
                   <a
                     href="https://www.youtube.com/watch?v=O8PShy9d484"
@@ -196,302 +210,505 @@ export const Header: React.FC<HeaderProps> = ({
                 </p>
               </div>
             </div>
-          </div>
 
-          {/* Minimalist Primary Navigation Tabs */}
-          <nav className="ui-subtle flex items-center gap-1 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('builder')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition sm:flex-initial ${
-                activeTab === 'builder'
-                  ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                  : 'ui-text-muted hover:ui-text-main'
-              }`}
+            {/* Desktop Primary Navigation Tabs (Hidden on mobile because mobile uses thumb-friendly Bottom Bar) */}
+            <nav
+              aria-label="Main Navigation"
+              className="ui-subtle hidden items-center gap-1 rounded-lg p-1 lg:flex"
             >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>1. Builder</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('rebalancer')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition sm:flex-initial ${
-                activeTab === 'rebalancer'
-                  ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                  : 'ui-text-muted hover:ui-text-main'
-              }`}
-            >
-              <Scale className="h-3.5 w-3.5" />
-              <span>2. Rebalancer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('roadmap')}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition sm:flex-initial ${
-                activeTab === 'roadmap'
-                  ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                  : 'ui-text-muted hover:ui-text-main'
-              }`}
-            >
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>3. Rp10M Simulator</span>
-            </button>
-          </nav>
-
-          {/* Global Controls */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Smart Portfolio Recommender Trigger */}
-            <button
-              type="button"
-              onClick={onOpenRecommender}
-              title="Jawab 4 pertanyaan singkat untuk mengestimasi pilihan portfolio terbaik Anda"
-              className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
-            >
-              <Compass className="h-3.5 w-3.5" />
-              <span>Tanya Quant</span>
-            </button>
-
-            {/* Interactive Walkthrough Tour Trigger */}
-            <button
-              type="button"
-              onClick={onOpenWalkthrough}
-              title="Buka panduan fitur interaktif QuantPorto"
-              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-            >
-              <HelpCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Panduan</span>
-            </button>
-
-            {/* Makmur RDPT Alpha Promo (+3%) Toggle */}
-            <button
-              type="button"
-              onClick={() => setRdptPromoActive(!rdptPromoActive)}
-              title="Di menit 05:04, Leon membahas mencari Alpha RDPT dengan promo bonus +3% (9-10% p.a. vs 6-7% p.a.)."
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition ${
-                rdptPromoActive
-                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                  : 'ui-subtle ui-text-secondary'
-              }`}
-            >
-              <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-              <span>RDPT +3%</span>
-            </button>
-
-            {/* USD/IDR Exchange Rate */}
-            <div className="ui-subtle flex items-center gap-1 rounded-md px-2 py-1 text-xs">
-              <span className="ui-text-muted">USD:</span>
-              <FormattedNumberInput
-                step={100}
-                min={1000}
-                value={usdIdrRate}
-                onChange={(val) => setUsdIdrRate(val)}
-                className="ui-text-main w-14 bg-transparent font-mono font-semibold focus:outline-none"
-                ariaLabel="USD to IDR Exchange Rate"
-              />
-            </div>
-
-            {/* Live Price Refresh Button */}
-            <button
-              type="button"
-              onClick={onRefreshLivePrices}
-              disabled={isFetchingPrices}
-              title={`Sumber Harga: ${priceSourceText}${lastUpdatedText ? ` (${lastUpdatedText})` : ''}`}
-              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80 disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`h-3 w-3 ${isFetchingPrices ? 'animate-spin' : ''}`}
-              />
-              <span className="hidden sm:inline">Sync</span>
-            </button>
-
-            {/* Saved Portfolios Modal Trigger */}
-            <button
-              type="button"
-              onClick={() => dialogRef.current?.showModal()}
-              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-            >
-              <BookmarkCheck className="h-3.5 w-3.5" />
-              <span>Saved ({savedPortfolios.length})</span>
-            </button>
-
-            {/* Share URL Button */}
-            <button
-              type="button"
-              onClick={onCopyShareUrl}
-              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-            >
-              {shareCopied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Share</span>
-                </>
-              )}
-            </button>
-
-            {/* Light / Dark Theme Toggle */}
-            <button
-              type="button"
-              onClick={handleToggleColorScheme}
-              title={
-                renderedScheme === 'dark'
-                  ? 'Switch to Light Mode'
-                  : 'Switch to Dark Mode'
-              }
-              aria-label={
-                renderedScheme === 'dark'
-                  ? 'Switch to light theme'
-                  : 'Switch to dark theme'
-              }
-              className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-            >
-              {renderedScheme === 'dark' ? (
-                <>
-                  <Sun className="h-3.5 w-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="h-3.5 w-3.5 text-slate-700" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Native Modal Dialog with closedby="any" */}
-      <dialog
-        ref={dialogRef}
-        {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
-        aria-labelledby="saved-modal-title"
-        className="ui-card m-auto w-full max-w-lg rounded-xl p-5 shadow-xl backdrop:bg-black/50"
-      >
-        <div className="ui-border flex items-center justify-between border-b pb-3">
-          <h2 id="saved-modal-title" className="ui-text-main text-sm font-bold">
-            Saved Portfolios &amp; JSON Backup
-          </h2>
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            className="ui-text-muted rounded p-1 hover:opacity-80"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-4">
-          <div className="ui-subtle rounded-lg p-3">
-            <label className="ui-text-secondary block text-xs font-medium">
-              Simpan Portfolio Saat Ini (LocalStorage)
-            </label>
-            <div className="mt-2 flex gap-2">
-              <input
-                type="text"
-                placeholder="Nama Portfolio..."
-                value={newSaveName}
-                onChange={(e) => setNewSaveName(e.target.value)}
-                className="ui-card ui-text-main flex-1 rounded-md px-2.5 py-1.5 text-xs focus:outline-none"
-              />
               <button
                 type="button"
-                onClick={() => {
-                  const name =
-                    newSaveName.trim() ||
-                    `Custom Porto #${savedPortfolios.length + 1}`;
-                  onSaveCurrentPortfolio(name);
-                  setNewSaveName('');
-                }}
-                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                onClick={() => setActiveTab('builder')}
+                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === 'builder'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
               >
-                Simpan
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>1. Builder</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rebalancer')}
+                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === 'rebalancer'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Scale className="h-3.5 w-3.5" />
+                <span>2. Rebalancer</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('roadmap')}
+                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  activeTab === 'roadmap'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>3. Rp10M Simulator</span>
+              </button>
+            </nav>
+
+            {/* Right Action Bar: Compact on Mobile, Full on Desktop */}
+            <div className="flex items-center gap-1.5">
+              {/* Primary CTA: Tanya Quant */}
+              <button
+                type="button"
+                onClick={onOpenRecommender}
+                title="Jawab 4 pertanyaan singkat untuk mengestimasi pilihan portfolio terbaik Anda"
+                className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
+              >
+                <Compass className="h-3.5 w-3.5 shrink-0" />
+                <span>Tanya Quant</span>
+              </button>
+
+              {/* Desktop-only Secondary Controls */}
+              <div className="hidden items-center gap-1.5 lg:flex">
+                <button
+                  type="button"
+                  onClick={onOpenWalkthrough}
+                  title="Buka panduan fitur interaktif QuantPorto"
+                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span>Panduan</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRdptPromoActive(!rdptPromoActive)}
+                  title="Di menit 05:04, Leon membahas mencari Alpha RDPT dengan promo bonus +3% (9-10% p.a. vs 6-7% p.a.)."
+                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition ${
+                    rdptPromoActive
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'ui-subtle ui-text-secondary'
+                  }`}
+                >
+                  <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>RDPT +3%</span>
+                </button>
+
+                <div className="ui-subtle flex items-center gap-1 rounded-md px-2 py-1 text-xs">
+                  <span className="ui-text-muted">USD:</span>
+                  <FormattedNumberInput
+                    step={100}
+                    min={1000}
+                    value={usdIdrRate}
+                    onChange={(val) => setUsdIdrRate(val)}
+                    className="ui-text-main w-14 bg-transparent font-mono font-semibold focus:outline-none"
+                    ariaLabel="USD to IDR Exchange Rate"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onRefreshLivePrices}
+                  disabled={isFetchingPrices}
+                  title={`Sumber Harga: ${priceSourceText}${lastUpdatedText ? ` (${lastUpdatedText})` : ''}`}
+                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 ${isFetchingPrices ? 'animate-spin' : ''}`}
+                  />
+                  <span>Sync</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => dialogRef.current?.showModal()}
+                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
+                >
+                  <BookmarkCheck className="h-3.5 w-3.5" />
+                  <span>Saved ({savedPortfolios.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onCopyShareUrl}
+                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
+                >
+                  {shareCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-3.5 w-3.5" />
+                      <span>Share</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Light / Dark Theme Toggle (Always accessible) */}
+              <button
+                type="button"
+                onClick={handleToggleColorScheme}
+                title={
+                  renderedScheme === 'dark'
+                    ? 'Switch to Light Mode'
+                    : 'Switch to Dark Mode'
+                }
+                aria-label={
+                  renderedScheme === 'dark'
+                    ? 'Switch to light theme'
+                    : 'Switch to dark theme'
+                }
+                className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition hover:opacity-80"
+              >
+                {renderedScheme === 'dark' ? (
+                  <>
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="hidden xl:inline">Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-3.5 w-3.5 text-slate-700" />
+                    <span className="hidden xl:inline">Dark</span>
+                  </>
+                )}
+              </button>
+
+              {/* Mobile Tools Drawer Trigger (< lg) */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                aria-expanded={isMobileMenuOpen}
+                aria-label="Buka menu pengaturan kurs, backup, dan bantuan"
+                className={`flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs font-medium transition lg:hidden ${
+                  isMobileMenuOpen || rdptPromoActive
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'ui-subtle ui-text-main'
+                }`}
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-3.5 w-3.5" />
+                ) : (
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                )}
+                <span>Menu</span>
               </button>
             </div>
           </div>
 
-          <div className="max-h-60 space-y-2 overflow-y-auto">
-            {savedPortfolios.length === 0 ? (
-              <p className="ui-text-muted py-4 text-center text-xs">
-                Belum ada portfolio yang disimpan.
-              </p>
-            ) : (
-              savedPortfolios.map((snap) => (
-                <div
-                  key={snap.id}
-                  className="ui-subtle flex items-center justify-between rounded-lg p-2.5"
-                >
-                  <div>
-                    <div className="ui-text-main text-xs font-semibold">
-                      {snap.name}
-                    </div>
-                    <div className="ui-text-muted mt-0.5 text-[11px]">
-                      CAGR <span className="font-mono">{snap.cagr}%</span> • Max
-                      DD <span className="font-mono">-{snap.maxDrawdown}%</span> •{' '}
-                      {snap.createdAt}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onLoadSavedPortfolio(snap);
-                        dialogRef.current?.close();
-                      }}
-                      className="ui-card ui-text-main rounded px-2.5 py-1 text-xs font-medium"
-                    >
-                      Load
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteSavedPortfolio(snap.id)}
-                      className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-600 dark:text-rose-400"
-                    >
-                      Hapus
-                    </button>
-                  </div>
+          {/* Collapsible Mobile Tools Drawer (< lg) */}
+          {isMobileMenuOpen && (
+            <div className="ui-border mt-2.5 space-y-2.5 border-t pt-2.5 lg:hidden">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {/* USD/IDR Input */}
+                <div className="ui-subtle flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs">
+                  <span className="ui-text-muted font-medium">Kurs USD:</span>
+                  <FormattedNumberInput
+                    step={100}
+                    min={1000}
+                    value={usdIdrRate}
+                    onChange={(val) => setUsdIdrRate(val)}
+                    className="ui-text-main w-16 bg-transparent text-right font-mono font-bold focus:outline-none"
+                    ariaLabel="USD to IDR Exchange Rate Mobile"
+                  />
                 </div>
-              ))
-            )}
-          </div>
 
-          <div className="ui-border flex items-center justify-between border-t pt-3">
+                {/* RDPT Promo Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setRdptPromoActive(!rdptPromoActive)}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                    rdptPromoActive
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'ui-subtle ui-text-secondary'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Promo RDPT +3%</span>
+                </button>
+
+                {/* Sync Live Prices */}
+                <button
+                  type="button"
+                  onClick={onRefreshLivePrices}
+                  disabled={isFetchingPrices}
+                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin' : ''}`}
+                  />
+                  <span>Sync Harga Live</span>
+                </button>
+
+                {/* Saved Portfolios */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    dialogRef.current?.showModal();
+                  }}
+                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+                >
+                  <BookmarkCheck className="h-3.5 w-3.5" />
+                  <span>Saved ({savedPortfolios.length})</span>
+                </button>
+
+                {/* Share URL */}
+                <button
+                  type="button"
+                  onClick={onCopyShareUrl}
+                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+                >
+                  {shareCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Link Tersalin</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-3.5 w-3.5" />
+                      <span>Bagikan Link</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Walkthrough Tour */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenWalkthrough();
+                  }}
+                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span>Panduan Fitur</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
+        <div className="ui-border bg-emerald-500/[0.04] border-t px-3 py-1 sm:px-6">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+              <span className="ui-text-main truncate font-semibold">
+                {activePortfolioName}
+              </span>
+              <span className="ui-text-muted hidden sm:inline">•</span>
+              <span className="shrink-0 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                CAGR +{activeCagr.toFixed(2)}%
+              </span>
+              <span className="shrink-0 font-mono font-semibold text-rose-600 dark:text-rose-400">
+                DD -{activeMaxDrawdown.toFixed(1)}%
+              </span>
+              <span className="ui-text-muted hidden shrink-0 font-mono md:inline">
+                Calmar {calmarRatio}x
+              </span>
+            </div>
+
             <button
               type="button"
-              onClick={onExportJson}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
+              onClick={() =>
+                setActiveTab(activeTab === 'builder' ? 'rebalancer' : 'builder')
+              }
+              className="flex shrink-0 items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
             >
-              <Download className="h-3.5 w-3.5" />
-              <span>Export (.json)</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  onImportJson(file);
-                  e.target.value = '';
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              <span>Import (.json)</span>
+              <span>
+                {activeTab === 'builder' ? 'Eksekusi Order' : 'Ubah Bobot'}
+              </span>
+              <ArrowRight className="h-3 w-3" />
             </button>
           </div>
         </div>
-      </dialog>
-    </header>
+
+        {/* Native Modal Dialog with closedby="any" */}
+        <dialog
+          ref={dialogRef}
+          {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
+          aria-labelledby="saved-modal-title"
+          className="ui-card m-auto w-full max-w-lg rounded-xl p-5 shadow-xl backdrop:bg-black/50"
+        >
+          <div className="ui-border flex items-center justify-between border-b pb-3">
+            <h2 id="saved-modal-title" className="ui-text-main text-sm font-bold">
+              Saved Portfolios &amp; JSON Backup
+            </h2>
+            <button
+              type="button"
+              onClick={() => dialogRef.current?.close()}
+              className="ui-text-muted rounded p-1 hover:opacity-80"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            <div className="ui-subtle rounded-lg p-3">
+              <label className="ui-text-secondary block text-xs font-medium">
+                Simpan Portfolio Saat Ini (LocalStorage)
+              </label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nama Portfolio..."
+                  value={newSaveName}
+                  onChange={(e) => setNewSaveName(e.target.value)}
+                  className="ui-card ui-text-main flex-1 rounded-md px-2.5 py-1.5 text-xs focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name =
+                      newSaveName.trim() ||
+                      `Custom Porto #${savedPortfolios.length + 1}`;
+                    onSaveCurrentPortfolio(name);
+                    setNewSaveName('');
+                  }}
+                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                >
+                  Simpan
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-60 space-y-2 overflow-y-auto">
+              {savedPortfolios.length === 0 ? (
+                <p className="ui-text-muted py-4 text-center text-xs">
+                  Belum ada portfolio yang disimpan.
+                </p>
+              ) : (
+                savedPortfolios.map((snap) => (
+                  <div
+                    key={snap.id}
+                    className="ui-subtle flex items-center justify-between rounded-lg p-2.5"
+                  >
+                    <div>
+                      <div className="ui-text-main text-xs font-semibold">
+                        {snap.name}
+                      </div>
+                      <div className="ui-text-muted mt-0.5 text-[11px]">
+                        CAGR <span className="font-mono">{snap.cagr}%</span> • Max
+                        DD <span className="font-mono">-{snap.maxDrawdown}%</span> •{' '}
+                        {snap.createdAt}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onLoadSavedPortfolio(snap);
+                          dialogRef.current?.close();
+                        }}
+                        className="ui-card ui-text-main rounded px-2.5 py-1 text-xs font-medium"
+                      >
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSavedPortfolio(snap.id)}
+                        className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-600 dark:text-rose-400"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="ui-border flex items-center justify-between border-t pt-3">
+              <button
+                type="button"
+                onClick={onExportJson}
+                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export (.json)</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onImportJson(file);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Import (.json)</span>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      </header>
+
+      {/* Thumb-Friendly Mobile Bottom Tab Navigation Bar (< lg) */}
+      <nav
+        aria-label="Mobile Bottom Navigation"
+        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-lg lg:hidden"
+      >
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('builder');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+              activeTab === 'builder'
+                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                : 'ui-text-muted hover:ui-text-main'
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>1. Builder</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('rebalancer');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+              activeTab === 'rebalancer'
+                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                : 'ui-text-muted hover:ui-text-main'
+            }`}
+          >
+            <Scale className="h-4 w-4" />
+            <span>2. Rebalancer</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('roadmap');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+              activeTab === 'roadmap'
+                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                : 'ui-text-muted hover:ui-text-main'
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" />
+            <span>3. Simulator</span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
 };

@@ -622,11 +622,18 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         </div>
 
         {/* Per-Asset Dividend Yield Table */}
-        <div className="ui-border mt-4 overflow-x-auto rounded-lg border">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Per-Asset Dividend and Passive Income Table"
+          className="ui-border mt-4 overflow-x-auto rounded-lg border"
+        >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <thead className="ui-subtle text-[11px] font-semibold uppercase">
               <tr>
-                <th className="ui-border border-b px-3 py-2">Instrumen</th>
+                <th className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
+                  Instrumen
+                </th>
                 <th className="ui-border border-b px-3 py-2 text-right">
                   Bobot Target
                 </th>
@@ -648,20 +655,23 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <tbody>
               {dividendBreakdown.activeItems.map((row) => (
                 <tr key={row.asset.id} className="hover:bg-zinc-500/5">
-                  <td className="ui-border border-b px-3 py-2">
+                  <th
+                    scope="row"
+                    className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]"
+                  >
                     <div className="flex items-center gap-2">
                       <span
-                        className="h-2.5 w-2.5 rounded-full"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: row.asset.color }}
                       />
                       <span className="ui-text-main font-semibold">
                         {row.asset.symbol}
                       </span>
-                      <span className="ui-text-muted text-[11px]">
+                      <span className="ui-text-muted hidden text-[11px] sm:inline">
                         ({row.asset.name})
                       </span>
                     </div>
-                  </td>
+                  </th>
                   <td className="ui-border ui-text-main border-b px-3 py-2 text-right font-mono font-semibold">
                     {row.weightPct.toFixed(1)}%
                   </td>
