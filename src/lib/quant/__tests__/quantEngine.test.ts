@@ -5,8 +5,11 @@ import {
   evaluatePortfolioMetrics,
   buildDynamicPresetsForSlotMap,
 } from '../riskParitySolver';
-import { calculateRebalancePlan } from '../rebalancerEngine';
-import { simulateWealthToGoal } from '../wealthSimulator';
+import { calculateRebalancePlan, generateCrashBuyingLadder } from '../rebalancerEngine';
+import {
+  simulateWealthToGoal,
+  simulateRebalancingFrequencyBacktest,
+} from '../wealthSimulator';
 import { HoldingEntry } from '../types';
 
 describe('Risk Parity & Risk Budgeting Quant Engine', () => {
@@ -211,5 +214,48 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     expect(sim.reachedGoal).toBe(true);
     expect(sim.yearsToGoal).toBeGreaterThanOrEqual(14);
     expect(sim.yearsToGoal).toBeLessThanOrEqual(20);
+  });
+
+  it('generates Pre-Planned Crash Buying Ladder (-10%, -20%, -35%, -50%) with increasing BUY amounts', () => {
+    const btc90Preset = VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === 'opt-4-rb-btc-90')!;
+    const btcAsset = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'BTC')!;
+    const holdings: Record<string, HoldingEntry> = {};
+    for (const asset of CORE_AND_EXPANDED_ASSETS.filter((a) => a.isCoreBenchmark)) {
+      holdings[asset.id] = {
+        assetId: asset.id,
+        currentValueIdr: VIDEO_1B_REBALANCE_EXAMPLE[asset.id] ?? 0,
+        units: 0,
+        currentPrice: asset.defaultPrice,
+        shockPercent: 0,
+      };
+    }
+
+    const ladder = generateCrashBuyingLadder({
+      targetAsset: btcAsset,
+      allAssets: CORE_AND_EXPANDED_ASSETS,
+      targetWeights: btc90Preset.weights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 15600,
+    });
+    expect(ladder).toHaveLength(4);
+    expect(ladder[0].dropPercent).toBe(-10);
+    expect(ladder[3].dropPercent).toBe(-50);
+    expect(ladder[3].rebalanceBuyAmountIdr).toBeGreaterThan(
+      ladder[0].rebalanceBuyAmountIdr
+    );
+  });
+
+  it('simulates 5-Year Historical Rebalancing Frequency Backtest (Monthly vs Quarterly vs Annual vs Buy & Hold)', () => {
+    const btc90Preset = VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === 'opt-4-rb-btc-90')!;
+    const backtest = simulateRebalancingFrequencyBacktest({
+      initialCapitalIdr: 100_000_000,
+      baseCagrPercent: btc90Preset.cagr,
+      maxDrawdownPercent: btc90Preset.maxDrawdown,
+    });
+    expect(backtest.series).toHaveLength(21); // Start + 20 quarters
+    expect(backtest.finalQuarterlyIdr).toBeGreaterThan(100_000_000);
+    // Rebalancing reduces max drawdown compared to never rebalancing
+    expect(btc90Preset.maxDrawdown).toBeLessThan(backtest.buyHoldMaxDdPercent);
   });
 });

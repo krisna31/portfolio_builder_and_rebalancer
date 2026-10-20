@@ -1,5 +1,6 @@
 import {
   AssetDefinition,
+  CrashLadderStep,
   HoldingEntry,
   RebalanceItemResult,
   RebalanceMode,
@@ -236,4 +237,122 @@ export function calculateRebalancePlan(params: {
     breachedCount,
     items,
   };
+}
+
+/**
+ * Generates a Pre-Planned Rebalance-Driven Crash Buying Ladder (`-10%`, `-20%`, `-35%`, `-50%`)
+ * for a chosen target asset (e.g., `BTC`, `ETH`, `PTBA`, `AADI`, `BBCA`, `QQQ`).
+ *
+ * At each crash tier:
+ * - Assumes the chosen asset (and correlated peers in the same category) drops by `dropPercent`,
+ *   while defensive anchors (`RDPT`, `RDPU`, `GLD`) remain stable.
+ * - Uses `calculateRebalancePlan` to compute the exact Rupiah amount & Units/IDX Lots to BUY
+ *   at that limit price by shifting funds out of `RDPT`/`GLD` to restore the target portfolio weight!
+ */
+export function generateCrashBuyingLadder(params: {
+  targetAsset: AssetDefinition;
+  allAssets: AssetDefinition[];
+  targetWeights: Record<string, number>;
+  holdings: Record<string, HoldingEntry>;
+  inputMode: 'nominal' | 'units';
+  usdIdrRate: number;
+  extraCashIdr?: number;
+  dropTiers?: number[];
+}): CrashLadderStep[] {
+  const {
+    targetAsset,
+    allAssets,
+    targetWeights,
+    holdings,
+    inputMode,
+    usdIdrRate,
+    extraCashIdr = 0,
+    dropTiers = [-10, -20, -35, -50],
+  } = params;
+
+  const baseHolding = holdings[targetAsset.id];
+  const currentPriceNative =
+    baseHolding?.currentPrice && baseHolding.currentPrice > 0
+      ? baseHolding.currentPrice
+      : targetAsset.defaultPrice;
+
+  return dropTiers.map((dropPercent) => {
+    const multiplier = Math.max(0.05, 1 + dropPercent / 100);
+    const limitPriceNative = Number((currentPriceNative * multiplier).toFixed(2));
+    const limitPriceIdr = Math.round(
+      targetAsset.currency === 'USD'
+        ? limitPriceNative * usdIdrRate
+        : limitPriceNative
+    );
+
+    // Simulate holdings where targetAsset (and same-category risky assets) drop by dropPercent
+    const simulatedHoldings: Record<string, HoldingEntry> = {};
+    for (const a of allAssets) {
+      const h = holdings[a.id] ?? {
+        assetId: a.id,
+        currentValueIdr: 0,
+        units: 0,
+        currentPrice: a.defaultPrice,
+        shockPercent: 0,
+      };
+      const isSameRiskBucket =
+        a.id === targetAsset.id ||
+        (a.category === targetAsset.category &&
+          a.category !== 'bonds' &&
+          a.category !== 'money-market');
+
+      simulatedHoldings[a.id] = {
+        ...h,
+        shockPercent: isSameRiskBucket
+          ? dropPercent
+          : a.category === 'idx-equity' || a.category === 'us-equity'
+            ? Math.round(dropPercent * 0.35)
+            : 0,
+      };
+    }
+
+    const plan = calculateRebalancePlan({
+      assets: allAssets,
+      targetWeights,
+      holdings: simulatedHoldings,
+      inputMode,
+      usdIdrRate,
+      cashInjectionIdr: extraCashIdr,
+      rebalanceMode: 'sell-and-buy',
+      driftThresholdAbsolutePercent: 1,
+    });
+
+    const targetItem = plan.items.find((i) => i.assetId === targetAsset.id);
+    const buyIdr = Math.max(0, targetItem?.tradeAmountIdr ?? 0);
+    const rawUnits = buyIdr / Math.max(1, limitPriceIdr);
+    const buyUnits = targetAsset.allowFractional
+      ? Number(rawUnits.toFixed(4))
+      : Math.round(rawUnits);
+    const buyLots =
+      targetAsset.lotSize === 100
+        ? Number((rawUnits / 100).toFixed(1))
+        : undefined;
+
+    // How much defensive assets (RDPT / RDPU / GLD) were sold to fund this dip buy
+    const fundingFromDefensiveIdr = plan.items
+      .filter((i) => {
+        const cat = allAssets.find((a) => a.id === i.assetId)?.category;
+        return (
+          (cat === 'bonds' || cat === 'money-market' || cat === 'gold') &&
+          i.tradeAmountIdr < 0
+        );
+      })
+      .reduce((acc, i) => acc + Math.abs(i.tradeAmountIdr), 0);
+
+    return {
+      dropPercent,
+      limitPriceNative,
+      limitPriceIdr,
+      rebalanceBuyAmountIdr: buyIdr,
+      rebalanceBuyUnits: buyUnits,
+      rebalanceBuyLots: buyLots,
+      fundingFromDefensiveIdr: Math.round(fundingFromDefensiveIdr),
+      postCrashPortfolioIdr: plan.postShockTotalIdr,
+    };
+  });
 }

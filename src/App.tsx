@@ -9,6 +9,7 @@ import {
   AllocationMethod,
   HoldingEntry,
   PortfolioPreset,
+  RebalanceHistoryEntry,
   RebalanceMode,
 } from './lib/quant/types';
 import {
@@ -166,6 +167,11 @@ export function App() {
     }
   );
 
+  // Rebalance Execution History Log (persisted inside quantporto_state_v2)
+  const [rebalanceHistory, setRebalanceHistory] = useState<
+    RebalanceHistoryEntry[]
+  >([]);
+
   // Restore state from URL Hash (if shared link) or LocalStorage on first mount
   useEffect(() => {
     try {
@@ -197,6 +203,7 @@ export function App() {
         if (saved.usdIdrRate) setUsdIdrRate(saved.usdIdrRate);
         if (saved.slotMap) setSlotMap(saved.slotMap);
         if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
+        if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
       }
     } catch {
       // Ignore malformed storage
@@ -219,6 +226,7 @@ export function App() {
           usdIdrRate,
           slotMap,
           customTableRows,
+          rebalanceHistory,
         })
       );
     } catch {
@@ -235,6 +243,7 @@ export function App() {
     usdIdrRate,
     slotMap,
     customTableRows,
+    rebalanceHistory,
   ]);
 
   // Dynamically recompute the 25 presets whenever slotMap or RDPT promo changes
@@ -618,6 +627,72 @@ export function App() {
     });
   };
 
+  // Handler: 1-Click Commit Rebalance to Holdings & Record History Snapshot
+  const handleCommitRebalanceToHoldings = (customNote?: string) => {
+    const newEntry: RebalanceHistoryEntry = {
+      id: `reb-${Date.now()}`,
+      timestamp: new Date().toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
+      note:
+        customNote ||
+        `Rebalance ${
+          rebalanceMode === 'sell-and-buy' ? 'Sell + Buy' : 'Buy-Only DCA'
+        }`,
+      totalValueBeforeIdr: rebalanceResult.postShockTotalIdr,
+      cashInjectedIdr: rebalanceResult.cashInjectionIdr,
+      totalValueAfterIdr: rebalanceResult.finalTargetTotalIdr,
+      totalBuyIdr: rebalanceResult.totalBuyIdr,
+      totalSellIdr: rebalanceResult.totalSellIdr,
+      tradesSummary: rebalanceResult.items
+        .filter((i) => i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000)
+        .map(
+          (i) =>
+            `${i.action} ${i.symbol} Rp ${Math.round(
+              Math.abs(i.tradeAmountIdr) / 1_000_000
+            )}Jt`
+        ),
+      weightsAfter: { ...activeWeights },
+    };
+
+    setRebalanceHistory((prev) => [newEntry, ...prev]);
+
+    // Update holdings to the post-rebalance target values & reset shocks to 0%
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const item of rebalanceResult.items) {
+        const asset = allAssets.find((a) => a.id === item.assetId);
+        if (!asset) continue;
+        const prevHold = next[item.assetId];
+        const postShockUnitPriceNative =
+          (prevHold?.currentPrice ?? asset.defaultPrice) *
+          Math.max(0.01, 1 + (prevHold?.shockPercent ?? 0) / 100);
+        const unitPriceIdr =
+          asset.currency === 'USD'
+            ? postShockUnitPriceNative * usdIdrRate
+            : postShockUnitPriceNative;
+
+        next[item.assetId] = {
+          assetId: item.assetId,
+          currentValueIdr: item.targetValueIdr,
+          units: Number(
+            (item.targetValueIdr / Math.max(1, unitPriceIdr)).toFixed(4)
+          ),
+          currentPrice: Number(postShockUnitPriceNative.toFixed(4)),
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
+    setCashInjectionIdr(0);
+  };
+
+  const handleDeleteRebalanceHistoryEntry = (id: string) => {
+    setRebalanceHistory((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // Save / Load / Export / Share handlers
   const handleSaveCurrentPortfolio = (name: string) => {
     const snap: SavedPortfolioSnapshot = {
@@ -790,11 +865,16 @@ export function App() {
             usdIdrRate={usdIdrRate}
             rebalanceResult={rebalanceResult}
             onApplyPeerDiversification={handleApplyPeerDiversification}
+            rebalanceHistory={rebalanceHistory}
+            onCommitRebalanceToHoldings={handleCommitRebalanceToHoldings}
+            onDeleteRebalanceHistoryEntry={handleDeleteRebalanceHistoryEntry}
           />
         )}
 
         {activeTab === 'roadmap' && (
           <WealthRoadmapView
+            allAssets={allAssets}
+            activeWeights={activeWeights}
             solvedMetrics={solvedMetrics}
             initialCapitalIdr={initialCapitalIdr}
             setInitialCapitalIdr={setInitialCapitalIdr}

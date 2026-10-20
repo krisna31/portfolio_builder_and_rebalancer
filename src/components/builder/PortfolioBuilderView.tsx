@@ -316,6 +316,24 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
   const manualSum = Object.values(activeWeights).reduce((a, b) => a + b, 0);
 
+  // Compute Portfolio Net Dividend Yield for quick display in the Builder KPI bar
+  const builderDividendStats = allAssets.reduce(
+    (acc, asset) => {
+      const w = (activeWeights[asset.id] ?? 0) / 100;
+      if (w <= 0) return acc;
+      const grossY = asset.dividendYield ?? 0;
+      const taxPct = asset.dividendTaxPercent ?? 0;
+      const netY = grossY * (1 - taxPct / 100);
+      return {
+        grossYield: acc.grossYield + w * grossY,
+        netYield: acc.netYield + w * netY,
+      };
+    },
+    { grossYield: 0, netYield: 0 }
+  );
+  const annualDividendAtGoalIdr =
+    targetGoalIdr * (builderDividendStats.netYield / 100);
+
   return (
     <div className="space-y-6">
       {/* TOP SUMMARY BANNER */}
@@ -353,7 +371,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {/* Key Quantitative Figures */}
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div className="ui-subtle rounded-lg p-3">
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Expected CAGR (5Y)
@@ -398,6 +416,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[11px]">
                   Volatilitas {solvedMetrics.volatility}%
+                </div>
+              </div>
+
+              <div className="ui-subtle col-span-2 rounded-lg p-3 sm:col-span-1">
+                <div className="ui-text-muted text-[11px] font-medium uppercase">
+                  Dividen Bersih
+                </div>
+                <div className="mt-1 font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {builderDividendStats.netYield.toFixed(2)}%
+                </div>
+                <div className="ui-text-muted mt-0.5 text-[10px]">
+                  ≈ {formatIdr(annualDividendAtGoalIdr / 12, true)}/bln @{' '}
+                  {formatIdr(targetGoalIdr, true)}
                 </div>
               </div>
             </div>

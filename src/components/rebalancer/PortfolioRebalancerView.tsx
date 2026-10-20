@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AssetDefinition,
   HoldingEntry,
+  RebalanceHistoryEntry,
   RebalanceMode,
   RebalanceSummaryResult,
 } from '../../lib/quant/types';
+import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import {
   Scale,
@@ -19,6 +21,10 @@ import {
   AlertCircle,
   Download,
   Zap,
+  History,
+  Check,
+  Trash2,
+  ListOrdered,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,6 +34,8 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  AreaChart,
+  Area,
 } from 'recharts';
 
 interface PortfolioRebalancerViewProps {
@@ -51,10 +59,14 @@ interface PortfolioRebalancerViewProps {
   usdIdrRate: number;
   rebalanceResult: RebalanceSummaryResult;
   onApplyPeerDiversification: () => void;
+  rebalanceHistory: RebalanceHistoryEntry[];
+  onCommitRebalanceToHoldings: (note?: string) => void;
+  onDeleteRebalanceHistoryEntry: (id: string) => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
   allAssets,
+  targetWeights,
   holdings,
   onUpdateHolding,
   onPopulateCapital,
@@ -68,10 +80,74 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   setCashInjectionIdr,
   driftThresholdPercent,
   setDriftThresholdPercent,
+  usdIdrRate,
   rebalanceResult,
   onApplyPeerDiversification,
+  rebalanceHistory,
+  onCommitRebalanceToHoldings,
+  onDeleteRebalanceHistoryEntry,
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(true);
+  const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
+  const [committedBanner, setCommittedBanner] = useState(false);
+
+  // Active assets for the Crash Limit Order Ladder
+  const activeCandidateAssets = useMemo(() => {
+    const list = allAssets.filter(
+      (a) =>
+        (targetWeights[a.id] ?? 0) > 0 &&
+        a.category !== 'money-market' &&
+        a.category !== 'bonds'
+    );
+    return list.length > 0 ? list : allAssets.filter((a) => a.id !== 'RDPU');
+  }, [allAssets, targetWeights]);
+
+  const [ladderAssetId, setLadderAssetId] = useState<string>(() => {
+    return (
+      activeCandidateAssets.find((a) => a.id === 'BTC')?.id ??
+      activeCandidateAssets[0]?.id ??
+      'BTC'
+    );
+  });
+
+  const effectiveLadderAssetId = activeCandidateAssets.some(
+    (a) => a.id === ladderAssetId
+  )
+    ? ladderAssetId
+    : activeCandidateAssets[0]?.id ?? 'BTC';
+
+  const selectedLadderAsset =
+    allAssets.find((a) => a.id === effectiveLadderAssetId) ?? allAssets[0];
+
+  const crashLadderSteps = useMemo(
+    () =>
+      generateCrashBuyingLadder({
+        targetAsset: selectedLadderAsset,
+        allAssets,
+        targetWeights,
+        holdings,
+        inputMode,
+        usdIdrRate,
+        extraCashIdr: cashInjectionIdr,
+        dropTiers: [-10, -20, -35, -50],
+      }),
+    [
+      selectedLadderAsset,
+      allAssets,
+      targetWeights,
+      holdings,
+      inputMode,
+      usdIdrRate,
+      cashInjectionIdr,
+    ]
+  );
+
+  const handleApplyAndRecord = () => {
+    onCommitRebalanceToHoldings(rebalanceNoteInput.trim() || undefined);
+    setRebalanceNoteInput('');
+    setCommittedBanner(true);
+    setTimeout(() => setCommittedBanner(false), 2500);
+  };
 
   const exportCsvTrades = () => {
     const headers = [
@@ -129,6 +205,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     rebalanceResult.initialTotalIdr > 0
       ? (pnlFromShockIdr / rebalanceResult.initialTotalIdr) * 100
       : 0;
+
+  const historyChartData = [...rebalanceHistory]
+    .reverse()
+    .map((entry, idx) => ({
+      step: `#${idx + 1} (${entry.timestamp})`,
+      NetWorthJuta: Math.round(entry.totalValueAfterIdr / 1_000_000),
+    }));
 
   return (
     <div className="space-y-6">
@@ -660,6 +743,41 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </tbody>
             </table>
           </div>
+
+          {/* 1-CLICK COMMIT REBALANCE TO HOLDINGS & RECORD SNAPSHOT */}
+          <div className="ui-subtle mt-4 flex flex-col gap-2.5 rounded-lg p-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              <div className="ui-text-main text-xs font-semibold">
+                Sudah Eksekusi Order di Broker/Exchange?
+              </div>
+              <p className="ui-text-muted text-[11px]">
+                Klik tombol di kanan untuk otomatis memperbarui nilai posisi awal ke
+                Target (Rp), mereset shock ke 0%, dan mencatat ke Jurnal Rebalancing.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={rebalanceNoteInput}
+                onChange={(e) => setRebalanceNoteInput(e.target.value)}
+                placeholder="Catatan (mis. Rebalance Q4 / Buy Dip)"
+                className="ui-input rounded-lg px-2.5 py-1.5 text-xs sm:w-52"
+                aria-label="Rebalance journal note"
+              />
+              <button
+                type="button"
+                onClick={handleApplyAndRecord}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>
+                  {committedBanner
+                    ? 'Tersimpan ke Jurnal!'
+                    : 'Catat & Terapkan Rebalance Ini'}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Right 4 Cols: Drift Chart & Cashflow Summary */}
@@ -744,6 +862,259 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
           </div>
         </div>
+      </section>
+
+      {/* PRE-PLANNED LIMIT ORDER & CRASH BUYING LADDER (-10%, -20%, -35%, -50%) */}
+      <section className="ui-card rounded-xl p-5">
+        <div className="ui-border flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <ListOrdered className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="ui-text-main text-sm font-bold">
+                Pre-Planned Limit Order &amp; Crash Buying Ladder (-10%, -20%, -35%,
+                -50%)
+              </h3>
+            </div>
+            <p className="ui-text-muted mt-0.5 text-xs">
+              Siapkan antrean Limit Order dari sekarang agar saat market crash (Menit
+              15:48) kamu tinggal serok sesuai rumus Rebalancing tanpa panik:
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="ui-text-muted text-xs">Pilih Aset:</span>
+            {activeCandidateAssets.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setLadderAssetId(a.id)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                  effectiveLadderAssetId === a.id
+                    ? 'bg-emerald-600 font-semibold text-white'
+                    : 'ui-subtle ui-text-secondary hover:opacity-80'
+                }`}
+              >
+                {a.id} ({targetWeights[a.id] ?? 0}%)
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="ui-border mt-4 overflow-x-auto rounded-lg border">
+          <table className="w-full border-separate border-spacing-0 text-left text-xs">
+            <thead className="ui-subtle text-[11px] font-semibold uppercase">
+              <tr>
+                <th className="ui-border border-b px-3 py-2">Tier Koreksi</th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Harga Limit Order ({selectedLadderAsset?.currency ?? 'IDR'})
+                </th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Harga Limit (Rp)
+                </th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Total Porto Saat Crash
+                </th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Nominal BUY Rebalance
+                </th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Jumlah Unit / Lot IDX
+                </th>
+                <th className="ui-border border-b px-3 py-2 text-right">
+                  Sumber Dana (Jual RDPT / GLD)
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {crashLadderSteps.map((step) => (
+                <tr key={step.dropPercent} className="hover:bg-zinc-500/5">
+                  <td className="ui-border border-b px-3 py-2.5 font-mono font-bold text-rose-600 dark:text-rose-400">
+                    Crash {step.dropPercent}%
+                  </td>
+                  <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold">
+                    {selectedLadderAsset?.currency === 'USD'
+                      ? `$${step.limitPriceNative.toLocaleString()}`
+                      : `Rp ${step.limitPriceNative.toLocaleString('id-ID')}`}
+                  </td>
+                  <td className="ui-border ui-text-muted border-b px-3 py-2.5 text-right font-mono">
+                    {formatIdr(step.limitPriceIdr)}
+                  </td>
+                  <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold">
+                    {formatIdr(step.postCrashPortfolioIdr, true)}
+                  </td>
+                  <td className="ui-border border-b px-3 py-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    BUY {formatIdr(step.rebalanceBuyAmountIdr)}
+                    {selectedLadderAsset?.currency === 'USD' && (
+                      <div className="ui-text-muted text-[10px] font-normal">
+                        ({formatUsd(step.rebalanceBuyAmountIdr / Math.max(1, usdIdrRate))})
+                      </div>
+                    )}
+                  </td>
+                  <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono">
+                    {step.rebalanceBuyLots !== undefined
+                      ? `${step.rebalanceBuyLots} Lot (${step.rebalanceBuyUnits} lbr)`
+                      : `${step.rebalanceBuyUnits} unit`}
+                  </td>
+                  <td className="ui-border ui-text-secondary border-b px-3 py-2.5 text-right font-mono">
+                    {formatIdr(step.fundingFromDefensiveIdr)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* REBALANCING HISTORY JOURNAL & NET WORTH TRACKER */}
+      <section className="ui-card rounded-xl p-5">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <h3 className="ui-text-main text-sm font-bold">
+                Jurnal Riwayat Rebalancing &amp; Pertumbuhan Net Worth
+              </h3>
+              <p className="ui-text-muted text-xs">
+                Rekam jejak disiplin rebalancing kamu dari waktu ke waktu (tersimpan di
+                browser):
+              </p>
+            </div>
+          </div>
+          <span className="ui-subtle ui-text-secondary rounded-md px-2.5 py-1 font-mono text-xs font-semibold">
+            {rebalanceHistory.length} Snapshot Tersimpan
+          </span>
+        </div>
+
+        {rebalanceHistory.length === 0 ? (
+          <div className="ui-subtle ui-text-muted mt-4 rounded-lg p-6 text-center text-xs">
+            Belum ada riwayat rebalancing. Klik tombol{' '}
+            <strong className="ui-text-main">
+              &ldquo;Catat &amp; Terapkan Rebalance Ini&rdquo;
+            </strong>{' '}
+            di atas setelah menyesuaikan posisi untuk merekam snapshot pertama.
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-12">
+            {historyChartData.length > 1 && (
+              <div className="ui-subtle rounded-lg p-4 lg:col-span-5">
+                <div className="ui-text-main mb-2 text-xs font-semibold">
+                  Kurva Net Worth Riwayat Rebalance (Juta Rp)
+                </div>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={historyChartData}
+                      margin={{ top: 6, right: 10, left: -10, bottom: 0 }}
+                    >
+                      <XAxis dataKey="step" stroke="#71717a" fontSize={10} />
+                      <YAxis
+                        stroke="#71717a"
+                        fontSize={10}
+                        tickFormatter={(v) => `${v}Jt`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-card)',
+                          borderColor: 'var(--border-subtle)',
+                          color: 'var(--text-main)',
+                          borderRadius: '0.5rem',
+                          fontSize: '12px',
+                        }}
+                        formatter={(val: number) => [
+                          `Rp ${val.toLocaleString('id-ID')} Juta`,
+                          'Total Portfolio',
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="NetWorthJuta"
+                        stroke="#10b981"
+                        fill="#10b981"
+                        fillOpacity={0.2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={
+                historyChartData.length > 1 ? 'lg:col-span-7' : 'lg:col-span-12'
+              }
+            >
+              <div className="ui-border overflow-x-auto rounded-lg border">
+                <table className="w-full border-separate border-spacing-0 text-left text-xs">
+                  <thead className="ui-subtle text-[11px] font-semibold uppercase">
+                    <tr>
+                      <th className="ui-border border-b px-3 py-2">Tanggal</th>
+                      <th className="ui-border border-b px-3 py-2">Catatan</th>
+                      <th className="ui-border border-b px-3 py-2 text-right">
+                        Total Portfolio
+                      </th>
+                      <th className="ui-border border-b px-3 py-2">
+                        Ringkasan Eksekusi
+                      </th>
+                      <th className="ui-border border-b px-2 py-2 text-center">
+                        Hapus
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rebalanceHistory.map((h) => (
+                      <tr key={h.id} className="hover:bg-zinc-500/5">
+                        <td className="ui-border ui-text-secondary border-b px-3 py-2 font-mono whitespace-nowrap">
+                          {h.timestamp}
+                        </td>
+                        <td className="ui-border border-b px-3 py-2">
+                          <div className="ui-text-main font-semibold">{h.note}</div>
+                          <div className="ui-text-muted text-[10px]">
+                            Top-Up: {formatIdr(h.cashInjectedIdr, true)} • Beli:{' '}
+                            {formatIdr(h.totalBuyIdr, true)}
+                          </div>
+                        </td>
+                        <td className="ui-border border-b px-3 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatIdr(h.totalValueAfterIdr)}
+                        </td>
+                        <td className="ui-border border-b px-3 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {h.tradesSummary.slice(0, 4).map((t, idx) => (
+                              <span
+                                key={idx}
+                                className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-medium ${
+                                  t.startsWith('BUY')
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                }`}
+                              >
+                                {t}
+                              </span>
+                            ))}
+                            {h.tradesSummary.length === 0 && (
+                              <span className="ui-text-muted text-[10px]">
+                                Posisi sudah seimbang (Hold)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="ui-border border-b px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => onDeleteRebalanceHistoryEntry(h.id)}
+                            className="ui-text-muted hover:text-rose-600"
+                            title="Hapus log ini"
+                          >
+                            <Trash2 className="mx-auto h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

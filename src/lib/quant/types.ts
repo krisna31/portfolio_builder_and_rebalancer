@@ -53,6 +53,10 @@ export interface AssetDefinition {
   color: string;
   /** Brief description of role in portfolio */
   description: string;
+  /** Estimated annual gross dividend / coupon yield (%) */
+  dividendYield?: number;
+  /** Default dividend/coupon withholding tax (%) if not tax-exempt */
+  dividendTaxPercent?: number;
 }
 
 export interface PortfolioPreset {
@@ -173,3 +177,28 @@ export interface WealthSimulationResult {
   totalGainAtGoalIdr: number;
   timeline: WealthProjectionPoint[];
 }
+
+export interface RebalanceHistoryEntry {
+  id: string;
+  timestamp: string;
+  note: string;
+  totalValueBeforeIdr: number;
+  cashInjectedIdr: number;
+  totalValueAfterIdr: number;
+  totalBuyIdr: number;
+  totalSellIdr: number;
+  tradesSummary: string[];
+  weightsAfter: Record<string, number>;
+}
+
+export interface CrashLadderStep {
+  dropPercent: number; // e.g. -10, -20, -35, -50
+  limitPriceNative: number;
+  limitPriceIdr: number;
+  rebalanceBuyAmountIdr: number;
+  rebalanceBuyUnits: number;
+  rebalanceBuyLots?: number;
+  fundingFromDefensiveIdr: number;
+  postCrashPortfolioIdr: number;
+}
+
