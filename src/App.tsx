@@ -283,16 +283,51 @@ export function App() {
     rebalanceHistory,
   ]);
 
-  // Dynamically recompute the 25 presets whenever slotMap or RDPT promo changes
+  // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
+  const hasCustomAssetAssumptions = useMemo(() => {
+    const baseMap = new Map(CORE_AND_EXPANDED_ASSETS.map((a) => [a.id, a]));
+    return allAssets.some((a) => {
+      const base = baseMap.get(a.id);
+      if (!base) return true;
+      return (
+        Math.abs(a.cagr - base.cagr) > 0.01 ||
+        Math.abs(a.maxDrawdown - base.maxDrawdown) > 0.01
+      );
+    });
+  }, [allAssets]);
+
+  const handleUpdateAssetAssumption = (
+    assetId: string,
+    patch: { cagr?: number; maxDrawdown?: number }
+  ) => {
+    setAllAssets((prev) =>
+      prev.map((a) => (a.id === assetId ? { ...a, ...patch } : a))
+    );
+  };
+
+  const handleResetAssetAssumptions = () => {
+    const baseMap = new Map(CORE_AND_EXPANDED_ASSETS.map((a) => [a.id, a]));
+    setAllAssets((prev) =>
+      prev.map((a) => {
+        const base = baseMap.get(a.id);
+        return base
+          ? { ...a, cagr: base.cagr, maxDrawdown: base.maxDrawdown }
+          : a;
+      })
+    );
+  };
+
+  // Dynamically recompute the 25 presets whenever slotMap, RDPT promo, or custom asset return assumptions change
   const dynamicPresets = useMemo(
     () =>
       buildDynamicPresetsForSlotMap(
         VIDEO_PORTFOLIO_PRESETS,
         slotMap,
         allAssets,
-        rdptPromoActive ? 3.0 : 0
+        rdptPromoActive ? 3.0 : 0,
+        hasCustomAssetAssumptions
       ),
-    [slotMap, allAssets, rdptPromoActive]
+    [slotMap, allAssets, rdptPromoActive, hasCustomAssetAssumptions]
   );
 
   // Re-run Quant Solver automatically when user changes Risk Parity / Risk Budgeting parameters
@@ -339,8 +374,16 @@ export function App() {
       evaluatePortfolioMetrics(activeWeights, allAssets, dynamicPresets, {
         rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
         exactPresetMatch,
+        hasCustomAssetAssumptions,
       }),
-    [activeWeights, allAssets, dynamicPresets, rdptPromoActive, exactPresetMatch]
+    [
+      activeWeights,
+      allAssets,
+      dynamicPresets,
+      rdptPromoActive,
+      exactPresetMatch,
+      hasCustomAssetAssumptions,
+    ]
   );
 
   // Calculate Rebalance Plan
@@ -1081,6 +1124,10 @@ export function App() {
             setMonthlySavingsIdr={setMonthlySavingsIdr}
             onGoToRebalancer={() => setActiveTab('rebalancer')}
             onOpenRecommender={() => setIsRecommenderOpen(true)}
+            rdptPromoActive={rdptPromoActive}
+            hasCustomAssetAssumptions={hasCustomAssetAssumptions}
+            onUpdateAssetAssumption={handleUpdateAssetAssumption}
+            onResetAssetAssumptions={handleResetAssetAssumptions}
           />
         )}
 

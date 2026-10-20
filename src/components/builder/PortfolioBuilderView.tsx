@@ -87,6 +87,13 @@ interface PortfolioBuilderViewProps {
   setMonthlySavingsIdr: (v: number) => void;
   onGoToRebalancer: () => void;
   onOpenRecommender: () => void;
+  rdptPromoActive: boolean;
+  hasCustomAssetAssumptions: boolean;
+  onUpdateAssetAssumption: (
+    assetId: string,
+    patch: { cagr?: number; maxDrawdown?: number }
+  ) => void;
+  onResetAssetAssumptions: () => void;
 }
 
 export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
@@ -124,6 +131,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   setMonthlySavingsIdr,
   onGoToRebalancer,
   onOpenRecommender,
+  rdptPromoActive,
+  hasCustomAssetAssumptions,
+  onUpdateAssetAssumption,
+  onResetAssetAssumptions,
 }) => {
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
@@ -421,6 +432,31 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const annualDividendAtGoalIdr =
     targetGoalIdr * (builderDividendStats.netYield / 100);
 
+  // Compute per-asset effective CAGR assumption & weighted return contribution (Bobot % × Return Aset %)
+  const getEffectiveAssetCagr = (asset: AssetDefinition): number =>
+    asset.id === 'RDPT' && rdptPromoActive ? asset.cagr + 3.0 : asset.cagr;
+
+  const activeReturnBreakdown = allAssets
+    .filter((asset) => (activeWeights[asset.id] ?? 0) > 0)
+    .map((asset) => {
+      const weightPct = activeWeights[asset.id] ?? 0;
+      const effectiveCagr = getEffectiveAssetCagr(asset);
+      const weightedReturnContrib = (weightPct / 100) * effectiveCagr;
+      return {
+        asset,
+        weightPct,
+        effectiveCagr,
+        weightedReturnContrib,
+      };
+    })
+    .sort((a, b) => b.weightedReturnContrib - a.weightedReturnContrib);
+
+  const weightedBaseCagr = activeReturnBreakdown.reduce(
+    (sum, item) => sum + item.weightedReturnContrib,
+    0
+  );
+  const rebalancingBonusDiff = solvedMetrics.cagr - weightedBaseCagr;
+
   return (
     <div className="space-y-6">
       {/* TOP SUMMARY BANNER */}
@@ -528,6 +564,92 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   ≈ {formatIdr(annualDividendAtGoalIdr / 12, true)}/bln @{' '}
                   {formatIdr(targetGoalIdr, true)}
                 </div>
+              </div>
+            </div>
+
+            {/* Per-Asset Assumed Return & CAGR Contribution Breakdown */}
+            <div className="ui-subtle mt-3 rounded-lg border border-emerald-500/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="ui-text-main">
+                    Bedah Asumsi Return Tiap Aset ➔ Pembentuk CAGR{' '}
+                    <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                      {solvedMetrics.cagr.toFixed(2)}%/thn
+                    </span>
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
+                  <span className="ui-card ui-text-secondary rounded px-1.5 py-0.5">
+                    ∑(Bobot × Return Aset) ={' '}
+                    <strong className="ui-text-main">
+                      {weightedBaseCagr.toFixed(2)}%
+                    </strong>
+                  </span>
+                  {Math.abs(rebalancingBonusDiff) >= 0.03 && (
+                    <span
+                      title="Efek Rebalancing & Diversifikasi (Volatility Harvesting / kalibrasi empiris 5Y video Menit 08:25)"
+                      className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400"
+                    >
+                      {rebalancingBonusDiff >= 0 ? '+' : ''}
+                      {rebalancingBonusDiff.toFixed(2)}% Rebalancing/Kalibrasi
+                    </span>
+                  )}
+                  {hasCustomAssetAssumptions && (
+                    <button
+                      type="button"
+                      onClick={onResetAssetAssumptions}
+                      className="rounded bg-amber-500/15 px-1.5 py-0.5 font-sans font-semibold text-amber-600 hover:bg-amber-500/25 dark:text-amber-400"
+                    >
+                      Reset Asumsi 5Y Video
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+                {activeReturnBreakdown.map(
+                  ({ asset, weightPct, effectiveCagr, weightedReturnContrib }) => (
+                    <div
+                      key={asset.id}
+                      className="ui-card flex flex-col justify-between rounded-md border border-zinc-500/15 px-2.5 py-1.5 text-[11px]"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="flex items-center gap-1.5 font-semibold">
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: asset.color }}
+                          />
+                          <span className="ui-text-main">{asset.shortName}</span>
+                        </span>
+                        <span className="ui-subtle ui-text-secondary rounded px-1 py-0.2 font-mono text-[10px] font-semibold">
+                          {weightPct}%
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between font-mono text-[10px]">
+                        <span
+                          className="ui-text-muted"
+                          title={`Asumsi Return Tahunan ${asset.name}: ${effectiveCagr.toFixed(1)}%/thn | Max Drawdown: -${asset.maxDrawdown}%`}
+                        >
+                          Asumsi:{' '}
+                          <strong className="ui-text-secondary">
+                            {effectiveCagr.toFixed(1)}%
+                          </strong>
+                          <span className="text-rose-500/80">
+                            {' '}
+                            (-{asset.maxDrawdown}%)
+                          </span>
+                        </span>
+                        <span
+                          className="font-bold text-emerald-600 dark:text-emerald-400"
+                          title={`${weightPct}% bobot × ${effectiveCagr.toFixed(1)}% asumsi return = +${weightedReturnContrib.toFixed(2)}%/thn`}
+                        >
+                          +{weightedReturnContrib.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -1004,6 +1126,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   {core8Slots.map((slotId) => {
                     const currentAssetId = slotMap[slotId] ?? slotId;
                     const isSwapped = currentAssetId !== slotId;
+                    const slotAsset = allAssets.find((a) => a.id === currentAssetId);
+                    const slotEffectiveCagr = slotAsset
+                      ? getEffectiveAssetCagr(slotAsset)
+                      : 0;
                     return (
                       <th
                         key={slotId}
@@ -1024,26 +1150,42 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               value={a.id}
                               className="bg-zinc-900 text-white"
                             >
-                              {a.shortName}
+                              {a.shortName} ({getEffectiveAssetCagr(a).toFixed(1)}%)
                             </option>
                           ))}
                         </select>
+                        {slotAsset && (
+                          <div
+                            className="text-[9px] font-normal leading-tight text-emerald-600 dark:text-emerald-400"
+                            title={`Asumsi Return ${slotAsset.shortName}: ${slotEffectiveCagr.toFixed(1)}%/thn • MaxDD: -${slotAsset.maxDrawdown}%`}
+                          >
+                            {slotEffectiveCagr.toFixed(1)}%/thn
+                          </div>
+                        )}
                         {isSwapped && (
-                          <div className="ui-text-muted text-[9px] font-normal">
+                          <div className="ui-text-muted text-[9px] font-normal leading-tight">
                             ex-{slotId}
                           </div>
                         )}
                       </th>
                     );
                   })}
-                  {extraCustomAssetIds.map((extraId) => (
-                    <th
-                      key={extraId}
-                      className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
-                    >
-                      {extraId}
-                    </th>
-                  ))}
+                  {extraCustomAssetIds.map((extraId) => {
+                    const extraAsset = allAssets.find((a) => a.id === extraId);
+                    return (
+                      <th
+                        key={extraId}
+                        className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
+                      >
+                        <div>{extraId}</div>
+                        {extraAsset && (
+                          <div className="text-[9px] font-normal leading-tight text-emerald-600 dark:text-emerald-400">
+                            {getEffectiveAssetCagr(extraAsset).toFixed(1)}%/thn
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -1388,12 +1530,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             <div className="mt-2 flex flex-wrap gap-1.5">
               {allAssets.map((asset) => {
                 const isSelected = selectedUniverseIds.includes(asset.id);
+                const effCagr = getEffectiveAssetCagr(asset);
                 return (
                   <button
                     key={asset.id}
                     type="button"
                     onClick={() => onToggleUniverseAsset(asset.id)}
-                    title={`${asset.name} • 5Y CAGR: ${asset.cagr}% • Max DD: ${asset.maxDrawdown}%`}
+                    title={`${asset.name} • Asumsi Return 5Y: ${effCagr.toFixed(1)}%/thn • Max DD: -${asset.maxDrawdown}%`}
                     className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                       isSelected
                         ? 'ui-text-main border-emerald-500/50 bg-emerald-500/10 font-semibold'
@@ -1405,6 +1548,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       style={{ backgroundColor: asset.color }}
                     />
                     <span>{asset.shortName}</span>
+                    <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                      {effCagr.toFixed(1)}%
+                    </span>
                   </button>
                 );
               })}
@@ -1506,15 +1652,27 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           )}
 
-          {/* Step C: Interactive Weight Sliders */}
+          {/* Step C: Interactive Weight Sliders & Per-Asset Return Assumptions */}
           <div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="ui-text-secondary text-xs font-semibold">
-                3. Bobot Modal (%) vs Kontribusi Risiko (%):
+                3. Bobot Modal (%), Asumsi Return Aset (%/thn) & Kontribusi CAGR:
               </span>
               <div className="flex items-center gap-2">
+                {hasCustomAssetAssumptions && (
+                  <button
+                    type="button"
+                    onClick={onResetAssetAssumptions}
+                    className="rounded bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 hover:bg-amber-500/25 dark:text-amber-400"
+                  >
+                    Reset Asumsi 5Y Video
+                  </button>
+                )}
                 <span className="ui-text-main font-mono text-xs font-semibold">
-                  Total: {manualSum.toFixed(1)}%
+                  Total Bobot: {manualSum.toFixed(1)}% ➔ CAGR{' '}
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {solvedMetrics.cagr.toFixed(2)}%
+                  </span>
                 </span>
                 {Math.abs(manualSum - 100) > 0.2 && (
                   <button
@@ -1528,7 +1686,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               </div>
             </div>
 
-            <div className="mt-2.5 max-h-72 space-y-2 overflow-y-auto pr-1">
+            <div className="mt-2.5 max-h-80 space-y-2 overflow-y-auto pr-1">
               {allAssets
                 .filter(
                   (a) =>
@@ -1537,9 +1695,11 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 .map((asset) => {
                   const capWeight = activeWeights[asset.id] ?? 0;
                   const riskContrib = solvedMetrics.riskContributions[asset.id] ?? 0;
+                  const effectiveCagr = getEffectiveAssetCagr(asset);
+                  const cagrContrib = (capWeight / 100) * effectiveCagr;
                   return (
                     <div key={asset.id} className="ui-subtle rounded-lg p-2.5">
-                      <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <span
                             className="h-2.5 w-2.5 rounded-full"
@@ -1552,9 +1712,15 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             {asset.name}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                             {formatNominalCell(capWeight)}
+                          </span>
+                          <span
+                            className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"
+                            title={`${capWeight}% bobot × ${effectiveCagr.toFixed(1)}% asumsi return = +${cagrContrib.toFixed(2)}%/thn kontribusi ke CAGR`}
+                          >
+                            +{cagrContrib.toFixed(2)}%/thn
                           </span>
                           <span className="ui-text-muted text-[11px]">
                             Risk:{' '}
@@ -1595,6 +1761,53 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         className="mt-1.5 h-1.5 w-full cursor-pointer"
                         aria-label={`${asset.shortName} weight slider`}
                       />
+
+                      {/* Inline Editable Asset Return (CAGR %) & MaxDD (%) Assumptions */}
+                      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-500/10 pt-1.5 text-[10px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="ui-text-muted">Asumsi Return Aset:</span>
+                          <input
+                            type="number"
+                            step={0.5}
+                            min={-50}
+                            max={200}
+                            value={asset.cagr}
+                            onChange={(e) =>
+                              onUpdateAssetAssumption(asset.id, {
+                                cagr: Number(e.target.value),
+                              })
+                            }
+                            className="ui-card ui-text-main w-14 rounded px-1 py-0.5 text-right font-mono text-[10px] font-semibold"
+                            aria-label={`Asumsi CAGR tahunan ${asset.shortName}`}
+                          />
+                          <span className="ui-text-muted font-mono">%/thn</span>
+                          {asset.id === 'RDPT' && rdptPromoActive && (
+                            <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                              (+3% Promo = {effectiveCagr.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className="ui-text-muted">Asumsi MaxDD:</span>
+                          <span className="font-mono text-rose-500">-</span>
+                          <input
+                            type="number"
+                            step={0.5}
+                            min={0.5}
+                            max={99}
+                            value={asset.maxDrawdown}
+                            onChange={(e) =>
+                              onUpdateAssetAssumption(asset.id, {
+                                maxDrawdown: Math.max(0.5, Number(e.target.value)),
+                              })
+                            }
+                            className="ui-card ui-text-main w-14 rounded px-1 py-0.5 text-right font-mono text-[10px] font-semibold"
+                            aria-label={`Asumsi Max Drawdown ${asset.shortName}`}
+                          />
+                          <span className="ui-text-muted font-mono">%</span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

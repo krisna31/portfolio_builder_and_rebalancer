@@ -273,9 +273,11 @@ export function evaluatePortfolioMetrics(
   options?: {
     rdptAlphaPromoBonusPercent?: number; // e.g., +3% Makmur promo mentioned at 05:04
     exactPresetMatch?: PortfolioPreset | null;
+    hasCustomAssetAssumptions?: boolean;
   }
 ): SolvedPortfolio {
   const rdptBonus = options?.rdptAlphaPromoBonusPercent ?? 0;
+  const hasCustomAssumptions = options?.hasCustomAssetAssumptions ?? false;
 
   // Filter active assets
   const assetMap = new Map(allAssets.map((a) => [a.id, a]));
@@ -317,8 +319,8 @@ export function evaluatePortfolioMetrics(
       totalRawRisk > 0 ? Number(((r / totalRawRisk) * 100).toFixed(1)) : 0;
   }
 
-  // If this matches a video preset and no RDPT promo override is active, use the exact video CAGR & MaxDD
-  if (options?.exactPresetMatch && rdptBonus === 0) {
+  // If this matches a video preset and no RDPT promo or custom asset assumption override is active, use the exact video CAGR & MaxDD
+  if (options?.exactPresetMatch && rdptBonus === 0 && !hasCustomAssumptions) {
     const preset = options.exactPresetMatch;
     const vol = Math.max(0.5, preset.maxDrawdown * 0.85);
     const sharpe = Number(((preset.cagr - 3.76) / Math.max(1, vol)).toFixed(2));
@@ -441,12 +443,14 @@ export function buildDynamicPresetsForSlotMap(
   basePresets: PortfolioPreset[],
   slotMap: Record<string, string>, // e.g., { RDPU: 'RDPU', RDPT: 'RDPT', BBCA: 'PTBA', ... }
   allAssets: AssetDefinition[],
-  rdptBonusPercent: number = 0
+  rdptBonusPercent: number = 0,
+  hasCustomAssetAssumptions: boolean = false
 ): PortfolioPreset[] {
   const core8 = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
   const isUnchanged =
     core8.every((slot) => (slotMap[slot] ?? slot) === slot) &&
-    rdptBonusPercent === 0;
+    rdptBonusPercent === 0 &&
+    !hasCustomAssetAssumptions;
 
   if (isUnchanged) {
     return basePresets;
@@ -496,6 +500,7 @@ export function buildDynamicPresetsForSlotMap(
     const metrics = evaluatePortfolioMetrics(newWeights, allAssets, basePresets, {
       rdptAlphaPromoBonusPercent: rdptBonusPercent,
       exactPresetMatch: null,
+      hasCustomAssetAssumptions,
     });
 
     return {
