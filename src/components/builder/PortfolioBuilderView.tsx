@@ -41,12 +41,23 @@ import {
   Flame,
   Eye,
   EyeOff,
+  Pin,
+  Trash2,
+  RotateCcw,
+  Repeat,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
   allAssets: AssetDefinition[];
   onAddCustomAsset: (asset: AssetDefinition) => void;
   presets: PortfolioPreset[];
+  customTableRows: PortfolioPreset[];
+  onPinCurrentToTable: (customName?: string) => void;
+  onRemoveCustomTableRow: (id: string) => void;
+  slotMap: Record<string, string>;
+  onChangeSlotAsset: (coreSlotId: string, newAssetId: string) => void;
+  onResetSlotMap: () => void;
+  onQuickSwapBbcaToPtba: () => void;
   activePresetId: string | null;
   onSelectPreset: (preset: PortfolioPreset) => void;
   allocationMethod: AllocationMethod;
@@ -63,6 +74,10 @@ interface PortfolioBuilderViewProps {
   onManualWeightChange: (assetId: string, newWeight: number) => void;
   onNormalizeManualWeights: () => void;
   solvedMetrics: SolvedPortfolio;
+  initialCapitalIdr: number;
+  setInitialCapitalIdr: (v: number) => void;
+  targetGoalIdr: number;
+  setTargetGoalIdr: (v: number) => void;
   monthlySavingsIdr: number;
   setMonthlySavingsIdr: (v: number) => void;
   onGoToRebalancer: () => void;
@@ -72,6 +87,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   allAssets,
   onAddCustomAsset,
   presets,
+  customTableRows,
+  onPinCurrentToTable,
+  onRemoveCustomTableRow,
+  slotMap,
+  onChangeSlotAsset,
+  onResetSlotMap,
+  onQuickSwapBbcaToPtba,
   activePresetId,
   onSelectPreset,
   allocationMethod,
@@ -88,12 +110,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   onManualWeightChange,
   onNormalizeManualWeights,
   solvedMetrics,
+  initialCapitalIdr,
+  setInitialCapitalIdr,
+  targetGoalIdr,
+  setTargetGoalIdr,
   monthlySavingsIdr,
   setMonthlySavingsIdr,
   onGoToRebalancer,
 }) => {
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
+  const [customRowName, setCustomRowName] = useState('');
 
   const [tickerInput, setTickerInput] = useState('');
   const [isLookingUpTicker, setIsLookingUpTicker] = useState(false);
@@ -108,45 +135,67 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const [synthPrice, setSynthPrice] = useState(10000);
   const [synthCurrency, setSynthCurrency] = useState<'IDR' | 'USD'>('IDR');
 
-  const core8Ids = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
+  const core8Slots = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
+  const mappedColumnIds = core8Slots.map((slot) => slotMap[slot] ?? slot);
 
-  const displayedPresets = presets.filter((p) => {
-    if (!showDominated25 && !p.isOptimal15) return false;
-    if (archetypeFilter === 'business-owner') {
-      return p.maxDrawdown <= 10.5;
-    }
-    if (archetypeFilter === 'full-time-investor') {
-      return p.cagr >= 18;
-    }
-    if (archetypeFilter === 'hybrid-conviction') {
-      return p.method === 'risk-budgeting' || p.id === 'opt-9-rp-all-7';
-    }
-    return true;
-  });
+  // Also include any extra columns if a pinned custom row uses an asset outside the 8 mapped columns
+  const extraCustomAssetIds = Array.from(
+    new Set(
+      customTableRows.flatMap((row) =>
+        Object.entries(row.weights)
+          .filter(([, w]) => w > 0)
+          .map(([id]) => id)
+      )
+    )
+  ).filter((id) => !mappedColumnIds.includes(id));
 
+  const isSlotMapCustomized = core8Slots.some((slot) => (slotMap[slot] ?? slot) !== slot);
+
+  const combinedRows: PortfolioPreset[] = [
+    ...customTableRows,
+    ...presets.filter((p) => {
+      if (!showDominated25 && !p.isOptimal15) return false;
+      if (archetypeFilter === 'business-owner') {
+        return p.maxDrawdown <= 10.5;
+      }
+      if (archetypeFilter === 'full-time-investor') {
+        return p.cagr >= 18;
+      }
+      if (archetypeFilter === 'hybrid-conviction') {
+        return p.method === 'risk-budgeting' || p.id === 'opt-9-rp-all-7';
+      }
+      return true;
+    }),
+  ];
+
+  // Simulate time to targetGoalIdr (default Rp 1 Miliar, selectable to Rp 10 Miliar) starting from initialCapitalIdr (default Rp 100 Juta)
   const sim5M = simulateWealthToGoal({
-    initialCapitalIdr: 0,
+    initialCapitalIdr,
     monthlyContributionIdr: 5_000_000,
     annualCagrPercent: solvedMetrics.cagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
+    targetWealthIdr: targetGoalIdr,
   });
   const sim10M = simulateWealthToGoal({
-    initialCapitalIdr: 0,
+    initialCapitalIdr,
     monthlyContributionIdr: 10_000_000,
     annualCagrPercent: solvedMetrics.cagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
+    targetWealthIdr: targetGoalIdr,
   });
   const sim20M = simulateWealthToGoal({
-    initialCapitalIdr: 0,
+    initialCapitalIdr,
     monthlyContributionIdr: 20_000_000,
     annualCagrPercent: solvedMetrics.cagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
+    targetWealthIdr: targetGoalIdr,
   });
   const simCustom = simulateWealthToGoal({
-    initialCapitalIdr: 0,
+    initialCapitalIdr,
     monthlyContributionIdr: monthlySavingsIdr,
     annualCagrPercent: solvedMetrics.cagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
+    targetWealthIdr: targetGoalIdr,
   });
 
   const tierBadge = getRiskTierBadge(solvedMetrics.riskTier);
@@ -282,7 +331,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </span>
                 <span className="ui-subtle ui-text-secondary rounded px-2 py-0.5 text-xs font-medium">
                   {allocationMethod === 'preset'
-                    ? 'Video Preset'
+                    ? 'Table Preset'
                     : allocationMethod === 'risk-parity'
                       ? 'Risk Parity (Equal Risk)'
                       : allocationMethod === 'risk-budgeting'
@@ -382,61 +431,133 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
         </div>
 
-        {/* Right 5 cols: "Kapan Dapat 10 Miliar Pertama?" */}
+        {/* Right 5 cols: "Kapan Capai Target Pertama?" (Default Modal Rp 100 Jt -> Target Rp 1 Miliar / 10 Miliar) */}
         <div className="ui-card flex flex-col justify-between rounded-xl p-5 lg:col-span-5">
           <div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="ui-text-main text-sm font-bold">
-                Kapan dapat Rp 10 Miliar pertama?
+                Kapan capai {formatIdr(targetGoalIdr, true)} pertama?
               </h2>
-              <span className="ui-subtle font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 rounded px-2 py-0.5">
+              <span className="ui-subtle rounded px-2 py-0.5 font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 @{solvedMetrics.cagr.toFixed(2)}%/thn
               </span>
             </div>
-            <p className="ui-text-muted mt-1 text-xs">
-              Simulasi nabung rutin bulanan (DCA) + compounding menuju Rp 10 Miliar:
-            </p>
 
-            <div className="mt-3 space-y-2">
-              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+            {/* Editable Initial Capital (Default Rp 100 Jt) & Target Goal Selector (Default Rp 1 Miliar / Pilihan Rp 10 Miliar) */}
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <div className="ui-subtle rounded-lg p-2">
+                <label className="ui-text-muted block text-[10px] font-medium">
+                  Modal Awal (Rp)
+                </label>
+                <div className="mt-0.5 flex items-center justify-between gap-1">
+                  <input
+                    type="number"
+                    step={10_000_000}
+                    value={initialCapitalIdr}
+                    onChange={(e) =>
+                      setInitialCapitalIdr(Math.max(0, Number(e.target.value)))
+                    }
+                    className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
+                    aria-label="Initial Capital in IDR"
+                  />
+                </div>
+                <div className="mt-1 flex gap-1 text-[10px]">
+                  {[0, 50_000_000, 100_000_000, 500_000_000].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setInitialCapitalIdr(v)}
+                      className={`rounded px-1.5 py-0.5 font-mono ${
+                        initialCapitalIdr === v
+                          ? 'bg-emerald-600 text-white font-semibold'
+                          : 'ui-card ui-text-muted'
+                      }`}
+                    >
+                      {v === 0 ? '0' : `${v / 1_000_000}Jt`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ui-subtle rounded-lg p-2">
+                <label className="ui-text-muted block text-[10px] font-medium">
+                  Target Kekayaan (Rp)
+                </label>
+                <div className="mt-0.5 flex items-center justify-between gap-1">
+                  <input
+                    type="number"
+                    step={500_000_000}
+                    value={targetGoalIdr}
+                    onChange={(e) =>
+                      setTargetGoalIdr(Math.max(10_000_000, Number(e.target.value)))
+                    }
+                    className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
+                    aria-label="Target Wealth Goal in IDR"
+                  />
+                </div>
+                <div className="mt-1 flex gap-1 text-[10px]">
+                  {[
+                    { label: '1M', val: 1_000_000_000 },
+                    { label: '5M', val: 5_000_000_000 },
+                    { label: '10M', val: 10_000_000_000 },
+                  ].map((t) => (
+                    <button
+                      key={t.val}
+                      type="button"
+                      onClick={() => setTargetGoalIdr(t.val)}
+                      className={`flex-1 rounded px-1.5 py-0.5 font-mono ${
+                        targetGoalIdr === t.val
+                          ? 'bg-emerald-600 text-white font-semibold'
+                          : 'ui-card ui-text-muted'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 space-y-1.5">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
                 <span className="ui-text-secondary text-xs font-medium">
-                  Rp 5 Juta / bulan
+                  + Rp 5 Juta / bulan
                 </span>
                 <span className="ui-text-main font-mono text-xs font-bold">
-                  ➔ {sim5M.exactYearsFloat} Tahun{' '}
+                  ➔ {sim5M.exactYearsFloat} Thn{' '}
                   <span className="ui-text-muted font-normal">
-                    (Modal {formatIdr(sim5M.totalPrincipalAtGoalIdr, true)})
+                    (Pokok {formatIdr(sim5M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
 
-              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
                 <span className="ui-text-secondary text-xs font-medium">
-                  Rp 10 Juta / bulan
+                  + Rp 10 Juta / bulan
                 </span>
                 <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  ➔ {sim10M.exactYearsFloat} Tahun{' '}
+                  ➔ {sim10M.exactYearsFloat} Thn{' '}
                   <span className="ui-text-muted font-normal">
-                    (Modal {formatIdr(sim10M.totalPrincipalAtGoalIdr, true)})
+                    (Pokok {formatIdr(sim10M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
 
-              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-2">
+              <div className="ui-subtle flex items-center justify-between rounded-lg px-3 py-1.5">
                 <span className="ui-text-secondary text-xs font-medium">
-                  Rp 20 Juta / bulan
+                  + Rp 20 Juta / bulan
                 </span>
                 <span className="ui-text-main font-mono text-xs font-bold">
-                  ➔ {sim20M.exactYearsFloat} Tahun{' '}
+                  ➔ {sim20M.exactYearsFloat} Thn{' '}
                   <span className="ui-text-muted font-normal">
-                    (Modal {formatIdr(sim20M.totalPrincipalAtGoalIdr, true)})
+                    (Pokok {formatIdr(sim20M.totalPrincipalAtGoalIdr, true)})
                   </span>
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="ui-subtle mt-4 rounded-lg p-3">
+          <div className="ui-subtle mt-3 rounded-lg p-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="ui-text-secondary font-medium">
                 Custom DCA Bulanan:
@@ -452,32 +573,60 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               step={1_000_000}
               value={monthlySavingsIdr}
               onChange={(e) => setMonthlySavingsIdr(Number(e.target.value))}
-              className="mt-2 h-1.5 w-full cursor-pointer"
+              className="mt-1.5 h-1.5 w-full cursor-pointer"
               aria-label="Custom Monthly Savings in IDR"
             />
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE */}
+      {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA -> PTBA & PINNED CUSTOM ROWS) */}
       <section className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="ui-text-main text-sm font-bold uppercase tracking-wide sm:text-base">
-                Tabel 15 Portfolio Optimal (The Overpost Baseline)
+                Tabel 15 Portfolio Optimal &amp; Simulasi Custom Slot
               </h2>
-              <span className="ui-subtle ui-text-muted rounded px-2 py-0.5 text-[11px]">
-                Klik baris untuk memilih
-              </span>
+              {isSlotMapCustomized && (
+                <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                  Mode Custom Slot Aktif (Dihitung Ulang oleh Solver)
+                </span>
+              )}
             </div>
             <p className="ui-text-muted mt-0.5 text-xs">
-              Berdasarkan riset kuantitatif 5 tahun atas 8 instrumen benchmark (07:16 –
-              14:05).
+              Anda bisa mengganti instrumen di header kolom tabel (contoh: ubah{' '}
+              <strong>BBCA ➔ PTBA</strong>) untuk melihat bagaimana bobot ke-15
+              strategi berubah secara otomatis, atau pin racikan custom Anda ke tabel.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
+            {/* Quick Example Button: Ubah BBCA -> PTBA */}
+            <button
+              type="button"
+              onClick={onQuickSwapBbcaToPtba}
+              className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition ${
+                slotMap.BBCA === 'PTBA'
+                  ? 'border-emerald-500 bg-emerald-600 text-white'
+                  : 'ui-subtle ui-text-main hover:opacity-80'
+              }`}
+            >
+              <Repeat className="h-3 w-3" />
+              <span>Contoh Custom: Ubah BBCA ➔ PTBA</span>
+            </button>
+
+            {isSlotMapCustomized && (
+              <button
+                type="button"
+                onClick={onResetSlotMap}
+                className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium hover:opacity-80"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset 8 Benchmark Video</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setArchetypeFilter('all')}
@@ -499,7 +648,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               }`}
             >
               <Briefcase className="h-3 w-3" />
-              <span>Pebisnis (&lt;10% DD)</span>
+              <span>&lt;10% DD</span>
             </button>
             <button
               type="button"
@@ -511,7 +660,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               }`}
             >
               <Sparkles className="h-3 w-3" />
-              <span>Risk Budgeting &amp; Parity</span>
+              <span>Risk Budgeting</span>
             </button>
             <button
               type="button"
@@ -523,7 +672,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               }`}
             >
               <Flame className="h-3 w-3" />
-              <span>High Return (&gt;18%)</span>
+              <span>&gt;18% CAGR</span>
             </button>
 
             <button
@@ -541,17 +690,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
         </div>
 
-        {/* Minimalist Data Table */}
+        {/* Minimalist Data Table with Interactive Column Slot Selector */}
         <div
           tabIndex={0}
           role="region"
           aria-labelledby="optimal-portfolios-caption"
-          className="ui-border mt-4 max-h-[500px] overflow-auto rounded-lg border"
+          className="ui-border mt-4 max-h-[520px] overflow-auto rounded-lg border"
         >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <caption id="optimal-portfolios-caption" className="sr-only">
-              Daftar 15 Portfolio Optimal berdasarkan CAGR, Maximum Drawdown, dan Bobot 8
-              Instrumen Benchmark
+              Daftar 15 Portfolio Optimal dan Custom Rows berdasarkan CAGR, Maximum
+              Drawdown, dan Bobot Instrumen
             </caption>
             <thead className="ui-subtle sticky top-0 z-20 text-[11px] font-semibold uppercase">
               <tr>
@@ -559,7 +708,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   rowSpan={2}
                   className="ui-subtle ui-border sticky left-0 z-30 border-b border-r px-3 py-2"
                 >
-                  Strategy
+                  Strategy ({combinedRows.length})
                 </th>
                 <th
                   rowSpan={2}
@@ -580,25 +729,60 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   Max DD
                 </th>
                 <th
-                  colSpan={8}
+                  colSpan={core8Slots.length + extraCustomAssetIds.length}
                   className="ui-border border-b px-3 py-1 text-center"
                 >
-                  Bobot Modal (%)
+                  Bobot Modal (%) — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
                 </th>
               </tr>
               <tr>
-                {core8Ids.map((id) => (
+                {core8Slots.map((slotId) => {
+                  const currentAssetId = slotMap[slotId] ?? slotId;
+                  const isSwapped = currentAssetId !== slotId;
+                  return (
+                    <th
+                      key={slotId}
+                      className={`ui-border border-b border-r px-1.5 py-1 text-right font-mono text-[11px] ${
+                        isSwapped ? 'bg-emerald-500/15' : 'ui-subtle'
+                      }`}
+                    >
+                      <select
+                        value={currentAssetId}
+                        onChange={(e) => onChangeSlotAsset(slotId, e.target.value)}
+                        title={`Ganti slot benchmark ${slotId} dengan instrumen lain`}
+                        aria-label={`Slot benchmark ${slotId}`}
+                        className="ui-text-main cursor-pointer bg-transparent font-mono text-[11px] font-bold focus:outline-none"
+                      >
+                        {allAssets.map((a) => (
+                          <option
+                            key={a.id}
+                            value={a.id}
+                            className="bg-zinc-900 text-white"
+                          >
+                            {a.shortName}
+                          </option>
+                        ))}
+                      </select>
+                      {isSwapped && (
+                        <div className="ui-text-muted text-[9px] font-normal">
+                          ex-{slotId}
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
+                {extraCustomAssetIds.map((extraId) => (
                   <th
-                    key={id}
+                    key={extraId}
                     className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
                   >
-                    {id}
+                    {extraId}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {displayedPresets.map((preset) => {
+              {combinedRows.map((preset) => {
                 const isSelected = activePresetId === preset.id;
                 const badge = getRiskTierBadge(preset.riskTier);
                 return (
@@ -608,36 +792,60 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     className={`cursor-pointer transition ${
                       isSelected
                         ? 'bg-emerald-500/10'
-                        : !preset.isOptimal15
-                          ? 'opacity-60 hover:opacity-100'
-                          : 'hover:bg-zinc-500/5'
+                        : preset.isCustomRow
+                          ? 'bg-sky-500/5 hover:bg-sky-500/10'
+                          : !preset.isOptimal15
+                            ? 'opacity-60 hover:opacity-100'
+                            : 'hover:bg-zinc-500/5'
                     }`}
                   >
                     <th
                       scope="row"
                       className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2 font-medium"
                     >
-                      <div className="flex items-center gap-2">
-                        {preset.rank && (
-                          <span className="ui-subtle ui-text-muted inline-flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px]">
-                            {preset.rank}
-                          </span>
-                        )}
-                        <div>
-                          <div className="ui-text-main text-xs font-semibold">
-                            {preset.name}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {preset.isCustomRow ? (
+                            <span className="rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
+                              CUSTOM
+                            </span>
+                          ) : (
+                            preset.rank && (
+                              <span className="ui-subtle ui-text-muted inline-flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px]">
+                                {preset.rank}
+                              </span>
+                            )
+                          )}
+                          <div>
+                            <div className="ui-text-main text-xs font-semibold">
+                              {preset.name}
+                            </div>
+                            {preset.videoNote && (
+                              <div className="ui-text-muted mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal">
+                                {preset.videoNote}
+                              </div>
+                            )}
+                            {preset.dominatedByReason && (
+                              <div className="mt-0.5 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                                ⚠️ {preset.dominatedByReason}
+                              </div>
+                            )}
                           </div>
-                          {preset.videoNote && (
-                            <div className="ui-text-muted mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal">
-                              {preset.videoNote}
-                            </div>
-                          )}
-                          {preset.dominatedByReason && (
-                            <div className="mt-0.5 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
-                              ⚠️ {preset.dominatedByReason}
-                            </div>
-                          )}
                         </div>
+
+                        {preset.isCustomRow && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveCustomTableRow(preset.id);
+                            }}
+                            title="Hapus baris custom ini dari tabel"
+                            className="ui-text-muted rounded p-1 hover:text-rose-500"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </th>
 
@@ -657,23 +865,25 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       {preset.maxDrawdown.toFixed(2)}%
                     </td>
 
-                    {core8Ids.map((assetId) => {
-                      const w = preset.weights[assetId] ?? 0;
-                      return (
-                        <td
-                          key={assetId}
-                          className={`ui-border border-b border-r px-2.5 py-2 text-right font-mono ${
-                            w >= 30
-                              ? 'ui-text-main font-bold bg-emerald-500/5'
-                              : w > 0
-                                ? 'ui-text-secondary'
-                                : 'ui-text-muted opacity-40'
-                          }`}
-                        >
-                          {w}%
-                        </td>
-                      );
-                    })}
+                    {[...mappedColumnIds, ...extraCustomAssetIds].map(
+                      (colAssetId, colIdx) => {
+                        const w = preset.weights[colAssetId] ?? 0;
+                        return (
+                          <td
+                            key={`${colAssetId}-${colIdx}`}
+                            className={`ui-border border-b border-r px-2.5 py-2 text-right font-mono ${
+                              w >= 30
+                                ? 'ui-text-main bg-emerald-500/5 font-bold'
+                                : w > 0
+                                  ? 'ui-text-secondary'
+                                  : 'ui-text-muted opacity-40'
+                            }`}
+                          >
+                            {w}%
+                          </td>
+                        );
+                      }
+                    )}
                   </tr>
                 );
               })}
@@ -718,6 +928,39 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
+          {/* Pin Current Custom Lab Configuration into the Main Comparison Table */}
+          <div className="ui-subtle flex flex-col gap-2 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              <div className="ui-text-main text-xs font-semibold">
+                Masukkan Racikan Ini ke Tabel Utama di Atas
+              </div>
+              <p className="ui-text-muted text-[11px]">
+                Bandingkan pembagian bobot, CAGR ({solvedMetrics.cagr}%), &amp; Max DD
+                (-{solvedMetrics.maxDrawdown}%) dengan 15 preset lainnya.
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                placeholder="Nama baris (opsional)..."
+                value={customRowName}
+                onChange={(e) => setCustomRowName(e.target.value)}
+                className="ui-card ui-text-main w-40 rounded px-2.5 py-1.5 text-xs focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  onPinCurrentToTable(customRowName.trim() || undefined);
+                  setCustomRowName('');
+                }}
+                className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+              >
+                <Pin className="h-3.5 w-3.5" />
+                <span>+ Masukkan ke Tabel</span>
+              </button>
+            </div>
+          </div>
+
           {/* Step A: Select Active Asset Universe */}
           <div>
             <div className="flex items-center justify-between">
@@ -740,7 +983,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     title={`${asset.name} • 5Y CAGR: ${asset.cagr}% • Max DD: ${asset.maxDrawdown}%`}
                     className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                       isSelected
-                        ? 'border-emerald-500/50 bg-emerald-500/10 ui-text-main font-semibold'
+                        ? 'ui-text-main border-emerald-500/50 bg-emerald-500/10 font-semibold'
                         : 'ui-subtle ui-text-muted opacity-65 hover:opacity-100'
                     }`}
                   >
@@ -818,7 +1061,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           onClick={() => setConvictionRiskPercent(presetPct)}
                           className={`rounded px-2 py-0.5 font-mono text-xs ${
                             convictionRiskPercent === presetPct
-                              ? 'bg-emerald-600 text-white font-semibold'
+                              ? 'bg-emerald-600 font-semibold text-white'
                               : 'ui-card ui-text-secondary'
                           }`}
                         >
@@ -965,7 +1208,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <Search className="ui-text-muted absolute left-3 top-2 h-3.5 w-3.5" />
                 <input
                   type="text"
-                  placeholder="Ketik simbol saham Indo/US (contoh: AADI.JK, ADRO, BREN, TLKM, NVDA)..."
+                  placeholder="Ketik simbol saham Indo/US (contoh: AADI.JK, PTBA, ADRO, BREN, NVDA)..."
                   value={tickerInput}
                   onChange={(e) => setTickerInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleYahooLookup()}

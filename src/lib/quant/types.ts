@@ -59,18 +59,20 @@ export interface PortfolioPreset {
   id: string;
   rank?: number;
   name: string;
-  method: 'all-in' | 'risk-parity' | 'risk-budgeting';
+  method: 'all-in' | 'risk-parity' | 'risk-budgeting' | 'custom';
   riskTier: RiskTier;
   /** Conviction asset ID if method === 'risk-budgeting' */
   convictionAssetId?: string;
   /** Risk budget % allocated to conviction asset (e.g. 70 or 90) */
   convictionRiskPercent?: number;
-  /** Exact CAGR (%) reported in the video */
+  /** Exact CAGR (%) reported in the video or dynamically solved */
   cagr: number;
-  /** Exact Max Drawdown (%) reported in the video */
+  /** Exact Max Drawdown (%) reported in the video or dynamically solved */
   maxDrawdown: number;
   /** Whether this portfolio is in the 15 Optimal (Pareto-efficient) set vs dominated */
   isOptimal15: boolean;
+  /** Whether this is a user-pinned custom row in the table */
+  isCustomRow?: boolean;
   /** Explanation if dominated by another portfolio (mentioned at 10:16 in video) */
   dominatedByReason?: string;
   /** Target capital weights (%) keyed by Asset ID (sums to 100) */

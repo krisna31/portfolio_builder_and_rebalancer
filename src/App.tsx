@@ -12,6 +12,7 @@ import {
   RebalanceMode,
 } from './lib/quant/types';
 import {
+  buildDynamicPresetsForSlotMap,
   evaluatePortfolioMetrics,
   normalizeWeightsTo100,
   solveRiskBudgetingWeights,
@@ -23,8 +24,19 @@ import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView'
 import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
 import { WealthRoadmapView } from './components/roadmap/WealthRoadmapView';
 
-const STORAGE_KEY = 'quantporto_state_v1';
+const STORAGE_KEY = 'quantporto_state_v2';
 const SAVED_PORTFOLIOS_KEY = 'quantporto_saved_portfolios_v1';
+
+const DEFAULT_SLOT_MAP: Record<string, string> = {
+  RDPU: 'RDPU',
+  RDPT: 'RDPT',
+  BBCA: 'BBCA',
+  GLD: 'GLD',
+  SPY: 'SPY',
+  QQQ: 'QQQ',
+  BTC: 'BTC',
+  ETH: 'ETH',
+};
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(
@@ -36,7 +48,39 @@ export function App() {
     CORE_AND_EXPANDED_ASSETS
   );
 
-  // Selected Universe for Quant Solver (defaults to the 7 core active assets in Risk Parity / Risk Budgeting)
+  // Dynamic Slot Map for the 8 Table Columns (allows replacing e.g. BBCA -> PTBA across all 15 rows!)
+  const [slotMap, setSlotMap] = useState<Record<string, string>>(DEFAULT_SLOT_MAP);
+
+  // User-Pinned Custom Rows in the main comparison table
+  // Pre-seeded with 1 default custom example row ("Custom Risk Parity: PTBA ganti BBCA") so user immediately sees it in the table!
+  const [customTableRows, setCustomTableRows] = useState<PortfolioPreset[]>(() => {
+    const ptbaAssets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+      ['RDPT', 'PTBA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'].includes(a.id)
+    );
+    const weights = solveRiskBudgetingWeights(ptbaAssets, 'risk-parity');
+    const metrics = evaluatePortfolioMetrics(
+      weights,
+      CORE_AND_EXPANDED_ASSETS,
+      VIDEO_PORTFOLIO_PRESETS
+    );
+    return [
+      {
+        id: 'custom-default-ptba-rp',
+        name: 'Custom Risk Parity (PTBA ganti BBCA)',
+        method: 'risk-parity',
+        riskTier: metrics.riskTier,
+        cagr: metrics.cagr,
+        maxDrawdown: metrics.maxDrawdown,
+        isOptimal15: true,
+        isCustomRow: true,
+        weights,
+        videoNote:
+          'Contoh Default Custom: Mengganti slot BBCA menjadi PTBA.JK di Risk Parity 7 Aset.',
+      },
+    ];
+  });
+
+  // Selected Universe for Quant Solver
   const [selectedUniverseIds, setSelectedUniverseIds] = useState<string[]>([
     'RDPT',
     'BBCA',
@@ -68,10 +112,15 @@ export function App() {
   // Makmur +3% RDPT Alpha Promo toggle mentioned at 05:04
   const [rdptPromoActive, setRdptPromoActive] = useState<boolean>(false);
 
-  // Monthly Savings for Rp 10 Billion calculator
+  // Synchronized Wealth Simulator Defaults:
+  // Default Initial Capital = Rp 100 Juta (100,000,000)
+  // Default Target Wealth = Rp 1 Miliar (1,000,000,000), with quick toggle to Rp 10 Miliar
+  const [initialCapitalIdr, setInitialCapitalIdr] =
+    useState<number>(100_000_000);
+  const [targetGoalIdr, setTargetGoalIdr] = useState<number>(1_000_000_000);
   const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(10_000_000);
 
-  // Rebalancer State
+  // Rebalancer State (Default starting holdings scaled to Rp 100 Juta Initial Capital!)
   const [usdIdrRate, setUsdIdrRate] = useState<number>(15600);
   const [inputMode, setInputMode] = useState<'nominal' | 'units'>('nominal');
   const [rebalanceMode, setRebalanceMode] =
@@ -82,7 +131,8 @@ export function App() {
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     const init: Record<string, HoldingEntry> = {};
     for (const a of CORE_AND_EXPANDED_ASSETS) {
-      const valIdr = VIDEO_1B_REBALANCE_EXAMPLE[a.id] ?? 0;
+      const weightPct = defaultPreset.weights[a.id] ?? 0;
+      const valIdr = Math.round(100_000_000 * (weightPct / 100));
       const unitPriceIdr =
         a.currency === 'USD' ? a.defaultPrice * 15600 : a.defaultPrice;
       init[a.id] = {
@@ -138,9 +188,15 @@ export function App() {
           setActivePresetId(saved.activePresetId);
         if (saved.allocationMethod) setAllocationMethod(saved.allocationMethod);
         if (saved.holdings) setHoldings((prev) => ({ ...prev, ...saved.holdings }));
+        if (saved.initialCapitalIdr !== undefined)
+          setInitialCapitalIdr(saved.initialCapitalIdr);
+        if (saved.targetGoalIdr !== undefined)
+          setTargetGoalIdr(saved.targetGoalIdr);
         if (saved.monthlySavingsIdr)
           setMonthlySavingsIdr(saved.monthlySavingsIdr);
         if (saved.usdIdrRate) setUsdIdrRate(saved.usdIdrRate);
+        if (saved.slotMap) setSlotMap(saved.slotMap);
+        if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
       }
     } catch {
       // Ignore malformed storage
@@ -157,8 +213,12 @@ export function App() {
           activePresetId,
           allocationMethod,
           holdings,
+          initialCapitalIdr,
+          targetGoalIdr,
           monthlySavingsIdr,
           usdIdrRate,
+          slotMap,
+          customTableRows,
         })
       );
     } catch {
@@ -169,9 +229,25 @@ export function App() {
     activePresetId,
     allocationMethod,
     holdings,
+    initialCapitalIdr,
+    targetGoalIdr,
     monthlySavingsIdr,
     usdIdrRate,
+    slotMap,
+    customTableRows,
   ]);
+
+  // Dynamically recompute the 25 presets whenever slotMap or RDPT promo changes
+  const dynamicPresets = useMemo(
+    () =>
+      buildDynamicPresetsForSlotMap(
+        VIDEO_PORTFOLIO_PRESETS,
+        slotMap,
+        allAssets,
+        rdptPromoActive ? 3.0 : 0
+      ),
+    [slotMap, allAssets, rdptPromoActive]
+  );
 
   // Re-run Quant Solver automatically when user changes Risk Parity / Risk Budgeting parameters
   useEffect(() => {
@@ -203,26 +279,22 @@ export function App() {
   ]);
 
   // Evaluate portfolio CAGR, Max Drawdown, Risk Contributions, and Pareto Dominance
-  const exactPresetMatch = useMemo(
-    () =>
-      activePresetId
-        ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === activePresetId) ?? null
-        : null,
-    [activePresetId]
-  );
+  const exactPresetMatch = useMemo(() => {
+    if (!activePresetId) return null;
+    return (
+      dynamicPresets.find((p) => p.id === activePresetId) ??
+      customTableRows.find((p) => p.id === activePresetId) ??
+      null
+    );
+  }, [activePresetId, dynamicPresets, customTableRows]);
 
   const solvedMetrics = useMemo(
     () =>
-      evaluatePortfolioMetrics(
-        activeWeights,
-        allAssets,
-        VIDEO_PORTFOLIO_PRESETS,
-        {
-          rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
-          exactPresetMatch,
-        }
-      ),
-    [activeWeights, allAssets, rdptPromoActive, exactPresetMatch]
+      evaluatePortfolioMetrics(activeWeights, allAssets, dynamicPresets, {
+        rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
+        exactPresetMatch,
+      }),
+    [activeWeights, allAssets, dynamicPresets, rdptPromoActive, exactPresetMatch]
   );
 
   // Calculate Rebalance Plan
@@ -250,7 +322,7 @@ export function App() {
     ]
   );
 
-  // Handler: Select one of the 15 Optimal Presets (or 10 Dominated Presets)
+  // Handler: Select one of the Table Presets (or Custom Pinned Rows)
   const handleSelectPreset = (preset: PortfolioPreset) => {
     setActivePresetId(preset.id);
     setAllocationMethod('preset');
@@ -266,6 +338,87 @@ export function App() {
     }
     if (preset.convictionRiskPercent) {
       setConvictionRiskPercent(preset.convictionRiskPercent);
+    }
+  };
+
+  // Handler: Change a column benchmark slot in the table (e.g. BBCA -> PTBA)
+  const handleChangeSlotAsset = (coreSlotId: string, newAssetId: string) => {
+    const nextMap = { ...slotMap, [coreSlotId]: newAssetId };
+    setSlotMap(nextMap);
+
+    // If a preset is currently selected, update activeWeights to the newly solved preset weights
+    const nextPresets = buildDynamicPresetsForSlotMap(
+      VIDEO_PORTFOLIO_PRESETS,
+      nextMap,
+      allAssets,
+      rdptPromoActive ? 3.0 : 0
+    );
+    const activeRow =
+      nextPresets.find((p) => p.id === activePresetId) ?? nextPresets[8];
+    if (activeRow) {
+      handleSelectPreset(activeRow);
+    }
+  };
+
+  const handleResetSlotMap = () => {
+    setSlotMap(DEFAULT_SLOT_MAP);
+    const baseRow =
+      VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === activePresetId) ??
+      defaultPreset;
+    handleSelectPreset(baseRow);
+  };
+
+  // Handler: 1-Click Toggle "Contoh Custom: Ubah BBCA -> PTBA"
+  const handleQuickSwapBbcaToPtba = () => {
+    if (slotMap.BBCA === 'PTBA') {
+      handleResetSlotMap();
+    } else {
+      handleChangeSlotAsset('BBCA', 'PTBA');
+    }
+  };
+
+  // Handler: Pin Current Quant Lab Portfolio into the Main Table
+  const handlePinCurrentToTable = (customName?: string) => {
+    const activeAssetSymbols = Object.entries(activeWeights)
+      .filter(([, w]) => w > 0)
+      .map(([id, w]) => `${id} ${w}%`)
+      .slice(0, 4)
+      .join(', ');
+
+    const defaultLabel =
+      allocationMethod === 'risk-parity'
+        ? `Custom Risk Parity (${activeAssetSymbols})`
+        : allocationMethod === 'risk-budgeting'
+          ? `Custom Risk Budgeting ${convictionAssetId} ${convictionRiskPercent}%`
+          : `Custom Racikan (${activeAssetSymbols})`;
+
+    const newRow: PortfolioPreset = {
+      id: `custom-row-${Date.now()}`,
+      name: customName || defaultLabel,
+      method:
+        allocationMethod === 'preset' ? 'custom' : allocationMethod,
+      convictionAssetId,
+      convictionRiskPercent,
+      riskTier: solvedMetrics.riskTier,
+      cagr: solvedMetrics.cagr,
+      maxDrawdown: solvedMetrics.maxDrawdown,
+      isOptimal15: !solvedMetrics.isParetoDominated,
+      isCustomRow: true,
+      weights: { ...activeWeights },
+      videoNote: `Dimasukkan dari Custom Quant Lab (${Object.entries(activeWeights)
+        .filter(([, w]) => w > 0)
+        .map(([id, w]) => `${id}:${w}%`)
+        .join(' ')}).`,
+    };
+
+    setCustomTableRows((prev) => [newRow, ...prev]);
+    setActivePresetId(newRow.id);
+  };
+
+  const handleRemoveCustomTableRow = (id: string) => {
+    setCustomTableRows((prev) => prev.filter((r) => r.id !== id));
+    if (activePresetId === id) {
+      setActivePresetId(null);
     }
   };
 
@@ -356,6 +509,31 @@ export function App() {
     }));
   };
 
+  // Handler: Populate Rebalancer Holdings with a specific Capital Amount (e.g. Rp 100 Juta) matching active target weights
+  const handlePopulateCapital = (capitalIdr: number) => {
+    setInitialCapitalIdr(capitalIdr);
+    setCashInjectionIdr(0);
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        const w = activeWeights[a.id] ?? 0;
+        const valIdr = Math.round(capitalIdr * (w / 100));
+        const unitPriceIdr =
+          a.currency === 'USD'
+            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : next[a.id]?.currentPrice ?? a.defaultPrice;
+        next[a.id] = {
+          assetId: a.id,
+          currentValueIdr: valIdr,
+          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
+  };
+
   // Handler: Load Video Rp 1 Billion Rebalance Example (14:58)
   const handleLoadVideo1BExample = () => {
     const btc90 = VIDEO_PORTFOLIO_PRESETS.find(
@@ -415,11 +593,9 @@ export function App() {
       for (const a of allAssets) {
         let shock = 0;
         if (scenario === 'video-bull-3x') {
-          // Video 15:20: BTC & ETH naik 3x lipat (+200%), BBCA turun -10%, RDPT tetap 0%
           if (a.category === 'crypto') shock = 200;
           else if (a.category === 'idx-equity') shock = -10;
         } else if (scenario === 'video-crash-50') {
-          // Video 15:46: BTC & ETH turun -50%
           if (a.category === 'crypto') shock = -50;
         } else if (scenario === 'global-crisis') {
           if (a.category === 'crypto') shock = -60;
@@ -475,6 +651,10 @@ export function App() {
       activeWeights,
       holdings,
       savedPortfolios,
+      customTableRows,
+      slotMap,
+      initialCapitalIdr,
+      targetGoalIdr,
       usdIdrRate,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -495,6 +675,8 @@ export function App() {
         const data = JSON.parse(String(reader.result));
         if (data.activeWeights) setActiveWeights(data.activeWeights);
         if (data.holdings) setHoldings(data.holdings);
+        if (data.customTableRows) setCustomTableRows(data.customTableRows);
+        if (data.slotMap) setSlotMap(data.slotMap);
         if (data.savedPortfolios) {
           setSavedPortfolios(data.savedPortfolios);
           localStorage.setItem(
@@ -554,7 +736,14 @@ export function App() {
           <PortfolioBuilderView
             allAssets={allAssets}
             onAddCustomAsset={handleAddCustomAsset}
-            presets={VIDEO_PORTFOLIO_PRESETS}
+            presets={dynamicPresets}
+            customTableRows={customTableRows}
+            onPinCurrentToTable={handlePinCurrentToTable}
+            onRemoveCustomTableRow={handleRemoveCustomTableRow}
+            slotMap={slotMap}
+            onChangeSlotAsset={handleChangeSlotAsset}
+            onResetSlotMap={handleResetSlotMap}
+            onQuickSwapBbcaToPtba={handleQuickSwapBbcaToPtba}
             activePresetId={activePresetId}
             onSelectPreset={handleSelectPreset}
             allocationMethod={allocationMethod}
@@ -571,6 +760,10 @@ export function App() {
             onManualWeightChange={handleManualWeightChange}
             onNormalizeManualWeights={handleNormalizeManualWeights}
             solvedMetrics={solvedMetrics}
+            initialCapitalIdr={initialCapitalIdr}
+            setInitialCapitalIdr={setInitialCapitalIdr}
+            targetGoalIdr={targetGoalIdr}
+            setTargetGoalIdr={setTargetGoalIdr}
             monthlySavingsIdr={monthlySavingsIdr}
             setMonthlySavingsIdr={setMonthlySavingsIdr}
             onGoToRebalancer={() => setActiveTab('rebalancer')}
@@ -583,6 +776,7 @@ export function App() {
             targetWeights={activeWeights}
             holdings={holdings}
             onUpdateHolding={handleUpdateHolding}
+            onPopulateCapital={handlePopulateCapital}
             onLoadVideo1BExample={handleLoadVideo1BExample}
             onApplyShockScenario={handleApplyShockScenario}
             inputMode={inputMode}
@@ -602,6 +796,10 @@ export function App() {
         {activeTab === 'roadmap' && (
           <WealthRoadmapView
             solvedMetrics={solvedMetrics}
+            initialCapitalIdr={initialCapitalIdr}
+            setInitialCapitalIdr={setInitialCapitalIdr}
+            targetGoalIdr={targetGoalIdr}
+            setTargetGoalIdr={setTargetGoalIdr}
             monthlySavingsIdr={monthlySavingsIdr}
             setMonthlySavingsIdr={setMonthlySavingsIdr}
           />

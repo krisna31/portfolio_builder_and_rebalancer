@@ -16,17 +16,23 @@ import { TrendingUp, Target, ShieldAlert, Award } from 'lucide-react';
 
 interface WealthRoadmapViewProps {
   solvedMetrics: SolvedPortfolio;
+  initialCapitalIdr: number;
+  setInitialCapitalIdr: (v: number) => void;
+  targetGoalIdr: number;
+  setTargetGoalIdr: (v: number) => void;
   monthlySavingsIdr: number;
   setMonthlySavingsIdr: (v: number) => void;
 }
 
 export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   solvedMetrics,
+  initialCapitalIdr,
+  setInitialCapitalIdr,
+  targetGoalIdr,
+  setTargetGoalIdr,
   monthlySavingsIdr,
   setMonthlySavingsIdr,
 }) => {
-  const [initialCapitalIdr, setInitialCapitalIdr] = useState(50_000_000);
-  const [targetGoalIdr, setTargetGoalIdr] = useState(10_000_000_000);
   const [annualStepUpPct, setAnnualStepUpPct] = useState(0);
 
   const sim = simulateWealthToGoal({

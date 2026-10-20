@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 export interface SavedPortfolioSnapshot {
   id: string;
@@ -165,9 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Minimalist Brand Title */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="ui-subtle flex h-8 w-8 items-center justify-center rounded-md">
-                <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
+              <BrandLogo className="h-8 w-8 shrink-0" />
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="ui-text-main text-base font-bold tracking-tight">

@@ -35,6 +35,7 @@ interface PortfolioRebalancerViewProps {
   targetWeights: Record<string, number>;
   holdings: Record<string, HoldingEntry>;
   onUpdateHolding: (assetId: string, patch: Partial<HoldingEntry>) => void;
+  onPopulateCapital: (capitalIdr: number) => void;
   onLoadVideo1BExample: () => void;
   onApplyShockScenario: (
     scenario: 'reset' | 'video-bull-3x' | 'video-crash-50' | 'global-crisis'
@@ -56,6 +57,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   allAssets,
   holdings,
   onUpdateHolding,
+  onPopulateCapital,
   onLoadVideo1BExample,
   onApplyShockScenario,
   inputMode,
@@ -149,10 +151,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={onLoadVideo1BExample}
+              onClick={() => onPopulateCapital(100_000_000)}
               className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
             >
               <Coins className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Set Modal Awal Rp 100 Juta (Sesuai Target Aktif)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onLoadVideo1BExample}
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
+            >
+              <Coins className="h-3.5 w-3.5" />
               <span>Contoh Video Rp 1M (BTC 90%)</span>
             </button>
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_AND_EXPANDED_ASSETS, VIDEO_PORTFOLIO_PRESETS, VIDEO_1B_REBALANCE_EXAMPLE } from '../../../data/presets';
-import { solveRiskBudgetingWeights, evaluatePortfolioMetrics } from '../riskParitySolver';
+import {
+  solveRiskBudgetingWeights,
+  evaluatePortfolioMetrics,
+  buildDynamicPresetsForSlotMap,
+} from '../riskParitySolver';
 import { calculateRebalancePlan } from '../rebalancerEngine';
 import { simulateWealthToGoal } from '../wealthSimulator';
 import { HoldingEntry } from '../types';
@@ -65,6 +69,29 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
     );
     expect(metrics.isParetoDominated).toBe(true);
     expect(metrics.dominatingPresets.length).toBeGreaterThan(0);
+  });
+
+  it('recomputes all 15 table presets dynamically when swapping BBCA -> PTBA', () => {
+    const slotMap = {
+      RDPU: 'RDPU',
+      RDPT: 'RDPT',
+      BBCA: 'PTBA',
+      GLD: 'GLD',
+      SPY: 'SPY',
+      QQQ: 'QQQ',
+      BTC: 'BTC',
+      ETH: 'ETH',
+    };
+    const dynamic = buildDynamicPresetsForSlotMap(
+      VIDEO_PORTFOLIO_PRESETS,
+      slotMap,
+      CORE_AND_EXPANDED_ASSETS
+    );
+    const rp7 = dynamic.find((p) => p.id === 'opt-9-rp-all-7')!;
+    expect(rp7.name).toContain('PTBA');
+    // Since PTBA has higher riskScale (3.6) than BBCA (2.714), its optimal Risk Parity weight is slightly lower (~11% vs 14%)
+    expect(rp7.weights.PTBA).toBeGreaterThanOrEqual(10);
+    expect(rp7.weights.PTBA).toBeLessThanOrEqual(13);
   });
 });
 

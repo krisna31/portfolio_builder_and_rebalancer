@@ -427,3 +427,86 @@ export function evaluatePortfolioMetrics(
     dominatingPresets: dominatingPresets.slice(0, 2),
   };
 }
+
+/**
+ * Re-computes all 25 Portfolio Presets when one or more of the 8 Core Benchmark slots
+ * (`RDPU`, `RDPT`, `BBCA`, `GLD`, `SPY`, `QQQ`, `BTC`, `ETH`) is substituted with another asset
+ * (for example, replacing `BBCA` with `PTBA` or `AADI`, or `QQQ` with `SMH`).
+ *
+ * - If no slot is substituted (all 8 match the original video benchmarks), returns the exact video presets unchanged.
+ * - If a slot is substituted (e.g. `BBCA -> PTBA`), re-solves the weights for every Risk Parity and Risk Budgeting row
+ *   using `solveRiskBudgetingWeights` so the user immediately sees how the optimal weights, CAGR, and Max Drawdown adjust!
+ */
+export function buildDynamicPresetsForSlotMap(
+  basePresets: PortfolioPreset[],
+  slotMap: Record<string, string>, // e.g., { RDPU: 'RDPU', RDPT: 'RDPT', BBCA: 'PTBA', ... }
+  allAssets: AssetDefinition[],
+  rdptBonusPercent: number = 0
+): PortfolioPreset[] {
+  const core8 = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
+  const isUnchanged =
+    core8.every((slot) => (slotMap[slot] ?? slot) === slot) &&
+    rdptBonusPercent === 0;
+
+  if (isUnchanged) {
+    return basePresets;
+  }
+
+  const assetMap = new Map(allAssets.map((a) => [a.id, a]));
+
+  return basePresets.map((preset) => {
+    // Identify which of the 8 slots were active (> 0%) in this preset
+    const activeCoreSlots = core8.filter((slot) => (preset.weights[slot] ?? 0) > 0);
+    const mappedAssets: AssetDefinition[] = activeCoreSlots
+      .map((slot) => assetMap.get(slotMap[slot] ?? slot))
+      .filter((a): a is AssetDefinition => Boolean(a));
+
+    const mappedConvictionId = preset.convictionAssetId
+      ? slotMap[preset.convictionAssetId] ?? preset.convictionAssetId
+      : undefined;
+
+    // Solve new weights for the mapped assets
+    const solvedByAssetId =
+      preset.method === 'custom'
+        ? { ...preset.weights }
+        : solveRiskBudgetingWeights(
+            mappedAssets,
+            preset.method,
+            mappedConvictionId,
+            preset.convictionRiskPercent ?? 70,
+            'calibrated-video'
+          );
+
+    // Build full weights dictionary keyed by the actual mapped asset IDs
+    const newWeights: Record<string, number> = {};
+    for (const slot of core8) {
+      const actualId = slotMap[slot] ?? slot;
+      newWeights[actualId] = solvedByAssetId[actualId] ?? 0;
+    }
+
+    // Dynamic preset name (e.g., replace "BBCA" with "PTBA" in the title)
+    let dynamicName = preset.name;
+    for (const slot of core8) {
+      const replacement = slotMap[slot] ?? slot;
+      if (replacement !== slot) {
+        dynamicName = dynamicName.replace(new RegExp(`\\b${slot}\\b`, 'g'), replacement);
+      }
+    }
+
+    const metrics = evaluatePortfolioMetrics(newWeights, allAssets, basePresets, {
+      rdptAlphaPromoBonusPercent: rdptBonusPercent,
+      exactPresetMatch: null,
+    });
+
+    return {
+      ...preset,
+      name: dynamicName,
+      convictionAssetId: mappedConvictionId,
+      cagr: metrics.cagr,
+      maxDrawdown: metrics.maxDrawdown,
+      riskTier: metrics.riskTier,
+      weights: newWeights,
+    };
+  });
+}
+
