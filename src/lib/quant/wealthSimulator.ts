@@ -298,3 +298,151 @@ export function simulateRebalancingFrequencyBacktest(params: {
   };
 }
 
+export interface MonteCarloYearPoint {
+  year: number;
+  principal: number;
+  p10: number; // Bear 10th percentile
+  p25: number;
+  p50: number; // Median 50th percentile
+  p75: number;
+  p90: number; // Bull 90th percentile
+}
+
+export interface MonteCarloSimulationResult {
+  series: MonteCarloYearPoint[];
+  successProbabilityPercent: number;
+  medianYearsToGoal: number | null;
+  medianFinalWealthIdr: number;
+  bearFinalWealthIdr: number;
+  bullFinalWealthIdr: number;
+  totalSimulations: number;
+}
+
+/**
+ * Runs a 500-path stochastic Monte Carlo simulation using Geometric Brownian Motion
+ * to model portfolio growth under market volatility and monthly DCA contributions.
+ */
+export function simulateMonteCarloPaths(params: {
+  initialCapitalIdr: number;
+  monthlyContributionIdr: number;
+  annualCagrPercent: number;
+  annualVolatilityPercent: number;
+  targetGoalIdr?: number;
+  maxYears?: number;
+  numSimulations?: number;
+}): MonteCarloSimulationResult {
+  const {
+    initialCapitalIdr,
+    monthlyContributionIdr,
+    annualCagrPercent,
+    annualVolatilityPercent,
+    targetGoalIdr = 1_000_000_000,
+    maxYears = 25,
+    numSimulations = 500,
+  } = params;
+
+  const muAnnual = Math.max(0, annualCagrPercent) / 100;
+  // Floor volatility at 4% to ensure stochastic realism even for low-volatility assets
+  const sigmaAnnual = Math.max(0.04, annualVolatilityPercent / 100);
+
+  // Geometric Brownian motion monthly drift and volatility
+  const dt = 1 / 12;
+  const driftMonthly = (muAnnual - 0.5 * sigmaAnnual * sigmaAnnual) * dt;
+  const volMonthly = sigmaAnnual * Math.sqrt(dt);
+
+  // Pseudo-random Normal standard distribution N(0, 1) using Box-Muller transform
+  const getStandardNormal = (): number => {
+    let u1 = 0;
+    let u2 = 0;
+    while (u1 === 0) u1 = Math.random();
+    while (u2 === 0) u2 = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  };
+
+  const totalMonths = maxYears * 12;
+
+  // Track values at each year end for all simulation paths: [yearIndex][pathIndex]
+  const yearlyWealthDistribution: number[][] = Array.from(
+    { length: maxYears + 1 },
+    () => new Array(numSimulations)
+  );
+
+  const goalReachedMonths: (number | null)[] = new Array(numSimulations).fill(null);
+
+  for (let s = 0; s < numSimulations; s++) {
+    let wealth = Math.max(0, initialCapitalIdr);
+    yearlyWealthDistribution[0][s] = wealth;
+
+    if (wealth >= targetGoalIdr) {
+      goalReachedMonths[s] = 0;
+    }
+
+    for (let m = 1; m <= totalMonths; m++) {
+      const z = getStandardNormal();
+      const monthlyReturnMultiplier = Math.exp(driftMonthly + volMonthly * z);
+      wealth = wealth * monthlyReturnMultiplier + Math.max(0, monthlyContributionIdr);
+
+      if (wealth >= targetGoalIdr && goalReachedMonths[s] === null) {
+        goalReachedMonths[s] = m;
+      }
+
+      if (m % 12 === 0) {
+        const yr = m / 12;
+        yearlyWealthDistribution[yr][s] = wealth;
+      }
+    }
+  }
+
+  // Helper to extract quantile from sorted array
+  const getQuantile = (sortedArr: number[], q: number) => {
+    const idx = Math.min(sortedArr.length - 1, Math.max(0, Math.floor(q * sortedArr.length)));
+    return sortedArr[idx];
+  };
+
+  // Build percentile series
+  let runningPrincipal = initialCapitalIdr;
+  const series: MonteCarloYearPoint[] = [];
+
+  for (let yr = 0; yr <= maxYears; yr++) {
+    if (yr > 0) {
+      runningPrincipal += monthlyContributionIdr * 12;
+    }
+
+    const sortedVals = [...yearlyWealthDistribution[yr]].sort((a, b) => a - b);
+    series.push({
+      year: yr,
+      principal: Math.round(runningPrincipal),
+      p10: Math.round(getQuantile(sortedVals, 0.1)),
+      p25: Math.round(getQuantile(sortedVals, 0.25)),
+      p50: Math.round(getQuantile(sortedVals, 0.5)),
+      p75: Math.round(getQuantile(sortedVals, 0.75)),
+      p90: Math.round(getQuantile(sortedVals, 0.9)),
+    });
+  }
+
+  // Calculate Success Probability (% of paths reaching targetGoalIdr)
+  const pathsReachedGoal = goalReachedMonths.filter((m) => m !== null).length;
+  const successProbabilityPercent = Math.round((pathsReachedGoal / numSimulations) * 100);
+
+  // Median years to goal for successful paths
+  const successfulMonths = (goalReachedMonths.filter((m) => m !== null) as number[]).sort((a, b) => a - b);
+  const medianMonths =
+    successfulMonths.length > 0
+      ? successfulMonths[Math.floor(successfulMonths.length / 2)]
+      : null;
+  const medianYearsToGoal =
+    medianMonths !== null ? Number((medianMonths / 12).toFixed(1)) : null;
+
+  const finalYearValues = [...yearlyWealthDistribution[maxYears]].sort((a, b) => a - b);
+
+  return {
+    series,
+    successProbabilityPercent,
+    medianYearsToGoal,
+    medianFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.5)),
+    bearFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.1)),
+    bullFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.9)),
+    totalSimulations: numSimulations,
+  };
+}
+

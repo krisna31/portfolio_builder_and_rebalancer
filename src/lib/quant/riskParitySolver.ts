@@ -79,6 +79,99 @@ const CATEGORY_CORRELATIONS: Record<string, Record<string, number>> = {
 };
 
 /**
+ * Known asset-level correlation overrides for key assets
+ */
+const SPECIFIC_ASSET_CORRELATIONS: Record<string, number> = {
+  'SPY:QQQ': 0.88,
+  'QQQ:SPY': 0.88,
+  'BTC:ETH': 0.82,
+  'ETH:BTC': 0.82,
+  'RDPU:RDPT': 0.25,
+  'RDPT:RDPU': 0.25,
+  'BBCA:PTBA': 0.38,
+  'PTBA:BBCA': 0.38,
+  'BTC:GLD': 0.18,
+  'GLD:BTC': 0.18,
+  'ETH:GLD': 0.16,
+  'GLD:ETH': 0.16,
+};
+
+/**
+ * Returns the pairwise correlation coefficient r in [-1.0, 1.0] between any two assets.
+ */
+export function getAssetPairwiseCorrelation(
+  assetA: AssetDefinition,
+  assetB: AssetDefinition
+): number {
+  if (assetA.id === assetB.id) return 1.0;
+
+  // Check specific overrides
+  const pairKey = `${assetA.id}:${assetB.id}`;
+  if (SPECIFIC_ASSET_CORRELATIONS[pairKey] !== undefined) {
+    return SPECIFIC_ASSET_CORRELATIONS[pairKey];
+  }
+
+  // Category correlation
+  const catCorr =
+    CATEGORY_CORRELATIONS[assetA.category]?.[assetB.category] ?? 0.25;
+
+  if (assetA.category === assetB.category) {
+    if (assetA.category === 'crypto') return 0.82;
+    if (assetA.category === 'us-equity') return 0.85;
+    if (assetA.category === 'idx-equity') return 0.45;
+    return 0.5;
+  }
+
+  return catCorr;
+}
+
+/**
+ * Calculates the overall portfolio diversification effectiveness score (0-100%)
+ * based on weighted pairwise correlations.
+ */
+export function calculatePortfolioDiversificationScore(
+  assets: AssetDefinition[],
+  weights: Record<string, number>
+): { score: number; label: string; avgCorrelation: number } {
+  const activeAssets = assets.filter((a) => (weights[a.id] ?? 0) > 0);
+  if (activeAssets.length <= 1) {
+    return {
+      score: 0,
+      label: 'Konsentrasi Penuh (1 Aset)',
+      avgCorrelation: 1.0,
+    };
+  }
+
+  let totalWeightedCorr = 0;
+  let totalWeightProduct = 0;
+
+  for (let i = 0; i < activeAssets.length; i++) {
+    for (let j = 0; j < activeAssets.length; j++) {
+      if (i === j) continue;
+      const wI = (weights[activeAssets[i].id] ?? 0) / 100;
+      const wJ = (weights[activeAssets[j].id] ?? 0) / 100;
+      const corr = getAssetPairwiseCorrelation(activeAssets[i], activeAssets[j]);
+      totalWeightedCorr += wI * wJ * corr;
+      totalWeightProduct += wI * wJ;
+    }
+  }
+
+  const avgCorrelation =
+    totalWeightProduct > 0 ? totalWeightedCorr / totalWeightProduct : 1.0;
+
+  // Diversification score: 1 - avgCorrelation mapped to 0-100%
+  const score = Math.max(0, Math.min(100, Math.round((1 - avgCorrelation) * 100)));
+
+  let label = 'Diversifikasi Sangat Baik';
+  if (score >= 75) label = 'Diversifikasi Sangat Kuat (Optimal)';
+  else if (score >= 55) label = 'Diversifikasi Moderat-Kuat';
+  else if (score >= 35) label = 'Diversifikasi Terbatas';
+  else label = 'Konsentrasi Tinggi (Risiko Serempak)';
+
+  return { score, label, avgCorrelation: Number(avgCorrelation.toFixed(2)) };
+}
+
+/**
  * Classifies a portfolio's Risk Tier based on Leon Hartono's video thresholds (11:10 - 13:15):
  * - Super High Risk: Max Drawdown > 30% (e.g., All-In BTC / ETH ~70-76%)
  * - High Risk: Max Drawdown between 10% and 30% (video: 10.46% - 21.06%)
@@ -107,12 +200,7 @@ export function buildCovarianceMatrix(assets: AssetDefinition[]): number[][] {
       if (i === j) {
         cov[i][j] = volI * volI;
       } else {
-        // Same category assets have higher correlation (e.g., SPY & QQQ = 0.88, BTC & ETH = 0.82)
-        let corr =
-          CATEGORY_CORRELATIONS[assets[i].category]?.[assets[j].category] ?? 0.25;
-        if (assets[i].category === assets[j].category) {
-          corr = assets[i].category === 'crypto' ? 0.82 : 0.85;
-        }
+        const corr = getAssetPairwiseCorrelation(assets[i], assets[j]);
         cov[i][j] = corr * volI * volJ;
       }
     }

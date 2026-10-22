@@ -15,6 +15,7 @@ import {
   POPULAR_TICKER_ESTIMATES,
   TickerLookupResult,
 } from '../../services/priceFeed';
+import { AssetCorrelationMatrixCard } from './AssetCorrelationMatrixCard';
 import {
   ResponsiveContainer,
   BarChart,
@@ -2467,6 +2468,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               </ResponsiveContainer>
             </div>
           </div>
+
+          {/* Institutional Asset Correlation Matrix Heatmap */}
+          <AssetCorrelationMatrixCard
+            allAssets={allAssets}
+            activeWeights={activeWeights}
+            coreBenchmarkAssets={allAssets.filter((a) => a.isCoreBenchmark)}
+          />
 
           {/* Chart 2: Interactive Pareto Frontier ScatterChart */}
           <div className="ui-card rounded-xl p-5">

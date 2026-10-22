@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AssetDefinition, SolvedPortfolio } from '../../lib/quant/types';
 import {
+  simulateMonteCarloPaths,
   simulateRebalancingFrequencyBacktest,
   simulateWealthToGoal,
 } from '../../lib/quant/wealthSimulator';
@@ -25,6 +26,8 @@ import {
   Coins,
   RefreshCw,
   Sparkles,
+  Activity,
+  CheckCircle2,
 } from 'lucide-react';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 
@@ -54,6 +57,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   const [annualStepUpPct, setAnnualStepUpPct] = useState(0);
   const [annualInflationPercent, setAnnualInflationPercent] = useState<number>(0);
   const [monthlyLivingCostTargetIdr, setMonthlyLivingCostTargetIdr] = useState<number>(10_000_000);
+  const [simulationViewMode, setSimulationViewMode] = useState<
+    'deterministic' | 'monte-carlo'
+  >('deterministic');
 
   // Dividend Estimator State
   const [taxMode, setTaxMode] = useState<
@@ -211,6 +217,40 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     Tahunan1Y: pt.RebalanceTahunan,
     BuyAndHold: pt.BuyAndHold,
   }));
+
+  // 500-Run Stochastic Monte Carlo Simulation
+  const monteCarloResult = useMemo(
+    () =>
+      simulateMonteCarloPaths({
+        initialCapitalIdr: initialCapitalIdr > 0 ? initialCapitalIdr : 100_000_000,
+        monthlyContributionIdr: monthlySavingsIdr,
+        annualCagrPercent: effectiveCompoundingCagr,
+        annualVolatilityPercent: solvedMetrics.volatility || 18,
+        targetGoalIdr,
+        maxYears: displayYears,
+        numSimulations: 500,
+      }),
+    [
+      initialCapitalIdr,
+      monthlySavingsIdr,
+      effectiveCompoundingCagr,
+      solvedMetrics.volatility,
+      targetGoalIdr,
+      displayYears,
+    ]
+  );
+
+  const monteCarloChartData = useMemo(() => {
+    return monteCarloResult.series.map((pt) => ({
+      yearLabel: `Thn ${pt.year}`,
+      ModalPokok: Math.round(pt.principal / 1_000_000),
+      P90Bull: Math.round(pt.p90 / 1_000_000),
+      P75: Math.round(pt.p75 / 1_000_000),
+      P50Median: Math.round(pt.p50 / 1_000_000),
+      P25: Math.round(pt.p25 / 1_000_000),
+      P10Bear: Math.round(pt.p10 / 1_000_000),
+    }));
+  }, [monteCarloResult]);
 
   return (
     <div className="space-y-6">
@@ -441,98 +481,256 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         {/* Right 7 Cols: Compounding Curve */}
         <div className="space-y-5 lg:col-span-7">
           <div className="ui-card rounded-xl p-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="ui-text-main text-sm font-bold">
-                  Kurva Pertumbuhan Kekayaan vs Modal Pokok &amp; Risiko Crash
+                <h3 className="ui-text-main text-sm font-bold flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span>
+                    {simulationViewMode === 'deterministic'
+                      ? 'Kurva Pertumbuhan Kekayaan vs Modal Pokok & Risiko Crash'
+                      : 'Simulasi Stokastik Monte Carlo (500 Skenario Siklus Pasar)'}
+                  </span>
                 </h3>
-                <p className="ui-text-muted text-xs">
-                  Proyeksi pada CAGR efektif{' '}
-                  <strong className="ui-text-main">
-                    {effectiveCompoundingCagr.toFixed(2)}%
-                  </strong>{' '}
-                  beserta batas bawah Maximum Drawdown (-{solvedMetrics.maxDrawdown}%):
+                <p className="ui-text-muted text-xs mt-0.5">
+                  {simulationViewMode === 'deterministic'
+                    ? `Proyeksi pada CAGR efektif ${effectiveCompoundingCagr.toFixed(2)}% beserta batas bawah Maximum Drawdown (-${solvedMetrics.maxDrawdown}%):`
+                    : `Simulasi 500 lintasan acak (volatilitas \u03c3 = ${(solvedMetrics.volatility || 18).toFixed(1)}%) memetakan rentang hasil terburuk (P10) hingga terbaik (P90):`}
                 </p>
               </div>
-              <TrendingUp className="ui-text-muted h-4 w-4" />
+
+              {/* Mode Toggle: Deterministik vs Monte Carlo */}
+              <div className="ui-subtle flex rounded-lg p-0.5 text-xs shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setSimulationViewMode('deterministic')}
+                  className={`px-2.5 py-1 rounded font-medium transition ${
+                    simulationViewMode === 'deterministic'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:opacity-80'
+                  }`}
+                >
+                  Deterministik
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSimulationViewMode('monte-carlo')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded font-medium transition ${
+                    simulationViewMode === 'monte-carlo'
+                      ? 'bg-indigo-600 font-semibold text-white shadow-2xs'
+                      : 'ui-text-muted hover:opacity-80'
+                  }`}
+                >
+                  <Activity className="h-3 w-3" />
+                  <span>Monte Carlo (500x)</span>
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartTimeline}
-                  margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
-                >
-                  <XAxis dataKey="yearLabel" stroke="#71717a" fontSize={11} />
-                  <YAxis
-                    stroke="#71717a"
-                    fontSize={11}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}M`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-card)',
-                      borderColor: 'var(--border-subtle)',
-                      color: 'var(--text-main)',
-                      borderRadius: '0.5rem',
-                      fontSize: '12px',
-                    }}
-                    itemStyle={{ color: 'var(--text-main)' }}
-                    labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
-                    formatter={(val: number, name: string) => [
-                      `Rp ${val.toLocaleString('id-ID')} Juta`,
-                      name,
-                    ]}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <ReferenceLine
-                    y={targetGoalIdr / 1_000_000}
-                    stroke="#f59e0b"
-                    strokeDasharray="4 4"
-                    label={{
-                      value: `Target ${formatIdr(targetGoalIdr, true)}`,
-                      fill: '#f59e0b',
-                      fontSize: 11,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="NilaiPortfolio"
-                    name="Nilai Portfolio (Compounding)"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.2}
-                  />
-                  {annualInflationPercent > 0 && (
+                {simulationViewMode === 'deterministic' ? (
+                  <AreaChart
+                    data={chartTimeline}
+                    margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
+                  >
+                    <XAxis dataKey="yearLabel" stroke="#71717a" fontSize={11} />
+                    <YAxis
+                      stroke="#71717a"
+                      fontSize={11}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}M`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderColor: 'var(--border-subtle)',
+                        color: 'var(--text-main)',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px',
+                      }}
+                      itemStyle={{ color: 'var(--text-main)' }}
+                      labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
+                      formatter={(val: number, name: string) => [
+                        `Rp ${val.toLocaleString('id-ID')} Juta`,
+                        name,
+                      ]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <ReferenceLine
+                      y={targetGoalIdr / 1_000_000}
+                      stroke="#f59e0b"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `Target ${formatIdr(targetGoalIdr, true)}`,
+                        fill: '#f59e0b',
+                        fontSize: 11,
+                      }}
+                    />
                     <Area
                       type="monotone"
-                      dataKey="DayaBeliRiil"
-                      name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
-                      stroke="#8b5cf6"
-                      fill="#8b5cf6"
-                      strokeDasharray="4 4"
-                      fillOpacity={0.08}
+                      dataKey="NilaiPortfolio"
+                      name="Nilai Portfolio (Compounding)"
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.2}
                     />
-                  )}
-                  <Area
-                    type="monotone"
-                    dataKey="WorstCaseCrash"
-                    name={`Saat Market Crash (-${solvedMetrics.maxDrawdown}%)`}
-                    stroke="#f43f5e"
-                    fill="#f43f5e"
-                    fillOpacity={0.1}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="ModalTabungan"
-                    name="Akumulasi Modal Tabungan"
-                    stroke="#0ea5e9"
-                    fill="#0ea5e9"
-                    fillOpacity={0.12}
-                  />
-                </AreaChart>
+                    {annualInflationPercent > 0 && (
+                      <Area
+                        type="monotone"
+                        dataKey="DayaBeliRiil"
+                        name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
+                        stroke="#8b5cf6"
+                        fill="#8b5cf6"
+                        strokeDasharray="4 4"
+                        fillOpacity={0.08}
+                      />
+                    )}
+                    <Area
+                      type="monotone"
+                      dataKey="WorstCaseCrash"
+                      name={`Saat Market Crash (-${solvedMetrics.maxDrawdown}%)`}
+                      stroke="#f43f5e"
+                      fill="#f43f5e"
+                      fillOpacity={0.1}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="ModalTabungan"
+                      name="Akumulasi Modal Tabungan"
+                      stroke="#0ea5e9"
+                      fill="#0ea5e9"
+                      fillOpacity={0.12}
+                    />
+                  </AreaChart>
+                ) : (
+                  <AreaChart
+                    data={monteCarloChartData}
+                    margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
+                  >
+                    <XAxis dataKey="yearLabel" stroke="#71717a" fontSize={11} />
+                    <YAxis
+                      stroke="#71717a"
+                      fontSize={11}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}M`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--bg-card)',
+                        borderColor: 'var(--border-subtle)',
+                        color: 'var(--text-main)',
+                        borderRadius: '0.5rem',
+                        fontSize: '12px',
+                      }}
+                      itemStyle={{ color: 'var(--text-main)' }}
+                      labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
+                      formatter={(val: number, name: string) => [
+                        `Rp ${val.toLocaleString('id-ID')} Juta`,
+                        name,
+                      ]}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <ReferenceLine
+                      y={targetGoalIdr / 1_000_000}
+                      stroke="#f59e0b"
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `Target ${formatIdr(targetGoalIdr, true)}`,
+                        fill: '#f59e0b',
+                        fontSize: 11,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="P90Bull"
+                      name="P90: Skenario Optimis (Bull 10%)"
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.15}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="P50Median"
+                      name="P50: Ekspektasi Median (Realistis)"
+                      stroke="#059669"
+                      fill="#059669"
+                      fillOpacity={0.25}
+                      strokeWidth={2}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="P10Bear"
+                      name="P10: Ujian Krisis (Bear 10%)"
+                      stroke="#f43f5e"
+                      fill="#f43f5e"
+                      fillOpacity={0.12}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="ModalPokok"
+                      name="Modal Pokok Disimpan"
+                      stroke="#0ea5e9"
+                      fill="#0ea5e9"
+                      fillOpacity={0.08}
+                      strokeDasharray="3 3"
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
+
+            {/* Monte Carlo Statistical Probability Summary Cards */}
+            {simulationViewMode === 'monte-carlo' && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-border/80">
+                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
+                  <div className="text-[11px] text-slate-400">Peluang Capai Target</div>
+                  <div
+                    className={`mt-0.5 text-base font-bold font-mono ${
+                      monteCarloResult.successProbabilityPercent >= 75
+                        ? 'text-emerald-400'
+                        : monteCarloResult.successProbabilityPercent >= 50
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                    }`}
+                  >
+                    {monteCarloResult.successProbabilityPercent}%
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Target {formatIdr(targetGoalIdr, true)}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
+                  <div className="text-[11px] text-slate-400">Median Waktu ke Goal</div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-indigo-400">
+                    {monteCarloResult.medianYearsToGoal !== null
+                      ? `${monteCarloResult.medianYearsToGoal} Tahun`
+                      : '> 25 Tahun'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    50% jalur simulasi
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
+                  <div className="text-[11px] text-slate-400">Hasil P10 (Ujian Bear)</div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-rose-400">
+                    {formatIdr(monteCarloResult.bearFinalWealthIdr, true)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    10% terburuk
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
+                  <div className="text-[11px] text-slate-400">Hasil P90 (Kondisi Bull)</div>
+                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-400">
+                    {formatIdr(monteCarloResult.bullFinalWealthIdr, true)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    10% terbaik
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
