@@ -10,6 +10,7 @@ import {
   BookmarkCheck,
   Sparkles,
   Check,
+  Copy,
   X,
   Sun,
   Moon,
@@ -21,6 +22,8 @@ import {
   FileSpreadsheet,
   Building2,
   RotateCcw,
+  Database,
+  ClipboardPaste,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -59,6 +62,9 @@ interface HeaderProps {
   onOpenFactsheet?: () => void;
   onOpenOrderSlip?: () => void;
   onOpenResetConfirm?: () => void;
+  onOpenDataTransfer?: () => void;
+  onQuickCopyConfig?: () => void;
+  quickCopyFeedback?: boolean;
   activePortfolioName?: string;
   activeCagr?: number;
   activeMaxDrawdown?: number;
@@ -88,6 +94,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenFactsheet,
   onOpenOrderSlip,
   onOpenResetConfirm,
+  onOpenDataTransfer,
+  onQuickCopyConfig,
+  quickCopyFeedback = false,
   activePortfolioName = 'Portfolio Aktif',
   activeCagr = 0,
   activeMaxDrawdown = 0,
@@ -524,7 +533,45 @@ export const Header: React.FC<HeaderProps> = ({
                         )}
                       </div>
 
-                      {/* Export / Import Backup */}
+                      {/* Transfer Data & Backup */}
+                      {onOpenDataTransfer && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsToolsMenuOpen(false);
+                            onOpenDataTransfer();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 border border-emerald-500/30 bg-emerald-500/5 mt-1"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Database className="h-3.5 w-3.5 text-emerald-500" />
+                            <span className="font-semibold">Transfer & Backup Data</span>
+                          </div>
+                          <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Teks / JSON
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Quick Copy Config & File Backup */}
+                      {onQuickCopyConfig && (
+                        <button
+                          type="button"
+                          onClick={onQuickCopyConfig}
+                          className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-md p-1.5 text-[11px] hover:opacity-80 mt-1"
+                          title="Salin seluruh konfigurasi aplikasi sebagai teks JSON ke clipboard"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            {quickCopyFeedback ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>{quickCopyFeedback ? 'Config Tersalin!' : 'Salin Config Teks'}</span>
+                          </div>
+                          <span className="font-mono text-[10px] ui-text-muted">JSON</span>
+                        </button>
+                      )}
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
                         <button
                           type="button"
@@ -896,6 +943,28 @@ export const Header: React.FC<HeaderProps> = ({
                 ))
               )}
             </div>
+
+            {onOpenDataTransfer && (
+              <div className="ui-border border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    dialogRef.current?.close();
+                    setIsMobileMenuOpen(false);
+                    onOpenDataTransfer();
+                  }}
+                  className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2.5 text-xs font-semibold"
+                >
+                  <div className="flex items-center gap-2">
+                    <Database className="h-4 w-4 text-emerald-500" />
+                    <span>Transfer & Backup Data (Teks / File)</span>
+                  </div>
+                  <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                    Buka
+                  </span>
+                </button>
+              </div>
+            )}
 
             <div className="ui-border flex items-center justify-between border-t pt-3">
               <button

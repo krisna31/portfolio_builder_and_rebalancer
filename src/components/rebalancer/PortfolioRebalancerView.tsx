@@ -8,6 +8,8 @@ import {
 } from '../../lib/quant/types';
 import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
+import { HoldingsTextImportModal } from './HoldingsTextImportModal';
+import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
   Scale,
@@ -31,6 +33,7 @@ import {
   Table2,
   Building2,
   Tag,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -86,6 +89,7 @@ interface PortfolioRebalancerViewProps {
     distributeBy: 'current' | 'target'
   ) => void;
   onOpenOrderSlip?: () => void;
+  onBatchUpdateHoldings?: (items: ParsedHoldingItem[], strategy: 'merge' | 'replace') => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -125,8 +129,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
   onOpenOrderSlip,
+  onBatchUpdateHoldings,
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(true);
+  const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
@@ -209,6 +215,28 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       cashInjectionIdr,
     ]
   );
+
+  const handleApplyHoldingsFromText = (
+    items: ParsedHoldingItem[],
+    strategy: 'merge' | 'replace'
+  ) => {
+    if (onBatchUpdateHoldings) {
+      onBatchUpdateHoldings(items, strategy);
+    } else {
+      if (strategy === 'replace') {
+        onClearHoldingsForManualInput();
+      }
+      for (const item of items) {
+        if (!item.assetId || !item.isRecognized) continue;
+        onUpdateHolding(item.assetId, {
+          currentValueIdr: item.nominalIdr,
+          units: item.units,
+          currentPrice: item.priceNative,
+          shockPercent: 0,
+        });
+      }
+    }
+  };
 
   const handleApplyAndRecord = () => {
     onCommitRebalanceToHoldings(rebalanceNoteInput.trim() || undefined);
@@ -463,6 +491,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <span>
                 Beli Perdana dari Rp 0 ({formatIdr(initialCapitalMenu1Idr, true)})
               </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsHoldingsTextModalOpen(true)}
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition"
+              title="Import atau Export saldo holding melalui teks (Excel / TSV / CSV / format bebas)"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Import / Export Teks (Excel)</span>
             </button>
 
             <button
@@ -2346,6 +2384,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </div>
         )}
       </section>
+
+      {/* Holdings Text Import & Export Modal */}
+      <HoldingsTextImportModal
+        isOpen={isHoldingsTextModalOpen}
+        onClose={() => setIsHoldingsTextModalOpen(false)}
+        allAssets={allAssets}
+        currentHoldings={holdings}
+        usdIdrRate={usdIdrRate}
+        onApplyHoldings={handleApplyHoldingsFromText}
+      />
     </div>
   );
 };

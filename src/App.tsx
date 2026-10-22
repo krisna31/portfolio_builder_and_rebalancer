@@ -32,6 +32,8 @@ import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfo
 import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetModal';
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { ResetConfirmationModal } from './components/ResetConfirmationModal';
+import { DataTransferModal } from './components/export/DataTransferModal';
+import { ParsedHoldingItem } from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 
 const STORAGE_KEY = 'quantporto_state_v2';
@@ -207,6 +209,8 @@ export function App() {
   const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
   const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+  const [isDataTransferModalOpen, setIsDataTransferModalOpen] = useState<boolean>(false);
+  const [quickCopyFeedback, setQuickCopyFeedback] = useState<boolean>(false);
 
   // Import backup success notification banner state
   const [backupToast, setBackupToast] = useState<{
@@ -1220,12 +1224,12 @@ export function App() {
     localStorage.setItem(SAVED_PORTFOLIOS_KEY, JSON.stringify(updated));
   };
 
-  const handleExportJson = () => {
+  const getBackupPayload = (): QuantPortoBackupPayload => {
     const customAssets = allAssets.filter(
       (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
     );
 
-    const payload: QuantPortoBackupPayload = {
+    return {
       version: 2,
       app: 'QuantPorto',
       exportedAt: new Date().toISOString(),
@@ -1267,7 +1271,10 @@ export function App() {
         },
       },
     };
+  };
 
+  const handleExportJson = () => {
+    const payload = getBackupPayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json',
     });
@@ -1279,161 +1286,258 @@ export function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handleImportJson = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const raw = JSON.parse(String(reader.result));
-        const details: string[] = [];
+  const handleQuickCopyConfig = async () => {
+    try {
+      const payload = getBackupPayload();
+      const text = JSON.stringify(payload, null, 2);
+      await navigator.clipboard.writeText(text);
+      setQuickCopyFeedback(true);
+      setTimeout(() => setQuickCopyFeedback(false), 2500);
+      setBackupToast({
+        message: 'Konfigurasi JSON Berhasil Disalin!',
+        details: [
+          'Seluruh data portofolio siap ditempel ke catatan atau dibagikan',
+        ],
+      });
+    } catch (err) {
+      console.error('Failed to copy config to clipboard', err);
+    }
+  };
 
-        // Check whether it's Schema v2 or Legacy v1
-        const isV2 = raw.version === 2 && raw.data;
-        const d1 = isV2 ? raw.data.menu1_builder : raw;
-        const d2 = isV2 ? raw.data.menu2_rebalancer : raw;
-        const d3 = isV2 ? raw.data.menu3_simulator : raw;
-        const dg = isV2 ? raw.data.global : raw;
+  const handleBatchUpdateHoldings = (
+    items: ParsedHoldingItem[],
+    strategy: 'merge' | 'replace'
+  ) => {
+    const updatedCount = items.filter((i) => i.isRecognized && i.isValid).length;
+    setHoldings((prev) => {
+      const next = strategy === 'replace' ? {} : { ...prev };
+      for (const item of items) {
+        if (!item.assetId || !item.isRecognized) continue;
+        next[item.assetId] = {
+          assetId: item.assetId,
+          currentValueIdr: item.nominalIdr,
+          units: item.units,
+          currentPrice: item.priceNative,
+          shockPercent: 0,
+        };
+      }
+      return next;
+    });
 
-        // 1. Menu 1: Builder
-        if (d1.activeWeights && typeof d1.activeWeights === 'object') {
+    setBackupToast({
+      message:
+        strategy === 'replace'
+          ? `Saldo Holding Digantikan (${updatedCount} Aset)!`
+          : `Saldo Holding Diperbarui (${updatedCount} Aset)!`,
+      details: [
+        `Data holding berhasil diparsing dan diterapkan ke kalkulator rebalance.`,
+      ],
+    });
+  };
+
+  const handleImportPayload = (
+    raw: any,
+    mode: 'overwrite' | 'merge' = 'overwrite'
+  ) => {
+    try {
+      const details: string[] = [];
+
+      // Check whether it's Schema v2 or Legacy v1
+      const isV2 = raw.version === 2 && raw.data;
+      const d1 = isV2 ? raw.data.menu1_builder : raw;
+      const d2 = isV2 ? raw.data.menu2_rebalancer : raw;
+      const d3 = isV2 ? raw.data.menu3_simulator : raw;
+      const dg = isV2 ? raw.data.global : raw;
+
+      // 1. Menu 1: Builder
+      if (d1.activeWeights && typeof d1.activeWeights === 'object') {
+        if (mode === 'merge') {
+          setActiveWeights((prev) => ({ ...prev, ...d1.activeWeights }));
+        } else {
           setActiveWeights(d1.activeWeights);
-          const activeCount = Object.values(d1.activeWeights).filter(
-            (w) => typeof w === 'number' && w > 0
-          ).length;
-          details.push(`Menu 1: ${activeCount} aset aktif dipulihkan`);
         }
-        if (d1.activePresetId !== undefined) setActivePresetId(d1.activePresetId);
-        if (d1.allocationMethod) setAllocationMethod(d1.allocationMethod);
-        if (d1.convictionAssetId) setConvictionAssetId(d1.convictionAssetId);
-        if (typeof d1.convictionRiskPercent === 'number')
-          setConvictionRiskPercent(d1.convictionRiskPercent);
-        if (d1.solverMode) setSolverMode(d1.solverMode);
-        if (Array.isArray(d1.selectedUniverseIds))
-          setSelectedUniverseIds(d1.selectedUniverseIds);
-        if (Array.isArray(d1.pinnedPresetIds))
-          setPinnedPresetIds(d1.pinnedPresetIds);
-        if (Array.isArray(d1.customTableRows))
-          setCustomTableRows(d1.customTableRows);
-        if (d1.slotMap) setSlotMap(d1.slotMap);
-        if (d1.rdptPromoActive !== undefined)
-          setRdptPromoActive(Boolean(d1.rdptPromoActive));
+        const activeCount = Object.values(d1.activeWeights).filter(
+          (w) => typeof w === 'number' && w > 0
+        ).length;
+        details.push(`Menu 1: ${activeCount} aset aktif dipulihkan`);
+      }
+      if (d1.activePresetId !== undefined) setActivePresetId(d1.activePresetId);
+      if (d1.allocationMethod) setAllocationMethod(d1.allocationMethod);
+      if (d1.convictionAssetId) setConvictionAssetId(d1.convictionAssetId);
+      if (typeof d1.convictionRiskPercent === 'number')
+        setConvictionRiskPercent(d1.convictionRiskPercent);
+      if (d1.solverMode) setSolverMode(d1.solverMode);
+      if (Array.isArray(d1.selectedUniverseIds))
+        setSelectedUniverseIds(d1.selectedUniverseIds);
+      if (Array.isArray(d1.pinnedPresetIds))
+        setPinnedPresetIds(d1.pinnedPresetIds);
+      if (Array.isArray(d1.customTableRows))
+        setCustomTableRows(d1.customTableRows);
+      if (d1.slotMap) setSlotMap(d1.slotMap);
+      if (d1.rdptPromoActive !== undefined)
+        setRdptPromoActive(Boolean(d1.rdptPromoActive));
 
-        // Restore custom assets
-        if (Array.isArray(d1.customAssets) && d1.customAssets.length > 0) {
-          setAllAssets((prev) => {
-            const existingIds = new Set(prev.map((a) => a.id));
-            const newAdditions = d1.customAssets.filter(
-              (a: AssetDefinition) => !existingIds.has(a.id)
-            );
-            return [...prev, ...newAdditions];
-          });
-          details.push(`Ticker kustom: +${d1.customAssets.length} aset`);
-        }
+      // Restore custom assets
+      if (Array.isArray(d1.customAssets) && d1.customAssets.length > 0) {
+        setAllAssets((prev) => {
+          const existingIds = new Set(prev.map((a) => a.id));
+          const newAdditions = d1.customAssets.filter(
+            (a: AssetDefinition) => !existingIds.has(a.id)
+          );
+          return [...prev, ...newAdditions];
+        });
+        details.push(`Ticker kustom: +${d1.customAssets.length} aset`);
+      }
 
-        // 2. Menu 2: Rebalancer & History
-        if (d2.holdings && typeof d2.holdings === 'object') {
+      // 2. Menu 2: Rebalancer & History
+      if (d2.holdings && typeof d2.holdings === 'object') {
+        if (mode === 'merge') {
+          setHoldings((prev) => ({ ...prev, ...d2.holdings }));
+        } else {
           setHoldings(d2.holdings);
-          details.push(
-            `Menu 2: Saldo holding ${Object.keys(d2.holdings).length} aset`
-          );
         }
-        if (Array.isArray(d2.rebalanceHistory)) {
+        details.push(
+          `Menu 2: Saldo holding ${Object.keys(d2.holdings).length} aset`
+        );
+      }
+      if (Array.isArray(d2.rebalanceHistory)) {
+        if (mode === 'merge') {
+          setRebalanceHistory((prev) => {
+            const existingIds = new Set(prev.map((h) => h.id));
+            const newEntries = d2.rebalanceHistory.filter(
+              (h: any) => !existingIds.has(h.id)
+            );
+            return [...newEntries, ...prev];
+          });
+        } else {
           setRebalanceHistory(d2.rebalanceHistory);
-          details.push(
-            `Jurnal Rebalance: ${d2.rebalanceHistory.length} catatan riwayat`
-          );
         }
-        if (d2.inputMode === 'nominal' || d2.inputMode === 'units')
-          setInputMode(d2.inputMode);
-        if (d2.rebalanceMode) setRebalanceMode(d2.rebalanceMode);
-        if (typeof d2.cashInjectionIdr === 'number')
-          setCashInjectionIdr(d2.cashInjectionIdr);
-        if (typeof d2.driftThresholdPercent === 'number')
-          setDriftThresholdPercent(d2.driftThresholdPercent);
-        if (d2.isHoldingsSyncedWithMenu1 !== undefined)
-          setIsHoldingsSyncedWithMenu1(d2.isHoldingsSyncedWithMenu1);
-        if (d2.enableIdxLotRounding !== undefined)
-          setEnableIdxLotRounding(Boolean(d2.enableIdxLotRounding));
-        if (d2.enableBrokerFees !== undefined)
-          setEnableBrokerFees(Boolean(d2.enableBrokerFees));
-        if (d2.filterDustTrades !== undefined)
-          setFilterDustTrades(Boolean(d2.filterDustTrades));
+        details.push(
+          `Jurnal Rebalance: ${d2.rebalanceHistory.length} catatan riwayat`
+        );
+      }
+      if (d2.inputMode === 'nominal' || d2.inputMode === 'units')
+        setInputMode(d2.inputMode);
+      if (d2.rebalanceMode) setRebalanceMode(d2.rebalanceMode);
+      if (typeof d2.cashInjectionIdr === 'number')
+        setCashInjectionIdr(d2.cashInjectionIdr);
+      if (typeof d2.driftThresholdPercent === 'number')
+        setDriftThresholdPercent(d2.driftThresholdPercent);
+      if (d2.isHoldingsSyncedWithMenu1 !== undefined)
+        setIsHoldingsSyncedWithMenu1(d2.isHoldingsSyncedWithMenu1);
+      if (d2.enableIdxLotRounding !== undefined)
+        setEnableIdxLotRounding(Boolean(d2.enableIdxLotRounding));
+      if (d2.enableBrokerFees !== undefined)
+        setEnableBrokerFees(Boolean(d2.enableBrokerFees));
+      if (d2.filterDustTrades !== undefined)
+        setFilterDustTrades(Boolean(d2.filterDustTrades));
 
-        // 3. Menu 3: Simulator & Goals
-        if (
-          typeof d3.initialCapitalIdr === 'number' &&
-          d3.initialCapitalIdr > 0
-        ) {
-          setInitialCapitalIdr(d3.initialCapitalIdr);
-        }
-        if (typeof d3.targetGoalIdr === 'number' && d3.targetGoalIdr > 0) {
-          setTargetGoalIdr(d3.targetGoalIdr);
-        }
-        if (
-          typeof d3.monthlySavingsIdr === 'number' &&
-          d3.monthlySavingsIdr >= 0
-        ) {
-          setMonthlySavingsIdr(d3.monthlySavingsIdr);
-          details.push(
-            `Menu 3: Target & DCA ${formatIdr(d3.monthlySavingsIdr, true)}/bln`
-          );
-        }
+      // 3. Menu 3: Simulator & Goals
+      if (
+        typeof d3.initialCapitalIdr === 'number' &&
+        d3.initialCapitalIdr > 0
+      ) {
+        setInitialCapitalIdr(d3.initialCapitalIdr);
+      }
+      if (typeof d3.targetGoalIdr === 'number' && d3.targetGoalIdr > 0) {
+        setTargetGoalIdr(d3.targetGoalIdr);
+      }
+      if (
+        typeof d3.monthlySavingsIdr === 'number' &&
+        d3.monthlySavingsIdr >= 0
+      ) {
+        setMonthlySavingsIdr(d3.monthlySavingsIdr);
+        details.push(
+          `Menu 3: Target & DCA ${formatIdr(d3.monthlySavingsIdr, true)}/bln`
+        );
+      }
 
-        // 4. Global
-        if (typeof dg.usdIdrRate === 'number' && dg.usdIdrRate > 1000) {
-          setUsdIdrRate(dg.usdIdrRate);
-        }
-        if (Array.isArray(dg.savedPortfolios)) {
+      // 4. Global
+      if (typeof dg.usdIdrRate === 'number' && dg.usdIdrRate > 1000) {
+        setUsdIdrRate(dg.usdIdrRate);
+      }
+      if (Array.isArray(dg.savedPortfolios)) {
+        if (mode === 'merge') {
+          setSavedPortfolios((prev) => {
+            const existingIds = new Set(prev.map((s) => s.id));
+            const newSnaps = dg.savedPortfolios.filter(
+              (s: any) => !existingIds.has(s.id)
+            );
+            const combined = [...newSnaps, ...prev];
+            localStorage.setItem(
+              SAVED_PORTFOLIOS_KEY,
+              JSON.stringify(combined)
+            );
+            return combined;
+          });
+        } else {
           setSavedPortfolios(dg.savedPortfolios);
           localStorage.setItem(
             SAVED_PORTFOLIOS_KEY,
             JSON.stringify(dg.savedPortfolios)
           );
-          details.push(
-            `Portofolio tersimpan: ${dg.savedPortfolios.length} snapshot`
-          );
         }
-
-        // Instant Atomic Persistence to LocalStorage (STORAGE_KEY)
-        try {
-          const snapshotToStore = {
-            activeWeights: d1.activeWeights ?? activeWeights,
-            activePresetId: d1.activePresetId ?? activePresetId,
-            allocationMethod: d1.allocationMethod ?? allocationMethod,
-            initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
-            targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
-            monthlySavingsIdr: d3.monthlySavingsIdr ?? monthlySavingsIdr,
-            holdings: d2.holdings ?? holdings,
-            isHoldingsSyncedWithMenu1:
-              d2.isHoldingsSyncedWithMenu1 ?? isHoldingsSyncedWithMenu1,
-            enableIdxLotRounding:
-              d2.enableIdxLotRounding ?? enableIdxLotRounding,
-            enableBrokerFees: d2.enableBrokerFees ?? enableBrokerFees,
-            slotMap: d1.slotMap ?? slotMap,
-            rdptPromoActive: d1.rdptPromoActive ?? rdptPromoActive,
-            usdIdrRate: dg.usdIdrRate ?? usdIdrRate,
-            customTableRows: d1.customTableRows ?? customTableRows,
-            rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
-            pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
-          };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
-        } catch {
-          // Ignore storage errors
-        }
-
-        setBackupToast({
-          message: isV2
-            ? 'Backup JSON (v2) Berhasil Dipulihkan!'
-            : 'Backup JSON (Legacy) Berhasil Dipulihkan!',
-          details:
-            details.length > 0
-              ? details
-              : ['Semua konfigurasi berhasil dipulihkan'],
-        });
-      } catch (err) {
-        console.error('Failed to import backup JSON:', err);
-        alert(
-          'Format file JSON tidak valid atau rusak. Pastikan file berasal dari QuantPorto backup.'
+        details.push(
+          `Portofolio tersimpan: ${dg.savedPortfolios.length} snapshot`
         );
+      }
+
+      // Instant Atomic Persistence to LocalStorage (STORAGE_KEY)
+      try {
+        const snapshotToStore = {
+          activeWeights: d1.activeWeights ?? activeWeights,
+          activePresetId: d1.activePresetId ?? activePresetId,
+          allocationMethod: d1.allocationMethod ?? allocationMethod,
+          initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
+          targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
+          monthlySavingsIdr: d3.monthlySavingsIdr ?? monthlySavingsIdr,
+          holdings: d2.holdings ?? holdings,
+          isHoldingsSyncedWithMenu1:
+            d2.isHoldingsSyncedWithMenu1 ?? isHoldingsSyncedWithMenu1,
+          enableIdxLotRounding:
+            d2.enableIdxLotRounding ?? enableIdxLotRounding,
+          enableBrokerFees: d2.enableBrokerFees ?? enableBrokerFees,
+          slotMap: d1.slotMap ?? slotMap,
+          rdptPromoActive: d1.rdptPromoActive ?? rdptPromoActive,
+          usdIdrRate: dg.usdIdrRate ?? usdIdrRate,
+          customTableRows: d1.customTableRows ?? customTableRows,
+          rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
+          pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
+      } catch {
+        // Ignore storage errors
+      }
+
+      setBackupToast({
+        message:
+          mode === 'merge'
+            ? 'Data Backup Berhasil Digabungkan (Merged)!'
+            : isV2
+              ? 'Backup JSON (v2) Berhasil Dipulihkan!'
+              : 'Backup JSON (Legacy) Berhasil Dipulihkan!',
+        details:
+          details.length > 0
+            ? details
+            : ['Semua konfigurasi berhasil dipulihkan'],
+      });
+    } catch (err) {
+      console.error('Failed to import backup payload:', err);
+      alert(
+        'Format data tidak valid atau rusak. Pastikan data berasal dari QuantPorto backup.'
+      );
+    }
+  };
+
+  const handleImportJson = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = JSON.parse(String(reader.result));
+        handleImportPayload(raw, 'overwrite');
+      } catch (err) {
+        console.error('Failed to read file:', err);
+        alert('File JSON tidak valid atau rusak.');
       }
     };
     reader.readAsText(file);
@@ -1569,6 +1673,9 @@ export function App() {
         onOpenFactsheet={() => setIsFactsheetOpen(true)}
         onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
         onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
+        onOpenDataTransfer={() => setIsDataTransferModalOpen(true)}
+        onQuickCopyConfig={handleQuickCopyConfig}
+        quickCopyFeedback={quickCopyFeedback}
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name
@@ -1675,6 +1782,7 @@ export function App() {
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
             onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
+            onBatchUpdateHoldings={handleBatchUpdateHoldings}
           />
         )}
 
@@ -1755,6 +1863,15 @@ export function App() {
         isOpen={isResetConfirmOpen}
         onClose={() => setIsResetConfirmOpen(false)}
         onConfirmReset={handleConfirmResetAll}
+      />
+
+      {/* Comprehensive Data Transfer Modal (Text & File) */}
+      <DataTransferModal
+        isOpen={isDataTransferModalOpen}
+        onClose={() => setIsDataTransferModalOpen(false)}
+        exportPayload={getBackupPayload()}
+        onImportPayload={handleImportPayload}
+        onDownloadJsonFile={handleExportJson}
       />
 
       {/* Import Backup Feedback Notification Toast */}
