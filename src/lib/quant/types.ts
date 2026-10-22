@@ -246,3 +246,47 @@ export interface CrashLadderStep {
   postCrashPortfolioIdr: number;
 }
 
+export interface QuantPortoBackupPayload {
+  version: 2;
+  app: 'QuantPorto';
+  exportedAt: string;
+  data: {
+    menu1_builder: {
+      activeWeights: Record<string, number>;
+      activePresetId?: string | null;
+      allocationMethod?: AllocationMethod;
+      convictionAssetId?: string;
+      convictionRiskPercent?: number;
+      solverMode?: 'calibrated-video' | 'euler-covariance';
+      selectedUniverseIds?: string[];
+      pinnedPresetIds?: string[];
+      customTableRows?: PortfolioPreset[];
+      slotMap?: Record<string, string>;
+      customAssets?: AssetDefinition[];
+      rdptPromoActive?: boolean;
+    };
+    menu2_rebalancer: {
+      holdings: Record<string, HoldingEntry>;
+      rebalanceHistory: RebalanceHistoryEntry[];
+      inputMode?: 'nominal' | 'units';
+      rebalanceMode?: RebalanceMode;
+      cashInjectionIdr?: number;
+      driftThresholdPercent?: number;
+      isHoldingsSyncedWithMenu1?: boolean;
+      enableIdxLotRounding?: boolean;
+      enableBrokerFees?: boolean;
+      filterDustTrades?: boolean;
+    };
+    menu3_simulator: {
+      initialCapitalIdr?: number;
+      targetGoalIdr?: number;
+      monthlySavingsIdr?: number;
+    };
+    global: {
+      usdIdrRate: number;
+      savedPortfolios: any[];
+    };
+  };
+}
+
+

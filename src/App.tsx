@@ -11,7 +11,10 @@ import {
   PortfolioPreset,
   RebalanceHistoryEntry,
   RebalanceMode,
+  QuantPortoBackupPayload,
 } from './lib/quant/types';
+import { formatIdr } from './lib/formatters';
+import { Check, X } from 'lucide-react';
 import {
   buildDynamicPresetsForSlotMap,
   evaluatePortfolioMetrics,
@@ -204,6 +207,18 @@ export function App() {
   const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
   const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+
+  // Import backup success notification banner state
+  const [backupToast, setBackupToast] = useState<{
+    message: string;
+    details: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (!backupToast) return;
+    const t = setTimeout(() => setBackupToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [backupToast]);
 
   const handleStartTour = () => {
     startInteractiveTour({ onTabSwitch: setActiveTab });
@@ -1206,17 +1221,53 @@ export function App() {
   };
 
   const handleExportJson = () => {
-    const payload = {
+    const customAssets = allAssets.filter(
+      (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
+    );
+
+    const payload: QuantPortoBackupPayload = {
+      version: 2,
+      app: 'QuantPorto',
       exportedAt: new Date().toISOString(),
-      activeWeights,
-      holdings,
-      savedPortfolios,
-      customTableRows,
-      slotMap,
-      initialCapitalIdr,
-      targetGoalIdr,
-      usdIdrRate,
+      data: {
+        menu1_builder: {
+          activeWeights,
+          activePresetId,
+          allocationMethod,
+          convictionAssetId,
+          convictionRiskPercent,
+          solverMode,
+          selectedUniverseIds,
+          pinnedPresetIds,
+          customTableRows,
+          slotMap,
+          rdptPromoActive,
+          customAssets,
+        },
+        menu2_rebalancer: {
+          holdings,
+          rebalanceHistory,
+          inputMode,
+          rebalanceMode,
+          cashInjectionIdr,
+          driftThresholdPercent,
+          isHoldingsSyncedWithMenu1,
+          enableIdxLotRounding,
+          enableBrokerFees,
+          filterDustTrades,
+        },
+        menu3_simulator: {
+          initialCapitalIdr,
+          targetGoalIdr,
+          monthlySavingsIdr,
+        },
+        global: {
+          usdIdrRate,
+          savedPortfolios,
+        },
+      },
     };
+
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json',
     });
@@ -1232,20 +1283,157 @@ export function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const data = JSON.parse(String(reader.result));
-        if (data.activeWeights) setActiveWeights(data.activeWeights);
-        if (data.holdings) setHoldings(data.holdings);
-        if (data.customTableRows) setCustomTableRows(data.customTableRows);
-        if (data.slotMap) setSlotMap(data.slotMap);
-        if (data.savedPortfolios) {
-          setSavedPortfolios(data.savedPortfolios);
-          localStorage.setItem(
-            SAVED_PORTFOLIOS_KEY,
-            JSON.stringify(data.savedPortfolios)
+        const raw = JSON.parse(String(reader.result));
+        const details: string[] = [];
+
+        // Check whether it's Schema v2 or Legacy v1
+        const isV2 = raw.version === 2 && raw.data;
+        const d1 = isV2 ? raw.data.menu1_builder : raw;
+        const d2 = isV2 ? raw.data.menu2_rebalancer : raw;
+        const d3 = isV2 ? raw.data.menu3_simulator : raw;
+        const dg = isV2 ? raw.data.global : raw;
+
+        // 1. Menu 1: Builder
+        if (d1.activeWeights && typeof d1.activeWeights === 'object') {
+          setActiveWeights(d1.activeWeights);
+          const activeCount = Object.values(d1.activeWeights).filter(
+            (w) => typeof w === 'number' && w > 0
+          ).length;
+          details.push(`Menu 1: ${activeCount} aset aktif dipulihkan`);
+        }
+        if (d1.activePresetId !== undefined) setActivePresetId(d1.activePresetId);
+        if (d1.allocationMethod) setAllocationMethod(d1.allocationMethod);
+        if (d1.convictionAssetId) setConvictionAssetId(d1.convictionAssetId);
+        if (typeof d1.convictionRiskPercent === 'number')
+          setConvictionRiskPercent(d1.convictionRiskPercent);
+        if (d1.solverMode) setSolverMode(d1.solverMode);
+        if (Array.isArray(d1.selectedUniverseIds))
+          setSelectedUniverseIds(d1.selectedUniverseIds);
+        if (Array.isArray(d1.pinnedPresetIds))
+          setPinnedPresetIds(d1.pinnedPresetIds);
+        if (Array.isArray(d1.customTableRows))
+          setCustomTableRows(d1.customTableRows);
+        if (d1.slotMap) setSlotMap(d1.slotMap);
+        if (d1.rdptPromoActive !== undefined)
+          setRdptPromoActive(Boolean(d1.rdptPromoActive));
+
+        // Restore custom assets
+        if (Array.isArray(d1.customAssets) && d1.customAssets.length > 0) {
+          setAllAssets((prev) => {
+            const existingIds = new Set(prev.map((a) => a.id));
+            const newAdditions = d1.customAssets.filter(
+              (a: AssetDefinition) => !existingIds.has(a.id)
+            );
+            return [...prev, ...newAdditions];
+          });
+          details.push(`Ticker kustom: +${d1.customAssets.length} aset`);
+        }
+
+        // 2. Menu 2: Rebalancer & History
+        if (d2.holdings && typeof d2.holdings === 'object') {
+          setHoldings(d2.holdings);
+          details.push(
+            `Menu 2: Saldo holding ${Object.keys(d2.holdings).length} aset`
           );
         }
-      } catch {
-        alert('Format file JSON tidak valid.');
+        if (Array.isArray(d2.rebalanceHistory)) {
+          setRebalanceHistory(d2.rebalanceHistory);
+          details.push(
+            `Jurnal Rebalance: ${d2.rebalanceHistory.length} catatan riwayat`
+          );
+        }
+        if (d2.inputMode === 'nominal' || d2.inputMode === 'units')
+          setInputMode(d2.inputMode);
+        if (d2.rebalanceMode) setRebalanceMode(d2.rebalanceMode);
+        if (typeof d2.cashInjectionIdr === 'number')
+          setCashInjectionIdr(d2.cashInjectionIdr);
+        if (typeof d2.driftThresholdPercent === 'number')
+          setDriftThresholdPercent(d2.driftThresholdPercent);
+        if (d2.isHoldingsSyncedWithMenu1 !== undefined)
+          setIsHoldingsSyncedWithMenu1(d2.isHoldingsSyncedWithMenu1);
+        if (d2.enableIdxLotRounding !== undefined)
+          setEnableIdxLotRounding(Boolean(d2.enableIdxLotRounding));
+        if (d2.enableBrokerFees !== undefined)
+          setEnableBrokerFees(Boolean(d2.enableBrokerFees));
+        if (d2.filterDustTrades !== undefined)
+          setFilterDustTrades(Boolean(d2.filterDustTrades));
+
+        // 3. Menu 3: Simulator & Goals
+        if (
+          typeof d3.initialCapitalIdr === 'number' &&
+          d3.initialCapitalIdr > 0
+        ) {
+          setInitialCapitalIdr(d3.initialCapitalIdr);
+        }
+        if (typeof d3.targetGoalIdr === 'number' && d3.targetGoalIdr > 0) {
+          setTargetGoalIdr(d3.targetGoalIdr);
+        }
+        if (
+          typeof d3.monthlySavingsIdr === 'number' &&
+          d3.monthlySavingsIdr >= 0
+        ) {
+          setMonthlySavingsIdr(d3.monthlySavingsIdr);
+          details.push(
+            `Menu 3: Target & DCA ${formatIdr(d3.monthlySavingsIdr, true)}/bln`
+          );
+        }
+
+        // 4. Global
+        if (typeof dg.usdIdrRate === 'number' && dg.usdIdrRate > 1000) {
+          setUsdIdrRate(dg.usdIdrRate);
+        }
+        if (Array.isArray(dg.savedPortfolios)) {
+          setSavedPortfolios(dg.savedPortfolios);
+          localStorage.setItem(
+            SAVED_PORTFOLIOS_KEY,
+            JSON.stringify(dg.savedPortfolios)
+          );
+          details.push(
+            `Portofolio tersimpan: ${dg.savedPortfolios.length} snapshot`
+          );
+        }
+
+        // Instant Atomic Persistence to LocalStorage (STORAGE_KEY)
+        try {
+          const snapshotToStore = {
+            activeWeights: d1.activeWeights ?? activeWeights,
+            activePresetId: d1.activePresetId ?? activePresetId,
+            allocationMethod: d1.allocationMethod ?? allocationMethod,
+            initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
+            targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
+            monthlySavingsIdr: d3.monthlySavingsIdr ?? monthlySavingsIdr,
+            holdings: d2.holdings ?? holdings,
+            isHoldingsSyncedWithMenu1:
+              d2.isHoldingsSyncedWithMenu1 ?? isHoldingsSyncedWithMenu1,
+            enableIdxLotRounding:
+              d2.enableIdxLotRounding ?? enableIdxLotRounding,
+            enableBrokerFees: d2.enableBrokerFees ?? enableBrokerFees,
+            slotMap: d1.slotMap ?? slotMap,
+            rdptPromoActive: d1.rdptPromoActive ?? rdptPromoActive,
+            usdIdrRate: dg.usdIdrRate ?? usdIdrRate,
+            customTableRows: d1.customTableRows ?? customTableRows,
+            rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
+            pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
+        } catch {
+          // Ignore storage errors
+        }
+
+        setBackupToast({
+          message: isV2
+            ? 'Backup JSON (v2) Berhasil Dipulihkan!'
+            : 'Backup JSON (Legacy) Berhasil Dipulihkan!',
+          details:
+            details.length > 0
+              ? details
+              : ['Semua konfigurasi berhasil dipulihkan'],
+        });
+      } catch (err) {
+        console.error('Failed to import backup JSON:', err);
+        alert(
+          'Format file JSON tidak valid atau rusak. Pastikan file berasal dari QuantPorto backup.'
+        );
       }
     };
     reader.readAsText(file);
@@ -1568,6 +1756,34 @@ export function App() {
         onClose={() => setIsResetConfirmOpen(false)}
         onConfirmReset={handleConfirmResetAll}
       />
+
+      {/* Import Backup Feedback Notification Toast */}
+      {backupToast && (
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border border-emerald-500/40 bg-slate-900/95 p-4 text-xs text-slate-100 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 font-bold text-emerald-400">
+              <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{backupToast.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBackupToast(null)}
+              className="text-slate-400 hover:text-white p-0.5"
+              aria-label="Tutup notifikasi"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1 text-[11px] text-slate-300 border-t border-slate-800 pt-2 font-mono">
+            {backupToast.details.map((d, i) => (
+              <li key={i} className="flex items-center gap-1.5">
+                <span className="text-emerald-500">•</span>
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <footer className="ui-border ui-text-muted mt-12 border-t py-6 pb-24 text-center text-xs lg:pb-6">
         <div className="mx-auto max-w-7xl px-4">

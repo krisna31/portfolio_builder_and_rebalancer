@@ -11,7 +11,7 @@ import {
   simulateRebalancingFrequencyBacktest,
 } from '../wealthSimulator';
 import { generatePortfolioRecommendations } from '../portfolioRecommender';
-import { HoldingEntry } from '../types';
+import { HoldingEntry, QuantPortoBackupPayload } from '../types';
 
 describe('Risk Parity & Risk Budgeting Quant Engine', () => {
   const core7Assets = CORE_AND_EXPANDED_ASSETS.filter(
@@ -499,5 +499,71 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     expect(bbcaItem.isNominalOnly).toBe(false);
     expect(bbcaItem.action).toBe('SELL');
     expect(bbcaItem.tradeLotsInteger).toBeDefined();
+  });
+
+  it('supports full comprehensive backup payload structure v2 with all menus and journal history', () => {
+    const backup: QuantPortoBackupPayload = {
+      version: 2,
+      app: 'QuantPorto',
+      exportedAt: new Date().toISOString(),
+      data: {
+        menu1_builder: {
+          activeWeights: { RDPT: 40, BBCA: 20, BTC: 40 },
+          activePresetId: 'opt-4-rb-btc-90',
+          allocationMethod: 'preset',
+          convictionAssetId: 'BTC',
+          convictionRiskPercent: 90,
+          solverMode: 'calibrated-video',
+          selectedUniverseIds: ['RDPT', 'BBCA', 'BTC'],
+          pinnedPresetIds: ['opt-4-rb-btc-90'],
+          rdptPromoActive: false,
+        },
+        menu2_rebalancer: {
+          holdings: {
+            RDPT: {
+              assetId: 'RDPT',
+              currentValueIdr: 40_000_000,
+              units: 40_000_000,
+              currentPrice: 1,
+              shockPercent: 0,
+              isNominalOnly: true,
+            },
+          },
+          rebalanceHistory: [
+            {
+              id: 'hist-1',
+              timestamp: '2026-10-22T10:00:00Z',
+              note: 'Rebalance Kuartal 1',
+              totalValueBeforeIdr: 100_000_000,
+              cashInjectedIdr: 5_000_000,
+              totalValueAfterIdr: 105_000_000,
+              totalBuyIdr: 5_000_000,
+              totalSellIdr: 0,
+              tradesSummary: ['BUY RDPT Rp 5.000.000'],
+              weightsAfter: { RDPT: 40, BBCA: 20, BTC: 40 },
+            },
+          ],
+          rebalanceMode: 'selective-profit-trim',
+          driftThresholdPercent: 3,
+        },
+        menu3_simulator: {
+          initialCapitalIdr: 100_000_000,
+          targetGoalIdr: 10_000_000_000,
+          monthlySavingsIdr: 5_000_000,
+        },
+        global: {
+          usdIdrRate: 18000,
+          savedPortfolios: [],
+        },
+      },
+    };
+
+    expect(backup.version).toBe(2);
+    expect(backup.data.menu2_rebalancer.rebalanceHistory).toHaveLength(1);
+    expect(backup.data.menu2_rebalancer.rebalanceHistory[0].note).toBe(
+      'Rebalance Kuartal 1'
+    );
+    expect(backup.data.menu3_simulator.monthlySavingsIdr).toBe(5_000_000);
+    expect(backup.data.menu3_simulator.targetGoalIdr).toBe(10_000_000_000);
   });
 });
