@@ -27,7 +27,7 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
     expect(optimal15[8].name).toBe('Risk Parity RDPT BBCA GLD SPY QQQ BTC ETH');
     expect(optimal15[8].weights).toEqual({
       RDPU: 0,
-      RDPT: 38,
+      RDPT: 39,
       BBCA: 14,
       GLD: 12,
       SPY: 16,

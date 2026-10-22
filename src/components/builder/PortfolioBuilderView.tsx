@@ -2469,13 +2469,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Institutional Asset Correlation Matrix Heatmap */}
-          <AssetCorrelationMatrixCard
-            allAssets={allAssets}
-            activeWeights={activeWeights}
-            coreBenchmarkAssets={allAssets.filter((a) => a.isCoreBenchmark)}
-          />
-
           {/* Chart 2: Interactive Pareto Frontier ScatterChart */}
           <div className="ui-card rounded-xl p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2727,7 +2720,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         </div>
       </section>
 
-      {/* SECTION 4: HEAD-TO-HEAD PORTFOLIO COMPARATOR (BANDINGKAN 2 PORTFOLIO) */}
+      {/* SECTION 4: INSTITUTIONAL ASSET CORRELATION MATRIX & RISK PARITY DIVERSIFICATION */}
+      <section id="tour-correlation-section">
+        <AssetCorrelationMatrixCard
+          allAssets={allAssets}
+          activeWeights={activeWeights}
+          coreBenchmarkAssets={allAssets.filter((a) => a.isCoreBenchmark)}
+        />
+      </section>
+
+      {/* SECTION 5: HEAD-TO-HEAD PORTFOLIO COMPARATOR (BANDINGKAN 2 PORTFOLIO) */}
       {(() => {
         const allSelectablePresets = [...customTableRows, ...presets];
         const compareTarget =
