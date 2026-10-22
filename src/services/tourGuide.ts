@@ -8,12 +8,14 @@ export interface TourGuideOptions {
 }
 
 export function startInteractiveTour(options?: TourGuideOptions) {
+  let activeTourTab: 'builder' | 'rebalancer' | 'roadmap' = 'builder';
+
   // Ensure we start on the Builder tab initially
   if (options?.onTabSwitch) {
     options.onTabSwitch('builder');
   }
 
-  const steps: DriveStep[] = [
+  const rawSteps: DriveStep[] = [
     // ==========================================
     // BAB 1: ARSITEKTUR UTAMA & NAVIGASI HEADER
     // ==========================================
@@ -327,6 +329,43 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     },
   ];
 
+  // Transform each step so that element resolution proactively triggers tab switching
+  // BEFORE Driver.js evaluates the DOM, allowing React to mount the component smoothly
+  const steps: DriveStep[] = rawSteps.map((step) => {
+    const rawElement = step.element;
+    const targetTab = step.data?.tab as ('builder' | 'rebalancer' | 'roadmap') | undefined;
+
+    return {
+      ...step,
+      element: () => {
+        // Proactive Tab Switch: when Driver looks for this step, ensure the target tab is activated FIRST
+        if (targetTab && options?.onTabSwitch && activeTourTab !== targetTab) {
+          activeTourTab = targetTab;
+          options.onTabSwitch(targetTab);
+        }
+
+        if (typeof rawElement === 'function') {
+          return rawElement();
+        }
+
+        if (typeof rawElement === 'string') {
+          const directEl = document.querySelector(rawElement) as HTMLElement | null;
+          if (directEl) return directEl;
+
+          // Fallbacks for rebalancer views (desktop table vs mobile cards vs container)
+          if (rawElement === '#tour-rebalance-table') {
+            const fallback =
+              document.querySelector('#tour-rebalance-cards') ||
+              document.querySelector('#tour-rebalance-table-container');
+            if (fallback) return fallback as HTMLElement;
+          }
+        }
+
+        return undefined as unknown as Element;
+      },
+    };
+  });
+
   const driverObj = driver({
     showProgress: true,
     animate: true,
@@ -335,7 +374,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     stagePadding: 6,
     stageRadius: 10,
     allowClose: true,
-    waitForElement: 1500,
+    waitForElement: 3000,
     nextBtnText: 'Lanjut ➔',
     prevBtnText: '⬅ Kembali',
     doneBtnText: 'Selesai & Eksplorasi 🎉',
@@ -343,9 +382,16 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     steps,
     onHighlightStarted: (_element, step) => {
       const targetTab = step.data?.tab as ('builder' | 'rebalancer' | 'roadmap') | undefined;
-      if (targetTab && options?.onTabSwitch) {
+      if (targetTab && options?.onTabSwitch && activeTourTab !== targetTab) {
+        activeTourTab = targetTab;
         options.onTabSwitch(targetTab);
       }
+    },
+    onHighlighted: (_element, _step, opts) => {
+      // Refresh popover and stage cutout position in case of scroll or dynamic tab height
+      window.requestAnimationFrame(() => {
+        opts.driver.refresh();
+      });
     },
     onDestroyStarted: () => {
       try {

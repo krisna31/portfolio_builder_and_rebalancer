@@ -843,7 +843,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
       {/* MAIN REBALANCING TABLE & DRIFT CHART */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="ui-card rounded-xl p-5 lg:col-span-8">
+        <div id="tour-rebalance-table-container" className="ui-card rounded-xl p-5 lg:col-span-8">
           <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <div>
               <h3 className="ui-text-main text-sm font-bold">
@@ -1385,7 +1385,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
           ) : (
             /* Mode 2: Zero-Horizontal-Scroll Mobile Card View for Rebalancer */
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div id="tour-rebalance-cards" className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {rebalanceResult.items.map((item) => {
                 const asset = allAssets.find((a) => a.id === item.assetId)!;
                 const h = holdings[item.assetId] ?? {
