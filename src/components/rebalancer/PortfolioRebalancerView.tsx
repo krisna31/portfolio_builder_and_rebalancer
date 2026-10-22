@@ -769,25 +769,57 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
-              {/* 1-Click Copy Order Slip for WhatsApp / Telegram / Notes */}
-              <button
-                type="button"
-                onClick={copyWhatsAppOrderSlip}
-                title="Salin daftar order Jual/Beli & Limit Order Crash untuk ditempel ke WhatsApp atau aplikasi Catatan"
-                className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
-              >
-                {slipCopied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5" />
-                    <span>Slip Tersalin!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Salin Slip Order (WA/Notes)</span>
-                  </>
-                )}
-              </button>
+              {/* Unified Broker Slip & Quick Copy Button Group */}
+              {onOpenOrderSlip ? (
+                <div className="inline-flex rounded-md shadow-xs">
+                  <button
+                    type="button"
+                    onClick={onOpenOrderSlip}
+                    className="inline-flex items-center gap-1.5 rounded-l-md bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 text-xs font-semibold transition"
+                    title="Buka Slip Order Broker Interaktif (Stockbit / Pluang / Reku / Makmur)"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span>Slip Order Broker</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyWhatsAppOrderSlip}
+                    title="Salin Cepat Format WhatsApp / Catatan ke Clipboard"
+                    className="inline-flex items-center gap-1 rounded-r-md bg-indigo-700 hover:bg-indigo-600 text-white px-2 py-1 text-xs border-l border-indigo-500/40 transition"
+                  >
+                    {slipCopied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-300" />
+                        <span className="hidden sm:inline">Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Salin Cepat</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={copyWhatsAppOrderSlip}
+                  title="Salin daftar order Jual/Beli & Limit Order Crash untuk ditempel ke WhatsApp atau aplikasi Catatan"
+                  className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                >
+                  {slipCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Slip Tersalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Salin Slip Order (WA/Notes)</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <div className="ui-subtle flex rounded-md p-0.5 text-xs">
                 <button
@@ -870,18 +902,6 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <Download className="h-3.5 w-3.5" />
                 <span>CSV</span>
               </button>
-
-              {onOpenOrderSlip && (
-                <button
-                  type="button"
-                  onClick={onOpenOrderSlip}
-                  className="flex items-center gap-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 text-xs font-semibold shadow-xs transition"
-                  title="Buka Slip Order Broker (Stockbit / Pluang / Reku / Makmur)"
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span>Slip Order Broker</span>
-                </button>
-              )}
             </div>
           </div>
 

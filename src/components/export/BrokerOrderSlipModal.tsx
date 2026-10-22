@@ -50,16 +50,14 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
   isOpen,
   onClose,
   rebalanceResult,
-  allAssets,
-  holdings,
+  allAssets = [],
+  holdings = {},
   usdIdrRate,
   activePortfolioName,
 }) => {
   const [executedMap, setExecutedMap] = useState<Record<string, boolean>>({});
   const [showAllItems, setShowAllItems] = useState<boolean>(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const assetDefMap = useMemo(() => {
     const map = new Map<string, AssetDefinition>();
@@ -69,13 +67,14 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
   // Filter items based on whether user wants all items or only active BUY/SELL trades
   const tradeItems = useMemo(() => {
+    const items = rebalanceResult?.items ?? [];
     if (showAllItems) {
-      return rebalanceResult.items;
+      return items;
     }
-    const filtered = rebalanceResult.items.filter((item) => item.action !== 'HOLD');
+    const filtered = items.filter((item) => item.action !== 'HOLD');
     // If all items are HOLD, fallback to showing all items with target values
-    return filtered.length > 0 ? filtered : rebalanceResult.items;
-  }, [rebalanceResult.items, showAllItems]);
+    return filtered.length > 0 ? filtered : items;
+  }, [rebalanceResult?.items, showAllItems]);
 
   // Group items by Indonesian Broker Platforms
   const platformGroups = useMemo((): PlatformGroup[] => {
@@ -257,7 +256,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
         if (g.id === 'idx_stocks') {
           const lots = item.tradeLotsInteger ?? Math.abs(Math.round(item.tradeLots ?? 0));
-          const unitPrice = item.initialValueIdr > 0 && holdings[item.assetId]
+          const unitPrice = item.initialValueIdr > 0 && holdings?.[item.assetId]
             ? holdings[item.assetId].currentPrice
             : def?.defaultPrice ?? 0;
           lines.push(
@@ -281,8 +280,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     }
 
     if (!filterGroupId) {
-      lines.push(`Total Eksekusi Beli : ${formatIdr(rebalanceResult.totalBuyIdr)}`);
-      lines.push(`Total Eksekusi Jual : ${formatIdr(rebalanceResult.totalSellIdr)}`);
+      lines.push(`Total Eksekusi Beli : ${formatIdr(rebalanceResult?.totalBuyIdr ?? 0)}`);
+      lines.push(`Total Eksekusi Jual : ${formatIdr(rebalanceResult?.totalSellIdr ?? 0)}`);
       lines.push(`========================================`);
       lines.push(`Dibuat otomatis oleh QuantPorto Engine`);
     }
@@ -301,6 +300,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       setTimeout(() => setCopyFeedback(null), 2000);
     }
   };
+
+  // If not open, do not render modal DOM
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto">
@@ -459,7 +461,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     const isIdx = group.id === 'idx_stocks';
                     const lots = item.tradeLotsInteger ?? Math.abs(Math.round(item.tradeLots ?? 0));
                     const shares = lots * 100;
-                    const spotPrice = item.initialValueIdr > 0 && holdings[item.assetId]
+                    const spotPrice = item.initialValueIdr > 0 && holdings?.[item.assetId]
                       ? holdings[item.assetId].currentPrice
                       : def?.defaultPrice ?? 0;
 

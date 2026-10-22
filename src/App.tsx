@@ -1356,45 +1356,49 @@ export function App() {
       </main>
 
       {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
-      <PortfolioFactsheetModal
-        isOpen={isFactsheetOpen}
-        onClose={() => setIsFactsheetOpen(false)}
-        portfolioName={
-          exactPresetMatch
-            ? exactPresetMatch.name
-            : allocationMethod === 'risk-parity'
-              ? 'Custom Equal Risk Parity'
-              : allocationMethod === 'risk-budgeting'
-                ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
-                : 'Portfolio Custom Anda'
-        }
-        activeWeights={activeWeights}
-        allAssets={allAssets}
-        solvedMetrics={solvedMetrics}
-        initialCapitalIdr={initialCapitalIdr}
-        monthlySavingsIdr={monthlySavingsIdr}
-        targetGoalIdr={targetGoalIdr}
-        usdIdrRate={usdIdrRate}
-      />
+      {isFactsheetOpen && (
+        <PortfolioFactsheetModal
+          isOpen={isFactsheetOpen}
+          onClose={() => setIsFactsheetOpen(false)}
+          portfolioName={
+            exactPresetMatch
+              ? exactPresetMatch.name
+              : allocationMethod === 'risk-parity'
+                ? 'Custom Equal Risk Parity'
+                : allocationMethod === 'risk-budgeting'
+                  ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                  : 'Portfolio Custom Anda'
+          }
+          activeWeights={activeWeights}
+          allAssets={allAssets}
+          solvedMetrics={solvedMetrics}
+          initialCapitalIdr={initialCapitalIdr}
+          monthlySavingsIdr={monthlySavingsIdr}
+          targetGoalIdr={targetGoalIdr}
+          usdIdrRate={usdIdrRate}
+        />
+      )}
 
       {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
-      <BrokerOrderSlipModal
-        isOpen={isOrderSlipOpen}
-        onClose={() => setIsOrderSlipOpen(false)}
-        rebalanceResult={rebalanceResult}
-        allAssets={allAssets}
-        holdings={holdings}
-        usdIdrRate={usdIdrRate}
-        activePortfolioName={
-          exactPresetMatch
-            ? exactPresetMatch.name
-            : allocationMethod === 'risk-parity'
-              ? 'Custom Equal Risk Parity'
-              : allocationMethod === 'risk-budgeting'
-                ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
-                : 'Portfolio Custom Anda'
-        }
-      />
+      {isOrderSlipOpen && (
+        <BrokerOrderSlipModal
+          isOpen={isOrderSlipOpen}
+          onClose={() => setIsOrderSlipOpen(false)}
+          rebalanceResult={rebalanceResult}
+          allAssets={allAssets}
+          holdings={holdings}
+          usdIdrRate={usdIdrRate}
+          activePortfolioName={
+            exactPresetMatch
+              ? exactPresetMatch.name
+              : allocationMethod === 'risk-parity'
+                ? 'Custom Equal Risk Parity'
+                : allocationMethod === 'risk-budgeting'
+                  ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                  : 'Portfolio Custom Anda'
+          }
+        />
+      )}
 
       {/* First-Load Interactive Walkthrough Tour Modal */}
       <WalkthroughModal
