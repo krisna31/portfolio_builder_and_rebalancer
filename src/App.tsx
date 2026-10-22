@@ -133,6 +133,32 @@ export function App() {
     defaultPreset.weights
   );
 
+  // User-Locked Asset IDs in manual weight customizer
+  const [lockedAssetIds, setLockedAssetIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.lockedAssetIds)) return parsed.lockedAssetIds;
+      }
+    } catch {
+      // Ignore
+    }
+    return [];
+  });
+
+  const handleToggleLockAsset = (assetId: string) => {
+    setLockedAssetIds((prev) =>
+      prev.includes(assetId)
+        ? prev.filter((id) => id !== assetId)
+        : [...prev, assetId]
+    );
+  };
+
+  const handleUnlockAllAssets = () => {
+    setLockedAssetIds([]);
+  };
+
   // Makmur +3% RDPT Alpha Promo toggle mentioned at 05:04
   const [rdptPromoActive, setRdptPromoActive] = useState<boolean>(false);
 
@@ -236,6 +262,7 @@ export function App() {
       localStorage.removeItem('quantporto_dca_3m_default_v1');
       localStorage.removeItem('quantporto_usd_18k_default_v1');
       localStorage.removeItem('color-scheme');
+      setLockedAssetIds([]);
     } catch {
       // Ignore storage errors
     }
@@ -392,6 +419,8 @@ export function App() {
         if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
         if (Array.isArray(saved.pinnedPresetIds))
           setPinnedPresetIds(saved.pinnedPresetIds);
+        if (Array.isArray(saved.lockedAssetIds))
+          setLockedAssetIds(saved.lockedAssetIds);
 
         // Restore custom tickers and modified CAGR/MaxDD return assumptions
         if (Array.isArray(saved.allAssets) && saved.allAssets.length > 0) {
@@ -441,6 +470,7 @@ export function App() {
           enableBrokerFees,
           allAssets,
           pinnedPresetIds,
+          lockedAssetIds,
         })
       );
     } catch {
@@ -728,8 +758,8 @@ export function App() {
     }));
   };
 
-  const handleNormalizeManualWeights = () => {
-    setActiveWeights((prev) => normalizeWeightsTo100(prev));
+  const handleNormalizeManualWeights = (strategy: 'proportional' | 'equal' = 'proportional') => {
+    setActiveWeights((prev) => normalizeWeightsTo100(prev, lockedAssetIds, strategy));
   };
 
   // Handler: Add Custom / Yahoo Ticker Asset
@@ -1247,6 +1277,7 @@ export function App() {
           slotMap,
           rdptPromoActive,
           customAssets,
+          lockedAssetIds,
         },
         menu2_rebalancer: {
           holdings,
@@ -1376,6 +1407,8 @@ export function App() {
       if (d1.slotMap) setSlotMap(d1.slotMap);
       if (d1.rdptPromoActive !== undefined)
         setRdptPromoActive(Boolean(d1.rdptPromoActive));
+      if (Array.isArray(d1.lockedAssetIds))
+        setLockedAssetIds(d1.lockedAssetIds);
 
       // Restore custom assets
       if (Array.isArray(d1.customAssets) && d1.customAssets.length > 0) {
@@ -1499,6 +1532,7 @@ export function App() {
           enableBrokerFees: d2.enableBrokerFees ?? enableBrokerFees,
           slotMap: d1.slotMap ?? slotMap,
           rdptPromoActive: d1.rdptPromoActive ?? rdptPromoActive,
+          lockedAssetIds: d1.lockedAssetIds ?? lockedAssetIds,
           usdIdrRate: dg.usdIdrRate ?? usdIdrRate,
           customTableRows: d1.customTableRows ?? customTableRows,
           rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
@@ -1717,6 +1751,9 @@ export function App() {
             activeWeights={activeWeights}
             onManualWeightChange={handleManualWeightChange}
             onNormalizeManualWeights={handleNormalizeManualWeights}
+            lockedAssetIds={lockedAssetIds}
+            onToggleLockAsset={handleToggleLockAsset}
+            onUnlockAllAssets={handleUnlockAllAssets}
             solvedMetrics={solvedMetrics}
             initialCapitalIdr={initialCapitalIdr}
             setInitialCapitalIdr={setInitialCapitalIdr}

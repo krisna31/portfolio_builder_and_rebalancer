@@ -264,6 +264,7 @@ export interface QuantPortoBackupPayload {
       slotMap?: Record<string, string>;
       customAssets?: AssetDefinition[];
       rdptPromoActive?: boolean;
+      lockedAssetIds?: string[];
     };
     menu2_rebalancer: {
       holdings: Record<string, HoldingEntry>;

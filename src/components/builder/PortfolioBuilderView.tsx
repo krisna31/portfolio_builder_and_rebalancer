@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AssetDefinition,
   AllocationMethod,
@@ -53,6 +53,8 @@ import {
   Table2,
   ArrowLeftRight,
   FileSpreadsheet,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -80,7 +82,10 @@ interface PortfolioBuilderViewProps {
   setSolverMode: (m: 'calibrated-video' | 'euler-covariance') => void;
   activeWeights: Record<string, number>;
   onManualWeightChange: (assetId: string, newWeight: number) => void;
-  onNormalizeManualWeights: () => void;
+  onNormalizeManualWeights: (strategy?: 'proportional' | 'equal') => void;
+  lockedAssetIds?: string[];
+  onToggleLockAsset?: (assetId: string) => void;
+  onUnlockAllAssets?: () => void;
   solvedMetrics: SolvedPortfolio;
   initialCapitalIdr: number;
   setInitialCapitalIdr: (v: number) => void;
@@ -128,6 +133,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   activeWeights,
   onManualWeightChange,
   onNormalizeManualWeights,
+  lockedAssetIds = [],
+  onToggleLockAsset,
+  onUnlockAllAssets,
   solvedMetrics,
   initialCapitalIdr,
   setInitialCapitalIdr,
@@ -515,6 +523,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   };
 
   const manualSum = Object.values(activeWeights).reduce((a, b) => a + b, 0);
+
+  const lockedSet = useMemo(() => new Set(lockedAssetIds), [lockedAssetIds]);
+  const lockedCount = lockedAssetIds.length;
+  const lockedSum = useMemo(() => {
+    return Number(
+      lockedAssetIds
+        .reduce((sum, id) => sum + (activeWeights[id] ?? 0), 0)
+        .toFixed(1)
+    );
+  }, [lockedAssetIds, activeWeights]);
+  const isLockedSumOverLimit = lockedSum > 100;
 
   // Compute Portfolio Net Dividend Yield for quick display in the Builder KPI bar
   const builderDividendStats = allAssets.reduce(
@@ -2055,14 +2074,67 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     {solvedMetrics.cagr.toFixed(2)}%
                   </span>
                 </span>
+                {/* Locked Assets Badge & Unlock All */}
+                {lockedCount > 0 && (
+                  <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-300">
+                    <Lock className="h-3 w-3" />
+                    <span className="font-semibold">{lockedCount} Tergembok ({lockedSum}%)</span>
+                    {onUnlockAllAssets && (
+                      <button
+                        type="button"
+                        onClick={onUnlockAllAssets}
+                        className="ml-1 text-[10px] underline hover:opacity-80"
+                        title="Buka semua gembok aset"
+                      >
+                        Buka Semua
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Warning if locked sum exceeds 100% */}
+                {isLockedSumOverLimit && (
+                  <span className="rounded bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                    ⚠️ Total gembok ({lockedSum}%) &gt; 100%!
+                  </span>
+                )}
+
                 {Math.abs(manualSum - 100) > 0.2 && (
-                  <button
-                    type="button"
-                    onClick={onNormalizeManualWeights}
-                    className="ui-subtle ui-text-main rounded px-2 py-0.5 text-xs font-medium"
-                  >
-                    Normalize 100%
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={isLockedSumOverLimit}
+                      onClick={() => onNormalizeManualWeights('proportional')}
+                      className={`rounded px-2 py-0.5 text-xs font-semibold transition ${
+                        isLockedSumOverLimit
+                          ? 'bg-zinc-300/30 text-zinc-400 cursor-not-allowed'
+                          : 'ui-subtle ui-text-main hover:bg-emerald-500/20'
+                      }`}
+                      title={
+                        lockedCount > 0
+                          ? 'Skalakan aset yang tidak digembok secara proporsional agar total = 100%'
+                          : 'Normalisasi seluruh aset agar total = 100%'
+                      }
+                    >
+                      Normalize 100%
+                    </button>
+
+                    {lockedCount > 0 && (
+                      <button
+                        type="button"
+                        disabled={isLockedSumOverLimit}
+                        onClick={() => onNormalizeManualWeights('equal')}
+                        className={`rounded px-2 py-0.5 text-xs font-medium transition ${
+                          isLockedSumOverLimit
+                            ? 'bg-zinc-300/30 text-zinc-400 cursor-not-allowed'
+                            : 'ui-subtle text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15'
+                        }`}
+                        title="Bagi rata sisa persentase sama besar ke seluruh aset yang tidak digembok"
+                      >
+                        Bagi Rata (Equalize)
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -2075,6 +2147,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 )
                 .map((asset) => {
                   const capWeight = activeWeights[asset.id] ?? 0;
+                  const isLocked = lockedSet.has(asset.id);
                   const riskContrib = solvedMetrics.riskContributions[asset.id] ?? 0;
                   const effectiveCagr = getEffectiveAssetCagr(asset);
                   const cagrContrib = (capWeight / 100) * effectiveCagr;
@@ -2110,19 +2183,47 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             </strong>
                           </span>
                           <div className="flex items-center gap-1">
+                            {onToggleLockAsset && (
+                              <button
+                                type="button"
+                                onClick={() => onToggleLockAsset(asset.id)}
+                                className={`rounded p-1 transition ${
+                                  isLocked
+                                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 shadow-xs'
+                                    : 'ui-text-muted hover:ui-text-main hover:bg-zinc-500/10'
+                                }`}
+                                title={
+                                  isLocked
+                                    ? `${asset.shortName} terkunci pada ${capWeight}%. Klik untuk membuka gembok.`
+                                    : `Gembok bobot ${asset.shortName} agar tidak berubah saat Normalize.`
+                                }
+                              >
+                                {isLocked ? (
+                                  <Lock className="h-3 w-3" />
+                                ) : (
+                                  <Unlock className="h-3 w-3 opacity-60 hover:opacity-100" />
+                                )}
+                              </button>
+                            )}
                             <input
                               type="number"
                               min={0}
                               max={100}
                               step={1}
                               value={capWeight}
+                              disabled={isLocked}
+                              readOnly={isLocked}
                               onChange={(e) =>
                                 onManualWeightChange(
                                   asset.id,
                                   Math.max(0, Math.min(100, Number(e.target.value)))
                                 )
                               }
-                              className="ui-card ui-text-main w-14 rounded px-1.5 py-0.5 text-right font-mono text-xs font-semibold"
+                              className={`ui-card ui-text-main w-14 rounded px-1.5 py-0.5 text-right font-mono text-xs font-semibold ${
+                                isLocked
+                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-not-allowed opacity-90'
+                                  : ''
+                              }`}
                               aria-label={`${asset.shortName} weight percentage`}
                             />
                             <span className="ui-text-muted font-mono text-xs">%</span>
@@ -2136,10 +2237,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         max={100}
                         step={1}
                         value={capWeight}
+                        disabled={isLocked}
                         onChange={(e) =>
                           onManualWeightChange(asset.id, Number(e.target.value))
                         }
-                        className="mt-1.5 h-1.5 w-full cursor-pointer"
+                        className={`mt-1.5 h-1.5 w-full ${
+                          isLocked ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                        }`}
                         aria-label={`${asset.shortName} weight slider`}
                       />
 

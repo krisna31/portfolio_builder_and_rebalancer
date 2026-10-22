@@ -313,43 +313,146 @@ export function solveRiskBudgetingWeights(
 }
 
 /**
- * Ensures weights sum to 100% by adjusting the largest weight for any rounding remainder.
+ * Ensures weights sum to 100% by adjusting unlocked weights.
+ * If lockedIds are provided, locked assets retain their exact weights,
+ * and the remaining budget (100 - sum(locked)) is allocated among unlocked assets.
+ *
+ * @param weights Record of asset IDs to weight percentages
+ * @param lockedIds Array or Set of asset IDs that should remain fixed
+ * @param strategy 'proportional' (scales based on current unlocked weights) or 'equal' (splits remaining equally)
  */
-export function normalizeWeightsTo100(weights: Record<string, number>): Record<string, number> {
+export function normalizeWeightsTo100(
+  weights: Record<string, number>,
+  lockedIds?: string[] | Set<string>,
+  strategy: 'proportional' | 'equal' = 'proportional'
+): Record<string, number> {
   const entries = Object.entries(weights);
   if (entries.length === 0) return {};
 
-  const total = entries.reduce((acc, [, val]) => acc + val, 0);
-  if (total === 0) {
-    const firstKey = entries[0][0];
-    return { ...weights, [firstKey]: 100 };
+  const lockedSet = new Set(lockedIds ? Array.from(lockedIds) : []);
+
+  // Filter to assets present in weights
+  const lockedEntries = entries.filter(([id]) => lockedSet.has(id));
+  const unlockedEntries = entries.filter(([id]) => !lockedSet.has(id));
+
+  // If no assets are locked, perform standard normalization
+  if (lockedEntries.length === 0) {
+    const total = entries.reduce((acc, [, val]) => acc + val, 0);
+    if (total === 0) {
+      if (strategy === 'equal') {
+        const perAsset = Number((100 / entries.length).toFixed(1));
+        const res: Record<string, number> = {};
+        let sum = 0;
+        for (const [key] of entries) {
+          res[key] = perAsset;
+          sum += perAsset;
+        }
+        res[entries[0][0]] = Number((res[entries[0][0]] + (100 - sum)).toFixed(1));
+        return res;
+      }
+      const firstKey = entries[0][0];
+      return { ...weights, [firstKey]: 100 };
+    }
+
+    const allIntegers = entries.every(([, val]) => Number.isInteger(val));
+    const scaled: Record<string, number> = {};
+    let runningSum = 0;
+    let maxKey = entries[0][0];
+    let maxVal = -1;
+
+    for (const [key, val] of entries) {
+      const cleanVal =
+        allIntegers && Math.abs(total - 100) <= 3
+          ? Math.max(0, Math.round(val))
+          : Math.max(0, Number(((val / total) * 100).toFixed(1)));
+      scaled[key] = cleanVal;
+      runningSum += cleanVal;
+      if (cleanVal > maxVal) {
+        maxVal = cleanVal;
+        maxKey = key;
+      }
+    }
+
+    const diff = Number((100 - runningSum).toFixed(1));
+    if (Math.abs(diff) > 0 && maxKey) {
+      scaled[maxKey] = Number(Math.max(0, scaled[maxKey] + diff).toFixed(1));
+    }
+
+    return scaled;
   }
 
-  // If weights are already integers close to 100, preserve integer percentages and add remainder to largest asset
-  const allIntegers = entries.every(([, val]) => Number.isInteger(val));
-  const scaled: Record<string, number> = {};
-  let runningSum = 0;
-  let maxKey = entries[0][0];
-  let maxVal = -1;
+  // When assets are locked:
+  const result: Record<string, number> = {};
+  let lockedSum = 0;
 
-  for (const [key, val] of entries) {
-    const cleanVal = allIntegers && Math.abs(total - 100) <= 3
-      ? Math.max(0, Math.round(val))
-      : Math.max(0, Number(((val / total) * 100).toFixed(1)));
-    scaled[key] = cleanVal;
-    runningSum += cleanVal;
-    if (cleanVal > maxVal) {
-      maxVal = cleanVal;
-      maxKey = key;
+  for (const [id, val] of lockedEntries) {
+    const cleanLocked = Number(Math.max(0, val).toFixed(1));
+    result[id] = cleanLocked;
+    lockedSum += cleanLocked;
+  }
+
+  lockedSum = Number(lockedSum.toFixed(1));
+
+  // If locked sum >= 100%:
+  if (lockedSum >= 100) {
+    // Unlocked assets become 0%
+    for (const [id] of unlockedEntries) {
+      result[id] = 0;
+    }
+    return result;
+  }
+
+  // If all assets are locked
+  if (unlockedEntries.length === 0) {
+    return result;
+  }
+
+  // Budget remaining for unlocked assets
+  const budgetRemaining = Number((100 - lockedSum).toFixed(1));
+
+  const unlockedTotal = unlockedEntries.reduce((acc, [, val]) => acc + Math.max(0, val), 0);
+
+  // If strategy is 'equal' or current unlockedTotal == 0, distribute equally
+  if (strategy === 'equal' || unlockedTotal <= 0) {
+    const equalShare = Number((budgetRemaining / unlockedEntries.length).toFixed(1));
+    let runningUnlockedSum = 0;
+
+    for (const [id] of unlockedEntries) {
+      result[id] = equalShare;
+      runningUnlockedSum += equalShare;
+    }
+
+    // Remainder adjustment
+    const remainder = Number((budgetRemaining - runningUnlockedSum).toFixed(1));
+    if (Math.abs(remainder) > 0 && unlockedEntries.length > 0) {
+      const targetId = unlockedEntries[0][0];
+      result[targetId] = Number((result[targetId] + remainder).toFixed(1));
+    }
+  } else {
+    // Proportional distribution based on current unlocked weights
+    let runningUnlockedSum = 0;
+    let maxUnlockedKey = unlockedEntries[0][0];
+    let maxUnlockedVal = -1;
+
+    for (const [id, val] of unlockedEntries) {
+      const safeVal = Math.max(0, val);
+      const share = Number(((safeVal / unlockedTotal) * budgetRemaining).toFixed(1));
+      result[id] = share;
+      runningUnlockedSum += share;
+      if (share > maxUnlockedVal) {
+        maxUnlockedVal = share;
+        maxUnlockedKey = id;
+      }
+    }
+
+    // Rounding remainder attributed to the largest unlocked asset
+    const remainder = Number((budgetRemaining - runningUnlockedSum).toFixed(1));
+    if (Math.abs(remainder) > 0 && maxUnlockedKey) {
+      result[maxUnlockedKey] = Number((result[maxUnlockedKey] + remainder).toFixed(1));
     }
   }
 
-  const diff = Number((100 - runningSum).toFixed(1));
-  if (Math.abs(diff) > 0 && maxKey) {
-    scaled[maxKey] = Number(Math.max(0, scaled[maxKey] + diff).toFixed(1));
-  }
-
-  return scaled;
+  return result;
 }
 
 /**
@@ -728,4 +831,3 @@ export function buildDynamicPresetsForSlotMap(
     };
   });
 }
-
