@@ -115,6 +115,18 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [isToolsMenuOpen]);
 
+  // Listen for programmatic toggle of tools menu (e.g. from interactive tour Step 19)
+  useEffect(() => {
+    const handleSetToolsMenu = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open?: boolean }>;
+      setIsToolsMenuOpen(Boolean(customEvent.detail?.open));
+    };
+    window.addEventListener('quantporto:set-tools-menu', handleSetToolsMenu);
+    return () => {
+      window.removeEventListener('quantporto:set-tools-menu', handleSetToolsMenu);
+    };
+  }, []);
+
   // Track currently rendered scheme ('light' | 'dark') for the icon display
   const [renderedScheme, setRenderedScheme] = useState<'light' | 'dark'>(() => {
     try {
@@ -590,6 +602,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Mobile Tools Drawer Trigger (< lg) */}
               <button
+                id="tour-mobile-menu-btn"
                 type="button"
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                 aria-expanded={isMobileMenuOpen}

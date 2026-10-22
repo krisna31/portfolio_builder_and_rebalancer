@@ -326,6 +326,14 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         side: 'bottom',
         align: 'end',
       },
+      onDeselected: () => {
+        // Automatically close tools menu when moving away from step 19
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('quantporto:set-tools-menu', { detail: { open: false } })
+          );
+        }
+      },
     },
   ];
 
@@ -349,6 +357,39 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         }
 
         if (typeof rawElement === 'string') {
+          // Special handling for Step 19 Export Actions:
+          // In desktop, opening "Alat & Pengaturan" menu exposes #tour-export-actions.
+          // In mobile, header tools dropdown is hidden so we point to #tour-mobile-menu-btn.
+          if (rawElement === '#tour-export-actions') {
+            const isMobile =
+              typeof window !== 'undefined' &&
+              (window.innerWidth < 1024 || !document.querySelector('#tour-tools-menu'));
+
+            if (isMobile) {
+              const mobileBtn = document.querySelector('#tour-mobile-menu-btn');
+              if (mobileBtn) return mobileBtn as HTMLElement;
+            }
+
+            // Desktop handling:
+            const directEl = document.querySelector(rawElement) as HTMLElement | null;
+            if (directEl) return directEl;
+
+            // Signal Header to expand the tools dropdown
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('quantporto:set-tools-menu', { detail: { open: true } })
+              );
+            }
+
+            // Re-check if element is immediately present
+            const recheckEl = document.querySelector(rawElement) as HTMLElement | null;
+            if (recheckEl) return recheckEl;
+
+            // Safe fallback: highlight tools menu button if dropdown hasn't rendered yet
+            const toolsMenuBtn = document.querySelector('#tour-tools-menu') as HTMLElement | null;
+            if (toolsMenuBtn) return toolsMenuBtn;
+          }
+
           const directEl = document.querySelector(rawElement) as HTMLElement | null;
           if (directEl) return directEl;
 
@@ -386,6 +427,13 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         activeTourTab = targetTab;
         options.onTabSwitch(targetTab);
       }
+
+      // Ensure tools menu dropdown is closed when highlighting other steps
+      if (step.element !== '#tour-export-actions' && typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('quantporto:set-tools-menu', { detail: { open: false } })
+        );
+      }
     },
     onHighlighted: (_element, _step, opts) => {
       // Refresh popover and stage cutout position in case of scroll or dynamic tab height
@@ -396,6 +444,11 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     onDestroyStarted: () => {
       try {
         localStorage.setItem('quantporto_tour_seen_v2', 'true');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('quantporto:set-tools-menu', { detail: { open: false } })
+          );
+        }
       } catch {
         // Ignore storage errors
       }
