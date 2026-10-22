@@ -29,6 +29,7 @@ import { WalkthroughModal } from './components/onboarding/WalkthroughModal';
 import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfolioRecommenderModal';
 import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetModal';
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
+import { ResetConfirmationModal } from './components/ResetConfirmationModal';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 
 const STORAGE_KEY = 'quantporto_state_v2';
@@ -207,6 +208,24 @@ export function App() {
   const [isRecommenderOpen, setIsRecommenderOpen] = useState<boolean>(false);
   const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
   const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
+
+  const handleConfirmResetAll = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(SAVED_PORTFOLIOS_KEY);
+      localStorage.removeItem(WALKTHROUGH_SEEN_KEY);
+      localStorage.removeItem('quantporto_dca_3m_default_v1');
+      localStorage.removeItem('quantporto_usd_18k_default_v1');
+      localStorage.removeItem('color-scheme');
+    } catch {
+      // Ignore storage errors
+    }
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+    window.location.reload();
+  };
 
   const handleCloseWalkthrough = () => {
     setIsWalkthroughOpen(false);
@@ -1214,6 +1233,7 @@ export function App() {
         }
         onOpenFactsheet={() => setIsFactsheetOpen(true)}
         onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
+        onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name
@@ -1400,6 +1420,13 @@ export function App() {
         monthlySavingsIdr={monthlySavingsIdr}
         targetGoalIdr={targetGoalIdr}
         onApplyRecommendation={handleApplyRecommendation}
+      />
+
+      {/* Reset to Factory Default Confirmation Modal */}
+      <ResetConfirmationModal
+        isOpen={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirmReset={handleConfirmResetAll}
       />
 
       <footer className="ui-border ui-text-muted mt-12 border-t py-6 pb-24 text-center text-xs lg:pb-6">

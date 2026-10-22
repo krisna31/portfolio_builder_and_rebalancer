@@ -20,6 +20,7 @@ import {
   ChevronDown,
   FileSpreadsheet,
   Building2,
+  RotateCcw,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -57,6 +58,7 @@ interface HeaderProps {
   onOpenWalkthrough: () => void;
   onOpenFactsheet?: () => void;
   onOpenOrderSlip?: () => void;
+  onOpenResetConfirm?: () => void;
   activePortfolioName?: string;
   activeCagr?: number;
   activeMaxDrawdown?: number;
@@ -85,6 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenWalkthrough,
   onOpenFactsheet,
   onOpenOrderSlip,
+  onOpenResetConfirm,
   activePortfolioName = 'Portfolio Aktif',
   activeCagr = 0,
   activeMaxDrawdown = 0,
@@ -512,6 +515,29 @@ export const Header: React.FC<HeaderProps> = ({
                           <span>Import Backup</span>
                         </button>
                       </div>
+
+                      {/* Reset All to Initial Settings */}
+                      {onOpenResetConfirm && (
+                        <div className="ui-border border-t pt-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsToolsMenuOpen(false);
+                              onOpenResetConfirm();
+                            }}
+                            className="flex w-full items-center justify-between rounded-lg p-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
+                            title="Reset seluruh portofolio, simpanan, dan pengaturan ke setelan awal"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              <span>Reset ke Setelan Awal</span>
+                            </div>
+                            <span className="rounded border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase text-rose-500 dark:text-rose-400">
+                              Reset
+                            </span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -684,6 +710,21 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Building2 className="h-3.5 w-3.5" />
                     <span>Slip Broker</span>
+                  </button>
+                )}
+
+                {/* Reset All to Initial Settings Mobile */}
+                {onOpenResetConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenResetConfirm();
+                    }}
+                    className="col-span-2 sm:col-span-3 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition mt-1"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Reset Seluruh Aplikasi ke Kondisi Awal</span>
                   </button>
                 )}
               </div>
