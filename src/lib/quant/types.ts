@@ -129,7 +129,11 @@ export interface HoldingEntry {
   subSplits?: SubAssetSplit[];
 }
 
-export type RebalanceMode = 'sell-and-buy' | 'buy-only-dca';
+export type RebalanceMode =
+  | 'sell-and-buy'
+  | 'selective-profit-trim'
+  | 'trim-defensive-first'
+  | 'buy-only-dca';
 
 export interface RebalanceItemResult {
   assetId: string;
@@ -160,6 +164,8 @@ export interface RebalanceItemResult {
   /** Estimated broker transaction fee & taxes (IDR) */
   estimatedFeeIdr?: number;
   action: 'BUY' | 'SELL' | 'HOLD';
+  /** Whether this item was suppressed to HOLD by the anti-dust trade filter */
+  isDustFiltered?: boolean;
 }
 
 export interface RebalanceSummaryResult {
@@ -174,6 +180,10 @@ export interface RebalanceSummaryResult {
   lotRoundingEnabled?: boolean;
   unallocatedCashRemainderIdr?: number;
   totalEstimatedFeeIdr?: number;
+  /** Count of small dust trades suppressed into HOLD */
+  suppressedDustTradesCount?: number;
+  /** Human-readable strategy name */
+  rebalanceMode?: RebalanceMode;
   items: RebalanceItemResult[];
 }
 

@@ -201,6 +201,126 @@ describe('Portfolio Rebalancer & Crash Stress-Test Engine', () => {
     expect(result.totalSellIdr).toBe(0);
     expect(result.totalBuyIdr).toBeCloseTo(20_000_000, -2);
   });
+
+  it('supports Selective Profit Trim mode: only sells significant overweight winners while keeping minor drift assets on HOLD', () => {
+    // Total portfolio = 100M.
+    // BBCA: 10M (target 25% = 25M -> deficit 15M)
+    // RDPT: 49.93M (target 35% = 35M -> major surplus ~15M)
+    // SPY: 20.05M (target 20% = 20M -> minor surplus 50k, drift +0.05%)
+    // BTC: 20.02M (target 20% = 20M -> minor surplus 20k, drift +0.02%)
+    const holdings: Record<string, HoldingEntry> = {
+      BBCA: { assetId: 'BBCA', currentValueIdr: 10_000_000, units: 10, currentPrice: 10_000, shockPercent: 0 },
+      RDPT: { assetId: 'RDPT', currentValueIdr: 49_930_000, units: 50, currentPrice: 1_000_000, shockPercent: 0 },
+      SPY: { assetId: 'SPY', currentValueIdr: 20_050_000, units: 2, currentPrice: 500, shockPercent: 0 },
+      BTC: { assetId: 'BTC', currentValueIdr: 20_020_000, units: 0.02, currentPrice: 65000, shockPercent: 0 },
+    };
+
+    const targetWeights = {
+      BBCA: 25,
+      RDPT: 35,
+      SPY: 20,
+      BTC: 20,
+    };
+
+    const result = calculateRebalancePlan({
+      assets: CORE_AND_EXPANDED_ASSETS.filter((a) => ['BBCA', 'RDPT', 'SPY', 'BTC'].includes(a.id)),
+      targetWeights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 16000,
+      cashInjectionIdr: 0,
+      rebalanceMode: 'selective-profit-trim',
+      driftThresholdAbsolutePercent: 3,
+      filterDustTrades: true,
+    });
+
+    const bbca = result.items.find((i) => i.assetId === 'BBCA')!;
+    const rdpt = result.items.find((i) => i.assetId === 'RDPT')!;
+    const spy = result.items.find((i) => i.assetId === 'SPY')!;
+    const btc = result.items.find((i) => i.assetId === 'BTC')!;
+
+    // BBCA is severely underweight -> must BUY
+    expect(bbca.action).toBe('BUY');
+    // RDPT is heavily overweight -> must SELL
+    expect(rdpt.action).toBe('SELL');
+    // SPY and BTC have negligible drift (< 1%) -> must remain HOLD without micro selling
+    expect(spy.action).toBe('HOLD');
+    expect(btc.action).toBe('HOLD');
+  });
+
+  it('supports Defensive Buffer First mode: funds equity/crypto dip from RDPT without selling growth assets', () => {
+    // Total portfolio = 100M.
+    // BBCA: 10M (target 25% = 25M -> deficit 15M)
+    // RDPT: 40M (target 25% = 25M -> surplus 15M)
+    // SPY: 25M (target 25% = 25M -> 0 drift)
+    // BTC: 25M (target 25% = 25M -> 0 drift)
+    const holdings: Record<string, HoldingEntry> = {
+      BBCA: { assetId: 'BBCA', currentValueIdr: 10_000_000, units: 10, currentPrice: 10_000, shockPercent: 0 },
+      RDPT: { assetId: 'RDPT', currentValueIdr: 40_000_000, units: 40, currentPrice: 1_000_000, shockPercent: 0 },
+      SPY: { assetId: 'SPY', currentValueIdr: 25_000_000, units: 2, currentPrice: 500, shockPercent: 0 },
+      BTC: { assetId: 'BTC', currentValueIdr: 25_000_000, units: 0.02, currentPrice: 65000, shockPercent: 0 },
+    };
+
+    const targetWeights = {
+      BBCA: 25,
+      RDPT: 25,
+      SPY: 25,
+      BTC: 25,
+    };
+
+    const result = calculateRebalancePlan({
+      assets: CORE_AND_EXPANDED_ASSETS.filter((a) => ['BBCA', 'RDPT', 'SPY', 'BTC'].includes(a.id)),
+      targetWeights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 16000,
+      cashInjectionIdr: 0,
+      rebalanceMode: 'trim-defensive-first',
+      driftThresholdAbsolutePercent: 3,
+    });
+
+    const bbca = result.items.find((i) => i.assetId === 'BBCA')!;
+    const rdpt = result.items.find((i) => i.assetId === 'RDPT')!;
+    const spy = result.items.find((i) => i.assetId === 'SPY')!;
+    const btc = result.items.find((i) => i.assetId === 'BTC')!;
+
+    expect(bbca.action).toBe('BUY');
+    expect(rdpt.action).toBe('SELL');
+    // SPY and BTC are growth assets -> protected from selling
+    expect(spy.action).toBe('HOLD');
+    expect(btc.action).toBe('HOLD');
+  });
+
+  it('filters dust trades below Rp 25.000 into clean HOLDs', () => {
+    const holdings: Record<string, HoldingEntry> = {
+      ETH: { assetId: 'ETH', currentValueIdr: 10_015_000, units: 0.1, currentPrice: 3000, shockPercent: 0 },
+      RDPT: { assetId: 'RDPT', currentValueIdr: 90_000_000, units: 90, currentPrice: 1_000_000, shockPercent: 0 },
+    };
+
+    const targetWeights = {
+      ETH: 10,
+      RDPT: 90,
+    };
+
+    const result = calculateRebalancePlan({
+      assets: CORE_AND_EXPANDED_ASSETS.filter((a) => ['ETH', 'RDPT'].includes(a.id)),
+      targetWeights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 16000,
+      cashInjectionIdr: 0,
+      rebalanceMode: 'sell-and-buy',
+      driftThresholdAbsolutePercent: 1,
+      filterDustTrades: true,
+      dustTradeThresholdIdr: 25_000,
+    });
+
+    const eth = result.items.find((i) => i.assetId === 'ETH')!;
+    // Without dust filter, ETH would sell Rp 15.000. With dust filter, it becomes HOLD.
+    expect(eth.action).toBe('HOLD');
+    expect(eth.isDustFiltered).toBe(true);
+    expect(result.suppressedDustTradesCount).toBeGreaterThanOrEqual(1);
+  });
 });
 
 describe('Rp10 Miliar Pertama Wealth Simulator', () => {

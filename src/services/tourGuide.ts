@@ -236,6 +236,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
             <li>Saham Indonesia otomatis dibulatkan ke kelipatan <strong>100 Lembar (1 Lot BEI)</strong>.</li>
             <li>Aset kripto dan ETF AS dihitung presisi hingga unit fraksional.</li>
             <li>Sisa kas kembalian dialihkan otomatis ke instrumen pasar uang/RDPT.</li>
+            <li>Tersedia 4 strategi fleksibel: <strong>🎯 Jual Untung Saja (Selective Trim)</strong>, <strong>🛡️ Prioritas RDPT Dulu</strong>, <strong>⚖️ Jual Rata</strong>, dan <strong>💰 DCA Saja</strong>, plus filter otomatis transaksi receh (Anti-Dust).</li>
           </ul>
         `,
         side: 'bottom',

@@ -29,6 +29,8 @@ export function calculateRebalancePlan(params: {
   enableIdxLotRounding?: boolean;
   sweepRemainderToDefensive?: boolean;
   enableBrokerFees?: boolean;
+  filterDustTrades?: boolean;
+  dustTradeThresholdIdr?: number;
 }): RebalanceSummaryResult {
   const {
     assets,
@@ -42,6 +44,8 @@ export function calculateRebalancePlan(params: {
     enableIdxLotRounding = true,
     sweepRemainderToDefensive = true,
     enableBrokerFees = false,
+    filterDustTrades = true,
+    dustTradeThresholdIdr = 25_000,
   } = params;
 
   // Consider all assets that either have a target weight > 0 or current holding > 0
@@ -104,39 +108,149 @@ export function calculateRebalancePlan(params: {
   // Step 2: Determine target post-rebalance IDR value per asset based on RebalanceMode
   const targetValuesByAsset: Record<string, number> = {};
 
-  if (rebalanceMode === 'sell-and-buy' || cashInjectionIdr <= 0) {
-    // Full rebalance: each asset targets finalTargetTotalIdr * (targetWeight / 100)
-    for (const item of computedHoldings) {
-      const normW =
-        rawWeightSum > 0
-          ? (Math.max(0, targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100
-          : 0;
-      targetValuesByAsset[item.asset.id] = finalTargetTotalIdr * (normW / 100);
+  // Compute textbook ideal targets, deficits (need to buy) and surpluses (need to sell)
+  const idealTargets: Record<string, number> = {};
+  const deficits: Record<string, number> = {};
+  const surpluses: Record<string, number> = {};
+  let totalDeficit = 0;
+  let totalSurplus = 0;
+
+  for (const item of computedHoldings) {
+    const normW =
+      rawWeightSum > 0
+        ? (Math.max(0, targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100
+        : 0;
+    const idealVal = finalTargetTotalIdr * (normW / 100);
+    idealTargets[item.asset.id] = idealVal;
+
+    const currentVal = item.postShockValIdr;
+    if (idealVal > currentVal) {
+      const def = idealVal - currentVal;
+      deficits[item.asset.id] = def;
+      totalDeficit += def;
+      surpluses[item.asset.id] = 0;
+    } else {
+      const sur = currentVal - idealVal;
+      surpluses[item.asset.id] = sur;
+      totalSurplus += sur;
+      deficits[item.asset.id] = 0;
     }
-  } else {
-    // Buy-Only DCA mode: Do not sell overweight assets; distribute cashInjectionIdr
-    // proportionally to deficits below the ideal target value
-    const deficits: Record<string, number> = {};
-    let totalDeficit = 0;
+  }
+
+  if (rebalanceMode === 'sell-and-buy') {
+    // Mode 1: Full textbook rebalance (sell all overweight proportionally, buy all underweight)
+    for (const item of computedHoldings) {
+      targetValuesByAsset[item.asset.id] = idealTargets[item.asset.id];
+    }
+  } else if (rebalanceMode === 'buy-only-dca') {
+    // Mode 2: Buy-Only DCA mode: Never sell existing assets. Distribute cash injection only.
+    for (const item of computedHoldings) {
+      if (cashInjectionIdr <= 0) {
+        // Without cash injection, keep holding untouched (no sells)
+        targetValuesByAsset[item.asset.id] = item.postShockValIdr;
+      } else {
+        const buyAdd =
+          totalDeficit > 0
+            ? cashInjectionIdr * (deficits[item.asset.id] / totalDeficit)
+            : cashInjectionIdr *
+              ((targetWeights[item.asset.id] ?? 0) / Math.max(1, rawWeightSum));
+        targetValuesByAsset[item.asset.id] = item.postShockValIdr + buyAdd;
+      }
+    }
+  } else if (rebalanceMode === 'selective-profit-trim') {
+    // Mode 3: Selective Profit Trim (Jual Untung Saja)
+    // Only sell assets that have significant positive drift above tolerance threshold.
+    // Minor drifts (< cutoff) remain HOLD without generating annoying micro/dust sell orders!
+    const netFundingNeeded = Math.max(0, totalDeficit - cashInjectionIdr);
+
+    // Minimum positive drift to be considered a significant winner
+    const minDriftCutoff = Math.max(0.5, Math.min(2.0, driftThresholdAbsolutePercent * 0.5));
+
+    const candidateSellers = computedHoldings.filter((item) => {
+      const curW = postShockTotalIdr > 0 ? (item.postShockValIdr / postShockTotalIdr) * 100 : 0;
+      const tgtW = rawWeightSum > 0 ? ((targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100 : 0;
+      const drift = curW - tgtW;
+      const surplus = surpluses[item.asset.id] ?? 0;
+      return drift >= minDriftCutoff && surplus >= 25_000;
+    });
+
+    // If no candidate crossed cutoff, pick top 1-2 assets with largest nominal surplus
+    const eligibleSellers =
+      candidateSellers.length > 0
+        ? candidateSellers
+        : [...computedHoldings]
+            .filter((item) => (surpluses[item.asset.id] ?? 0) > 25_000)
+            .sort((a, b) => (surpluses[b.asset.id] ?? 0) - (surpluses[a.asset.id] ?? 0))
+            .slice(0, 1);
+
+    const eligibleSurplusTotal = eligibleSellers.reduce(
+      (sum, item) => sum + (surpluses[item.asset.id] ?? 0),
+      0
+    );
+
+    const actualTrimTotal = Math.min(eligibleSurplusTotal, netFundingNeeded);
+    const availableBuyBudget = cashInjectionIdr + actualTrimTotal;
 
     for (const item of computedHoldings) {
-      const normW =
-        rawWeightSum > 0
-          ? (Math.max(0, targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100
-          : 0;
-      const idealTargetIdr = finalTargetTotalIdr * (normW / 100);
-      const deficit = Math.max(0, idealTargetIdr - item.postShockValIdr);
-      deficits[item.asset.id] = deficit;
-      totalDeficit += deficit;
+      const isEligibleSeller = eligibleSellers.some((s) => s.asset.id === item.asset.id);
+      if (isEligibleSeller && eligibleSurplusTotal > 0 && actualTrimTotal > 0) {
+        // Trim proportionally from eligible surplus
+        const trimShare = (surpluses[item.asset.id] / eligibleSurplusTotal) * actualTrimTotal;
+        targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr - trimShare);
+      } else if (deficits[item.asset.id] > 0 && totalDeficit > 0) {
+        // Fund underweight asset up to available buy budget
+        const buyShare =
+          (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
+        targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr + buyShare);
+      } else {
+        // Keep minor-drift assets untouched (HOLD)
+        targetValuesByAsset[item.asset.id] = item.postShockValIdr;
+      }
     }
+  } else if (rebalanceMode === 'trim-defensive-first') {
+    // Mode 4: Prioritas Jual RDPT / RDPU / Kas Dulu (Defensive Buffer First)
+    // Sesuai prinsip Risk Parity: gunakan cadangan defensif untuk membeli aset diskon.
+    // Lindungi aset pertumbuhan (saham AS/IDX, crypto, emas) dari aksi jual.
+    const netFundingNeeded = Math.max(0, totalDeficit - cashInjectionIdr);
 
-    for (const item of computedHoldings) {
-      const buyAdd =
-        totalDeficit > 0
-          ? cashInjectionIdr * (deficits[item.asset.id] / totalDeficit)
-          : cashInjectionIdr *
-            ((targetWeights[item.asset.id] ?? 0) / Math.max(1, rawWeightSum));
-      targetValuesByAsset[item.asset.id] = item.postShockValIdr + buyAdd;
+    const defensiveHoldings = computedHoldings.filter(
+      (item) =>
+        item.asset.category === 'money-market' ||
+        item.asset.category === 'bonds' ||
+        item.asset.id === 'RDPT' ||
+        item.asset.id === 'RDPU'
+    );
+
+    const defensiveCapitalTotal = defensiveHoldings.reduce(
+      (sum, item) => sum + item.postShockValIdr,
+      0
+    );
+
+    if (defensiveCapitalTotal > 0 && netFundingNeeded > 0) {
+      const actualDefensiveTrim = Math.min(defensiveCapitalTotal, netFundingNeeded);
+      const availableBuyBudget = cashInjectionIdr + actualDefensiveTrim;
+
+      for (const item of computedHoldings) {
+        const isDefensive = defensiveHoldings.some((d) => d.asset.id === item.asset.id);
+        if (isDefensive && defensiveCapitalTotal > 0 && actualDefensiveTrim > 0) {
+          const drawShare = (item.postShockValIdr / defensiveCapitalTotal) * actualDefensiveTrim;
+          targetValuesByAsset[item.asset.id] = Math.round(
+            Math.max(0, item.postShockValIdr - drawShare)
+          );
+        } else if (deficits[item.asset.id] > 0 && totalDeficit > 0) {
+          const buyShare =
+            (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
+          targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr + buyShare);
+        } else {
+          // Growth assets are protected (HOLD)
+          targetValuesByAsset[item.asset.id] = item.postShockValIdr;
+        }
+      }
+    } else {
+      // Fallback to selective trim if no defensive assets are held
+      for (const item of computedHoldings) {
+        targetValuesByAsset[item.asset.id] = idealTargets[item.asset.id];
+      }
     }
   }
 
@@ -320,18 +434,51 @@ export function calculateRebalancePlan(params: {
     }
   }
 
+  // Step 4: Dust Trade Filter (Anti-Dust Protection)
+  // Suppresses tiny negligible orders (e.g. < Rp 25.000 / ~$1.5) into clean HOLDs
+  let suppressedDustTradesCount = 0;
+  if (filterDustTrades) {
+    for (const item of items) {
+      // Don't suppress IDX stocks that already bought/sold full whole lots (tradeLotsInteger !== 0)
+      const hasIdxLot =
+        item.tradeLotsInteger !== undefined && Math.abs(item.tradeLotsInteger) >= 1;
+      if (
+        !hasIdxLot &&
+        item.action !== 'HOLD' &&
+        Math.abs(item.tradeAmountIdr) < dustTradeThresholdIdr
+      ) {
+        if (item.action === 'BUY') {
+          totalBuyIdr -= item.tradeAmountIdr;
+        } else if (item.action === 'SELL') {
+          totalSellIdr -= Math.abs(item.tradeAmountIdr);
+        }
+        item.action = 'HOLD';
+        item.isDustFiltered = true;
+        item.tradeAmountIdr = 0;
+        item.tradeAmountUsd = 0;
+        item.tradeUnits = 0;
+        item.tradeLots = 0;
+        item.tradeLotsInteger = 0;
+        item.estimatedFeeIdr = 0;
+        suppressedDustTradesCount += 1;
+      }
+    }
+  }
+
   return {
     initialTotalIdr: Math.round(initialTotalIdr),
     postShockTotalIdr: Math.round(postShockTotalIdr),
     cashInjectionIdr: Math.round(cashInjectionIdr),
     finalTargetTotalIdr: Math.round(finalTargetTotalIdr),
-    totalBuyIdr: Math.round(totalBuyIdr),
-    totalSellIdr: Math.round(totalSellIdr),
+    totalBuyIdr: Math.max(0, Math.round(totalBuyIdr)),
+    totalSellIdr: Math.max(0, Math.round(totalSellIdr)),
     maxAbsoluteDrift: Number(maxAbsoluteDrift.toFixed(2)),
     breachedCount,
     lotRoundingEnabled: enableIdxLotRounding,
     unallocatedCashRemainderIdr: Math.round(totalUnallocatedRemainderIdr),
     totalEstimatedFeeIdr: Math.round(totalEstimatedFeeIdr),
+    suppressedDustTradesCount,
+    rebalanceMode,
     items,
   };
 }

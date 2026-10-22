@@ -75,6 +75,8 @@ interface PortfolioRebalancerViewProps {
   setEnableIdxLotRounding?: (val: boolean) => void;
   enableBrokerFees?: boolean;
   setEnableBrokerFees?: (val: boolean) => void;
+  filterDustTrades?: boolean;
+  setFilterDustTrades?: (val: boolean) => void;
   onClearHoldingsForManualInput: () => void;
   onSetupInitialBuyFromMenu1: () => void;
   onScaleTotalHoldingsIdr: (
@@ -114,6 +116,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   setEnableIdxLotRounding,
   enableBrokerFees = false,
   setEnableBrokerFees,
+  filterDustTrades = true,
+  setFilterDustTrades,
   onClearHoldingsForManualInput,
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
@@ -280,9 +284,20 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           : ''
       }`,
       `⚙️ Mode: ${
-        rebalanceMode === 'sell-and-buy' ? 'Full Sell + Buy' : 'Buy-Only DCA'
+        rebalanceMode === 'sell-and-buy'
+          ? 'Full Sell + Buy (Jual Rata)'
+          : rebalanceMode === 'selective-profit-trim'
+            ? 'Jual Untung Saja (Selective Trim 🎯)'
+            : rebalanceMode === 'trim-defensive-first'
+              ? 'Prioritas RDPT Dulu 🛡️'
+              : 'Buy-Only DCA 💰'
       }`,
       enableIdxLotRounding ? `📦 Pembulatan: Lot Bulat BEI (1 Lot = 100 lbr)` : '',
+      filterDustTrades &&
+      rebalanceResult.suppressedDustTradesCount !== undefined &&
+      rebalanceResult.suppressedDustTradesCount > 0
+        ? `🧹 Anti-Dust: ${rebalanceResult.suppressedDustTradesCount} order receh disaring jadi HOLD`
+        : '',
       enableBrokerFees &&
       rebalanceResult.totalEstimatedFeeIdr !== undefined &&
       rebalanceResult.totalEstimatedFeeIdr > 0
@@ -686,37 +701,108 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         </div>
 
         <div className="ui-card rounded-xl p-4">
-          <div className="ui-text-muted text-xs font-medium">
-            Mode Eksekusi Rebalancing
+          <div className="flex items-center justify-between">
+            <span className="ui-text-muted text-xs font-medium">
+              Mode Eksekusi Rebalancing
+            </span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              {rebalanceMode === 'selective-profit-trim'
+                ? 'Selective Trim'
+                : rebalanceMode === 'trim-defensive-first'
+                  ? 'Defensive First'
+                  : rebalanceMode === 'buy-only-dca'
+                    ? 'Buy-Only DCA'
+                    : 'Full Rebalance'}
+            </span>
           </div>
-          <div className="ui-subtle mt-1.5 flex gap-1 rounded p-0.5">
+
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => setRebalanceMode('selective-profit-trim')}
+              className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                rebalanceMode === 'selective-profit-trim'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold ring-1 ring-emerald-500/30 shadow-2xs'
+                  : 'ui-subtle ui-text-secondary hover:ui-text-main'
+              }`}
+              title="Hanya jual aset yang surplus/kelebihan bobot signifikan. Aset dengan drift kecil di-HOLD tanpa penjualan receh."
+            >
+              <span>🎯 Untung Saja</span>
+              {rebalanceMode === 'selective-profit-trim' && (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRebalanceMode('trim-defensive-first')}
+              className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                rebalanceMode === 'trim-defensive-first'
+                  ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold ring-1 ring-blue-500/30 shadow-2xs'
+                  : 'ui-subtle ui-text-secondary hover:ui-text-main'
+              }`}
+              title="Cairkan dana dari aset defensif (RDPT/RDPU/Kas) untuk membeli aset diskon, tanpa menjual saham/kripto."
+            >
+              <span>🛡️ RDPT Dulu</span>
+              {rebalanceMode === 'trim-defensive-first' && (
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setRebalanceMode('sell-and-buy')}
-              className={`flex-1 rounded px-2 py-1 text-xs font-medium transition ${
+              className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                 rebalanceMode === 'sell-and-buy'
-                  ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                  : 'ui-text-muted'
+                  ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 font-bold ring-1 ring-purple-500/30 shadow-2xs'
+                  : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
+              title="Jual rata seluruh aset yang kelebihan bobot secara proporsional (rumus modern portfolio theory standar)."
             >
-              Sell + Buy
+              <span>⚖️ Jual Rata</span>
+              {rebalanceMode === 'sell-and-buy' && (
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+              )}
             </button>
+
             <button
               type="button"
               onClick={() => setRebalanceMode('buy-only-dca')}
-              className={`flex-1 rounded px-2 py-1 text-xs font-medium transition ${
+              className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                 rebalanceMode === 'buy-only-dca'
-                  ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                  : 'ui-text-muted'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold ring-1 ring-amber-500/30 shadow-2xs'
+                  : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
+              title="Tanpa jual aset ($0 jual). Alokasikan suntikan kas baru ke aset yang paling underweight."
             >
-              Buy-Only (DCA)
+              <span>💰 DCA Saja</span>
+              {rebalanceMode === 'buy-only-dca' && (
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              )}
             </button>
           </div>
-          <div className="ui-text-muted mt-1.5 text-[11px]">
-            {rebalanceMode === 'sell-and-buy'
-              ? 'Jual aset overweight & beli aset underweight.'
-              : 'Tanpa jual aset; alokasikan kas baru ke aset underweight.'}
+
+          <div className="ui-text-muted mt-2 text-[11px] leading-snug">
+            {rebalanceMode === 'selective-profit-trim' && (
+              <span className="text-emerald-600 dark:text-emerald-400">
+                Pangkas hanya pemenang terbesar (overweight) untuk mendanai aset diskon. Aset netral tetap <strong>HOLD</strong>.
+              </span>
+            )}
+            {rebalanceMode === 'trim-defensive-first' && (
+              <span className="text-blue-600 dark:text-blue-400">
+                Cairkan buffer kas / RDPT untuk beli aset diskon. Aset pertumbuhan (SPY, QQQ, BTC) aman dari aksi jual.
+              </span>
+            )}
+            {rebalanceMode === 'sell-and-buy' && (
+              <span>
+                Jual seluruh aset overweight dan beli underweight secara proporsional (standar textbook).
+              </span>
+            )}
+            {rebalanceMode === 'buy-only-dca' && (
+              <span className="text-amber-600 dark:text-amber-400">
+                Tanpa jual aset sama sekali. Alokasikan kas baru untuk mengakumulasi aset diskon.
+              </span>
+            )}
           </div>
         </div>
 
@@ -945,6 +1031,31 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   </span>
                 </button>
               )}
+
+              {setFilterDustTrades && (
+                <button
+                  type="button"
+                  onClick={() => setFilterDustTrades(!filterDustTrades)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
+                    filterDustTrades
+                      ? 'bg-indigo-600 font-semibold text-white'
+                      : 'ui-card ui-text-secondary hover:opacity-80'
+                  }`}
+                  title="Saring otomatis transaksi mikro di bawah Rp 25.000 (~$1.5) menjadi HOLD agar slip order bersih dan bebas biaya transaksi receh."
+                >
+                  <span>🧹 Saring Receh (&lt; 25rb)</span>
+                  <span className="rounded bg-black/20 px-1 text-[10px]">
+                    {filterDustTrades ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              )}
+
+              {rebalanceResult.suppressedDustTradesCount !== undefined &&
+                rebalanceResult.suppressedDustTradesCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                    ✨ {rebalanceResult.suppressedDustTradesCount} order receh disaring
+                  </span>
+                )}
             </div>
 
             {rebalanceResult.unallocatedCashRemainderIdr &&
@@ -1254,9 +1365,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 )}
                             </div>
                           ) : (
-                            <span className="ui-subtle ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
-                              HOLD
-                            </span>
+                            <div className="inline-flex flex-col items-end">
+                              <span className="ui-subtle ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
+                                HOLD
+                              </span>
+                              {item.isDustFiltered && (
+                                <span className="text-[9px] text-indigo-500 font-sans font-medium">
+                                  Anti-Dust (&lt; 25rb)
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1318,9 +1436,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           SELL {formatIdr(Math.abs(item.tradeAmountIdr), true)}
                         </span>
                       ) : (
-                        <span className="ui-card ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
-                          HOLD
-                        </span>
+                        <div className="flex flex-col items-end">
+                          <span className="ui-card ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
+                            HOLD
+                          </span>
+                          {item.isDustFiltered && (
+                            <span className="text-[9px] text-indigo-500 font-sans font-medium">
+                              Anti-Dust (&lt; 25rb)
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 

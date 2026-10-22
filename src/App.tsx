@@ -152,6 +152,7 @@ export function App() {
     useState<boolean>(true);
   const [enableIdxLotRounding, setEnableIdxLotRounding] = useState<boolean>(true);
   const [enableBrokerFees, setEnableBrokerFees] = useState<boolean>(false);
+  const [filterDustTrades, setFilterDustTrades] = useState<boolean>(true);
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     const init: Record<string, HoldingEntry> = {};
@@ -567,6 +568,7 @@ export function App() {
         enableIdxLotRounding,
         sweepRemainderToDefensive: true,
         enableBrokerFees,
+        filterDustTrades,
       }),
     [
       allAssets,
@@ -579,6 +581,7 @@ export function App() {
       driftThresholdPercent,
       enableIdxLotRounding,
       enableBrokerFees,
+      filterDustTrades,
     ]
   );
 
@@ -1020,7 +1023,13 @@ export function App() {
       note:
         customNote ||
         `Rebalance ${
-          rebalanceMode === 'sell-and-buy' ? 'Sell + Buy' : 'Buy-Only DCA'
+          rebalanceMode === 'sell-and-buy'
+            ? 'Sell + Buy (Jual Rata)'
+            : rebalanceMode === 'selective-profit-trim'
+              ? 'Jual Untung Saja (Selective Trim)'
+              : rebalanceMode === 'trim-defensive-first'
+                ? 'Prioritas RDPT Dulu'
+                : 'Buy-Only DCA'
         }`,
       totalValueBeforeIdr: rebalanceResult.postShockTotalIdr,
       cashInjectedIdr: rebalanceResult.cashInjectionIdr,
@@ -1376,6 +1385,8 @@ export function App() {
             setEnableIdxLotRounding={setEnableIdxLotRounding}
             enableBrokerFees={enableBrokerFees}
             setEnableBrokerFees={setEnableBrokerFees}
+            filterDustTrades={filterDustTrades}
+            setFilterDustTrades={setFilterDustTrades}
             onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}

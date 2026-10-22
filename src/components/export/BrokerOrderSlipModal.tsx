@@ -238,9 +238,22 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       `📋 SLIP ORDER EKSEKUSI PORTOFOLIO QUANTPORTO`,
       `Portofolio : ${activePortfolioName}`,
       `Tanggal    : ${today} | Kurs USD: Rp ${usdIdrRate.toLocaleString('id-ID')}`,
+      `Strategi   : ${
+        rebalanceResult?.rebalanceMode === 'selective-profit-trim'
+          ? 'Jual Untung Saja (Selective Trim 🎯)'
+          : rebalanceResult?.rebalanceMode === 'trim-defensive-first'
+            ? 'Prioritas RDPT Dulu 🛡️'
+            : rebalanceResult?.rebalanceMode === 'buy-only-dca'
+              ? 'Buy-Only DCA 💰'
+              : 'Full Sell + Buy (Jual Rata ⚖️)'
+      }`,
+      rebalanceResult?.suppressedDustTradesCount !== undefined &&
+      rebalanceResult.suppressedDustTradesCount > 0
+        ? `Anti-Dust  : ${rebalanceResult.suppressedDustTradesCount} order receh disaring jadi HOLD`
+        : '',
       `========================================`,
       ``,
-    ];
+    ].filter(Boolean);
 
     for (const g of groupsToCopy) {
       lines.push(`📱 ${g.name.toUpperCase()} (${g.apps})`);
