@@ -578,8 +578,15 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                             </div>
                           ) : (
                             <div>
-                              <div className="text-sm font-bold text-slate-100">
-                                {formatIdr(Math.abs(item.tradeAmountIdr))}
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-bold text-slate-100">
+                                  {formatIdr(Math.abs(item.tradeAmountIdr))}
+                                </span>
+                                {item.isNominalOnly && (
+                                  <span className="rounded bg-sky-500/20 px-1 py-0.2 font-mono text-[9px] text-sky-400">
+                                    Nominal Murni
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[10px] text-slate-400">
                                 Bobot Target: {formatPercent(item.targetWeightPercent)} (Drift: {formatPercent(item.absoluteDriftPercent)})

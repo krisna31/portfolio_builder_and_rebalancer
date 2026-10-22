@@ -311,9 +311,16 @@ export function calculateRebalancePlan(params: {
     let tradeLotsRemainderIdr: number | undefined;
     let tradeUnits = 0;
 
+    const isNominalOnly =
+      item.holding.isNominalOnly ??
+      (item.asset.category === 'bonds' || item.asset.category === 'money-market');
+
     const rawUnits = tradeAmountIdr / item.postShockUnitPriceIdr;
 
-    if (item.asset.lotSize === 100) {
+    if (isNominalOnly) {
+      // For nominal-only assets (e.g. bonds, deposits, cash), orders are executed as direct Rupiah amounts
+      tradeUnits = tradeAmountIdr;
+    } else if (item.asset.lotSize === 100) {
       const rawLots = rawUnits / 100;
       tradeLots = Number(rawLots.toFixed(1));
 
@@ -383,6 +390,7 @@ export function calculateRebalancePlan(params: {
       symbol: item.asset.symbol,
       name: item.asset.name,
       color: item.asset.color,
+      isNominalOnly,
       targetWeightPercent: normTargetWeight,
       initialValueIdr: Math.round(item.initialValIdr),
       postShockValueIdr: Math.round(item.postShockValIdr),

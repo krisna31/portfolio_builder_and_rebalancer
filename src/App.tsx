@@ -161,12 +161,14 @@ export function App() {
       const valIdr = Math.round(100_000_000 * (weightPct / 100));
       const unitPriceIdr =
         a.currency === 'USD' ? a.defaultPrice * 18000 : a.defaultPrice;
+      const isNominalOnly = a.category === 'bonds' || a.category === 'money-market';
       init[a.id] = {
         assetId: a.id,
         currentValueIdr: valIdr,
-        units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
-        currentPrice: a.defaultPrice,
+        units: isNominalOnly ? valIdr : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+        currentPrice: isNominalOnly ? 1 : a.defaultPrice,
         shockPercent: 0,
+        isNominalOnly,
       };
     }
     return init;
@@ -807,28 +809,47 @@ export function App() {
 
   // Handler: Update individual holding in Rebalancer
   const handleUpdateHolding = (assetId: string, patch: Partial<HoldingEntry>) => {
-    // If user manually edits currentValueIdr, units, or currentPrice, lock manual holdings so Menu 1 changes don't overwrite them
+    // If user manually edits currentValueIdr, units, currentPrice, or isNominalOnly, lock manual holdings so Menu 1 changes don't overwrite them
     if (
       patch.currentValueIdr !== undefined ||
       patch.units !== undefined ||
-      patch.currentPrice !== undefined
+      patch.currentPrice !== undefined ||
+      patch.isNominalOnly !== undefined
     ) {
       setIsHoldingsSyncedWithMenu1(false);
     }
     setHoldings((prev) => {
       const asset = allAssets.find((a) => a.id === assetId);
+      const isCatNominal = asset?.category === 'bonds' || asset?.category === 'money-market';
       const existing = prev[assetId] ?? {
         assetId,
         currentValueIdr: 0,
         units: 0,
         currentPrice: asset?.defaultPrice ?? 1,
         shockPercent: 0,
+        isNominalOnly: isCatNominal,
       };
 
       const updated = { ...existing, ...patch };
 
+      // Case 0: isNominalOnly is explicitly toggled
+      if (patch.isNominalOnly !== undefined) {
+        if (patch.isNominalOnly) {
+          // Switch to nominal-only mode: neutral price 1, units equal nominal rupiah
+          updated.isNominalOnly = true;
+          updated.currentPrice = 1;
+          updated.units = updated.currentValueIdr;
+        } else {
+          // Switch back to market price mode: restore asset defaultPrice and recalculate units
+          updated.isNominalOnly = false;
+          const pNative = asset?.defaultPrice ?? 1;
+          const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+          updated.currentPrice = pNative;
+          updated.units = Number((updated.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+        }
+      }
       // Case 1: Price is changed -> units are preserved, currentValueIdr is updated: units * newPriceIdr
-      if (patch.currentPrice !== undefined && patch.currentValueIdr === undefined) {
+      else if (patch.currentPrice !== undefined && patch.currentValueIdr === undefined) {
         const pNative = Math.max(0.000001, patch.currentPrice);
         const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
 
@@ -848,17 +869,27 @@ export function App() {
       }
       // Case 2: Nominal value is changed -> units are updated: currentValueIdr / priceIdr
       else if (patch.currentValueIdr !== undefined && patch.units === undefined) {
-        const pNative =
-          updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
-        const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
-        updated.units = Number((patch.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+        const isNominal = updated.isNominalOnly ?? isCatNominal;
+        if (isNominal) {
+          updated.units = patch.currentValueIdr;
+        } else {
+          const pNative =
+            updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
+          const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+          updated.units = Number((patch.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+        }
       }
       // Case 3: Units are changed -> currentValueIdr is updated: units * priceIdr
       else if (patch.units !== undefined && patch.currentValueIdr === undefined) {
-        const pNative =
-          updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
-        const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
-        updated.currentValueIdr = Math.round(patch.units * pIdr);
+        const isNominal = updated.isNominalOnly ?? isCatNominal;
+        if (isNominal) {
+          updated.currentValueIdr = Math.round(patch.units);
+        } else {
+          const pNative =
+            updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
+          const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+          updated.currentValueIdr = Math.round(patch.units * pIdr);
+        }
       }
 
       return {
@@ -875,6 +906,10 @@ export function App() {
       for (const a of allAssets) {
         const existing = next[a.id];
         if (!existing) continue;
+        const isNominal =
+          existing.isNominalOnly ??
+          (a.category === 'bonds' || a.category === 'money-market');
+        if (isNominal) continue; // Skip resetting nominal-only assets
         const defaultPrice = a.defaultPrice;
         const pIdr = a.currency === 'USD' ? defaultPrice * usdIdrRate : defaultPrice;
         next[a.id] = {

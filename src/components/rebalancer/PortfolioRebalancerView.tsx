@@ -30,6 +30,7 @@ import {
   LayoutGrid,
   Table2,
   Building2,
+  Tag,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -144,6 +145,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     return allAssets.some((a) => {
       const h = holdings[a.id];
       if (!h || !h.currentPrice) return false;
+      const isNominal =
+        h.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
+      if (isNominal) return false;
       return Math.abs(h.currentPrice - a.defaultPrice) > 0.0001;
     });
   }, [allAssets, holdings]);
@@ -279,6 +283,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     );
 
     const formatOrderUnit = (item: (typeof rebalanceResult.items)[number]) => {
+      if (item.isNominalOnly) {
+        return 'Nominal Murni';
+      }
       const asset = allAssets.find((a) => a.id === item.assetId);
       if (asset?.currency === 'USD') {
         return `${formatUsd(Math.abs(item.tradeAmountUsd))} / ${Math.abs(item.tradeUnits)} unit`;
@@ -1161,6 +1168,48 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2.5 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] min-w-[170px]"
                         >
                           {(() => {
+                            const isNominal =
+                              h.isNominalOnly ??
+                              (asset?.category === 'bonds' || asset?.category === 'money-market');
+
+                            if (isNominal) {
+                              return (
+                                <div className="flex items-start gap-2">
+                                  <span
+                                    className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="ui-text-main font-bold text-xs">{item.symbol}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 pt-0.5">
+                                      <span
+                                        className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-sky-600 dark:text-sky-400 border border-sky-500/20 select-none"
+                                        title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal Rupiah."
+                                      >
+                                        🏷️ Nominal Murni
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onUpdateHolding(item.assetId, {
+                                            isNominalOnly: false,
+                                            currentPrice: asset?.defaultPrice ?? 1,
+                                          })
+                                        }
+                                        className="ui-text-muted hover:ui-text-main text-[9px] underline decoration-dotted transition"
+                                        title="Ubah ke mode input harga pasar per unit"
+                                      >
+                                        Atur Harga
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             const priceDiffPct = asset?.defaultPrice
                               ? ((h.currentPrice - asset.defaultPrice) / asset.defaultPrice) * 100
                               : 0;
@@ -1225,6 +1274,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                         <RotateCcw className="h-2.5 w-2.5" />
                                       </button>
                                     )}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onUpdateHolding(item.assetId, {
+                                          isNominalOnly: true,
+                                          currentPrice: 1,
+                                        })
+                                      }
+                                      className="ui-text-muted hover:text-sky-500 p-0.5 rounded transition"
+                                      title="Jadikan Aset Nominal Murni (Abaikan harga pasar unit)"
+                                    >
+                                      <Tag className="h-2.5 w-2.5" />
+                                    </button>
                                   </div>
 
                                   {/* Quick Drop Chips: [-10%] [-20%] [-35%] [-50%] */}
@@ -1430,13 +1492,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 <span>BUY {formatIdr(item.tradeAmountIdr)}</span>
                               </div>
                               <div className="ui-text-muted font-mono text-[10px]">
-                                {asset?.currency === 'USD'
-                                  ? `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
-                                  : item.tradeLotsInteger !== undefined
-                                    ? `≈ ${item.tradeLotsInteger} Lot (${item.tradeLotsInteger * 100} lbr)`
-                                    : item.tradeLots !== undefined
-                                      ? `≈ ${item.tradeLots} Lot (${item.tradeUnits} lbr)`
-                                      : `≈ ${item.tradeUnits} unit`}
+                                {item.isNominalOnly
+                                  ? '🏷️ Nominal Murni'
+                                  : asset?.currency === 'USD'
+                                    ? `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
+                                    : item.tradeLotsInteger !== undefined
+                                      ? `≈ ${item.tradeLotsInteger} Lot (${item.tradeLotsInteger * 100} lbr)`
+                                      : item.tradeLots !== undefined
+                                        ? `≈ ${item.tradeLots} Lot (${item.tradeUnits} lbr)`
+                                        : `≈ ${item.tradeUnits} unit`}
                               </div>
                               {enableBrokerFees &&
                                 item.estimatedFeeIdr !== undefined &&
@@ -1461,13 +1525,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 </span>
                               </div>
                               <div className="ui-text-muted font-mono text-[10px]">
-                                {asset?.currency === 'USD'
-                                  ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
-                                  : item.tradeLotsInteger !== undefined
-                                    ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
-                                    : item.tradeLots !== undefined
-                                      ? `≈ ${Math.abs(item.tradeLots)} Lot (${Math.abs(item.tradeUnits)} lbr)`
-                                      : `≈ ${Math.abs(item.tradeUnits)} unit`}
+                                {item.isNominalOnly
+                                  ? '🏷️ Nominal Murni'
+                                  : asset?.currency === 'USD'
+                                    ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
+                                    : item.tradeLotsInteger !== undefined
+                                      ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
+                                      : item.tradeLots !== undefined
+                                        ? `≈ ${Math.abs(item.tradeLots)} Lot (${Math.abs(item.tradeUnits)} lbr)`
+                                        : `≈ ${Math.abs(item.tradeUnits)} unit`}
                               </div>
                               {enableBrokerFees &&
                                 item.estimatedFeeIdr !== undefined &&
@@ -1533,6 +1599,36 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             </span>
                           </div>
                           {(() => {
+                            const isNominal =
+                              h.isNominalOnly ??
+                              (asset?.category === 'bonds' || asset?.category === 'money-market');
+
+                            if (isNominal) {
+                              return (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-sky-600 dark:text-sky-400 border border-sky-500/20 select-none"
+                                    title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal Rupiah."
+                                  >
+                                    🏷️ Nominal Murni
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onUpdateHolding(item.assetId, {
+                                        isNominalOnly: false,
+                                        currentPrice: asset?.defaultPrice ?? 1,
+                                      })
+                                    }
+                                    className="ui-text-muted hover:ui-text-main text-[9px] underline decoration-dotted transition"
+                                    title="Ubah ke mode input harga pasar per unit"
+                                  >
+                                    Atur Harga
+                                  </button>
+                                </div>
+                              );
+                            }
+
                             const priceDiffPct = asset?.defaultPrice
                               ? ((h.currentPrice - asset.defaultPrice) / asset.defaultPrice) * 100
                               : 0;
@@ -1584,6 +1680,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                       <RotateCcw className="h-2.5 w-2.5" />
                                     </button>
                                   )}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onUpdateHolding(item.assetId, {
+                                        isNominalOnly: true,
+                                        currentPrice: 1,
+                                      })
+                                    }
+                                    className="ui-text-muted hover:text-sky-500 p-0.5 rounded transition"
+                                    title="Jadikan Aset Nominal Murni (Abaikan harga pasar unit)"
+                                  >
+                                    <Tag className="h-2.5 w-2.5" />
+                                  </button>
                                 </div>
 
                                 {/* Quick Drop Chips */}

@@ -453,4 +453,51 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     expect(rec.primaryRecommendation.metrics.cagr).toBeGreaterThan(15);
     expect(rec.alternativeRecommendations).toHaveLength(3);
   });
+
+  it('correctly tags bonds / money-market and nominal-only holdings with isNominalOnly: true and direct tradeUnits', () => {
+    const rdptAsset = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'RDPT')!;
+    const bbcaAsset = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'BBCA')!;
+
+    const plan = calculateRebalancePlan({
+      assets: [rdptAsset, bbcaAsset],
+      targetWeights: { RDPT: 50, BBCA: 50 },
+      holdings: {
+        RDPT: {
+          assetId: 'RDPT',
+          currentValueIdr: 10_000_000,
+          units: 10_000_000,
+          currentPrice: 1,
+          shockPercent: 0,
+          isNominalOnly: true,
+        },
+        BBCA: {
+          assetId: 'BBCA',
+          currentValueIdr: 30_000_000,
+          units: 3000,
+          currentPrice: 10000,
+          shockPercent: 0,
+          isNominalOnly: false,
+        },
+      },
+      inputMode: 'nominal',
+      usdIdrRate: 16000,
+      cashInjectionIdr: 0,
+      driftThresholdAbsolutePercent: 3,
+      rebalanceMode: 'sell-and-buy',
+      enableIdxLotRounding: true,
+      enableBrokerFees: false,
+      filterDustTrades: false,
+    });
+
+    const rdptItem = plan.items.find((i) => i.assetId === 'RDPT')!;
+    const bbcaItem = plan.items.find((i) => i.assetId === 'BBCA')!;
+
+    expect(rdptItem.isNominalOnly).toBe(true);
+    expect(rdptItem.action).toBe('BUY');
+    expect(rdptItem.tradeUnits).toBe(rdptItem.tradeAmountIdr); // Direct IDR nominal execution
+
+    expect(bbcaItem.isNominalOnly).toBe(false);
+    expect(bbcaItem.action).toBe('SELL');
+    expect(bbcaItem.tradeLotsInteger).toBeDefined();
+  });
 });

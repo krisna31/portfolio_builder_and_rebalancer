@@ -127,6 +127,8 @@ export interface HoldingEntry {
   shockPercent: number;
   /** Optional sub-asset diversification splits within this bucket */
   subSplits?: SubAssetSplit[];
+  /** Optional flag: treat asset as pure nominal value without market price / unit volatility (e.g. bonds, deposits, cash) */
+  isNominalOnly?: boolean;
 }
 
 export type RebalanceMode =
@@ -163,6 +165,8 @@ export interface RebalanceItemResult {
   tradeLotsRemainderIdr?: number;
   /** Estimated broker transaction fee & taxes (IDR) */
   estimatedFeeIdr?: number;
+  /** Whether this asset is handled as nominal-only / price-free (e.g. bonds, deposits, cash) */
+  isNominalOnly?: boolean;
   action: 'BUY' | 'SELL' | 'HOLD';
   /** Whether this item was suppressed to HOLD by the anti-dust trade filter */
   isDustFiltered?: boolean;
