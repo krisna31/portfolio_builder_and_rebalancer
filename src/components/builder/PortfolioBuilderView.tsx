@@ -1830,7 +1830,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
       {/* SECTION 3: CUSTOM QUANT SOLVER & MANUAL WEIGHT BUILDER */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="ui-card space-y-5 rounded-xl p-5 lg:col-span-7">
+        <div id="tour-builder-sliders" className="ui-card space-y-5 rounded-xl p-5 lg:col-span-7">
           <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <div className="flex items-center gap-2">
               <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -2470,7 +2470,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
 
           {/* Chart 2: Interactive Pareto Frontier ScatterChart */}
-          <div className="ui-card rounded-xl p-5">
+          <div id="tour-pareto-chart" className="ui-card rounded-xl p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="ui-text-main text-sm font-bold">
@@ -2772,7 +2772,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         );
 
         return (
-          <section className="ui-card rounded-xl p-5">
+          <section id="tour-comparator-section" className="ui-card rounded-xl p-5">
             <div className="ui-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2.5">
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">

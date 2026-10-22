@@ -55,7 +55,7 @@ interface HeaderProps {
   onLoadSavedPortfolio: (snap: SavedPortfolioSnapshot) => void;
   onDeleteSavedPortfolio: (id: string) => void;
   onOpenRecommender: () => void;
-  onOpenWalkthrough: () => void;
+  onStartInteractiveTour: () => void;
   onOpenFactsheet?: () => void;
   onOpenOrderSlip?: () => void;
   onOpenResetConfirm?: () => void;
@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLoadSavedPortfolio,
   onDeleteSavedPortfolio,
   onOpenRecommender,
-  onOpenWalkthrough,
+  onStartInteractiveTour,
   onOpenFactsheet,
   onOpenOrderSlip,
   onOpenResetConfirm,
@@ -308,12 +308,15 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="tour-guide-btn"
                 type="button"
-                onClick={onOpenWalkthrough}
-                title="Mulai tur panduan interaktif QuantPorto (Spotlight & Penjelasan)"
-                className="ui-subtle ui-text-main hidden items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition hover:border-emerald-500/50 sm:flex"
+                onClick={onStartInteractiveTour}
+                title="Mulai tur panduan interaktif QuantPorto (Shortcut: tekan '?' di keyboard)"
+                className="ui-subtle ui-text-main hidden items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition hover:border-emerald-500/50 sm:flex"
               >
                 <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Panduan</span>
+                <kbd className="hidden md:inline-block rounded bg-black/10 dark:bg-white/10 px-1 py-0.2 text-[9px] font-mono opacity-70">
+                  ?
+                </kbd>
               </button>
 
               {/* Desktop-only Unified Tools & Settings Dropdown */}
@@ -469,43 +472,45 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
 
                       {/* Institutional Factsheet & Broker Order Slips */}
-                      {onOpenFactsheet && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsToolsMenuOpen(false);
-                            onOpenFactsheet();
-                          }}
-                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500" />
-                            <span>Factsheet Portofolio</span>
-                          </div>
-                          <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
-                            A4 / PNG
-                          </span>
-                        </button>
-                      )}
+                      <div id="tour-export-actions" className="space-y-1.5">
+                        {onOpenFactsheet && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsToolsMenuOpen(false);
+                              onOpenFactsheet();
+                            }}
+                            className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500" />
+                              <span>Factsheet Portofolio</span>
+                            </div>
+                            <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                              A4 / PNG
+                            </span>
+                          </button>
+                        )}
 
-                      {onOpenOrderSlip && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsToolsMenuOpen(false);
-                            onOpenOrderSlip();
-                          }}
-                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-sky-500" />
-                            <span>Slip Order Broker</span>
-                          </div>
-                          <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
-                            Multi-App
-                          </span>
-                        </button>
-                      )}
+                        {onOpenOrderSlip && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsToolsMenuOpen(false);
+                              onOpenOrderSlip();
+                            }}
+                            className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                              <span>Slip Order Broker</span>
+                            </div>
+                            <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
+                              Multi-App
+                            </span>
+                          </button>
+                        )}
+                      </div>
 
                       {/* Export / Import Backup */}
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -688,17 +693,17 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                 </button>
 
-                {/* Walkthrough Tour */}
+                {/* Interactive Spotlight Tour Mobile */}
                 <button
                   type="button"
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    onOpenWalkthrough();
+                    onStartInteractiveTour();
                   }}
                   className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
                 >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  <span>Panduan Fitur</span>
+                  <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Panduan Interaktif</span>
                 </button>
 
                 {/* Factsheet Report Mobile */}

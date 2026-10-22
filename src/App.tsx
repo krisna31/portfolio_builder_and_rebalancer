@@ -25,7 +25,6 @@ import { Header, SavedPortfolioSnapshot } from './components/Header';
 import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView';
 import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
 import { WealthRoadmapView } from './components/roadmap/WealthRoadmapView';
-import { WalkthroughModal } from './components/onboarding/WalkthroughModal';
 import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfolioRecommenderModal';
 import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetModal';
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
@@ -34,7 +33,7 @@ import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 
 const STORAGE_KEY = 'quantporto_state_v2';
 const SAVED_PORTFOLIOS_KEY = 'quantporto_saved_portfolios_v1';
-const WALKTHROUGH_SEEN_KEY = 'quantporto_walkthrough_seen_v1';
+const TOUR_SEEN_KEY = 'quantporto_tour_seen_v2';
 
 const DEFAULT_SLOT_MAP: Record<string, string> = {
   RDPU: 'RDPU',
@@ -197,24 +196,21 @@ export function App() {
     RebalanceHistoryEntry[]
   >([]);
 
-  // First-Load Walkthrough Tour & Smart Portfolio Recommender Modal states
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(WALKTHROUGH_SEEN_KEY) !== 'true';
-    } catch {
-      return false;
-    }
-  });
+  // Modals state
   const [isRecommenderOpen, setIsRecommenderOpen] = useState<boolean>(false);
   const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
   const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
 
+  const handleStartTour = () => {
+    startInteractiveTour({ onTabSwitch: setActiveTab });
+  };
+
   const handleConfirmResetAll = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(SAVED_PORTFOLIOS_KEY);
-      localStorage.removeItem(WALKTHROUGH_SEEN_KEY);
+      localStorage.removeItem(TOUR_SEEN_KEY);
       localStorage.removeItem('quantporto_dca_3m_default_v1');
       localStorage.removeItem('quantporto_usd_18k_default_v1');
       localStorage.removeItem('color-scheme');
@@ -227,14 +223,43 @@ export function App() {
     window.location.reload();
   };
 
-  const handleCloseWalkthrough = () => {
-    setIsWalkthroughOpen(false);
+  // Auto-launch interactive tour on first load (if not yet seen)
+  useEffect(() => {
     try {
-      localStorage.setItem(WALKTHROUGH_SEEN_KEY, 'true');
+      const tourSeen = localStorage.getItem(TOUR_SEEN_KEY) === 'true';
+      if (!tourSeen) {
+        const timer = setTimeout(() => {
+          handleStartTour();
+        }, 800);
+        return () => clearTimeout(timer);
+      }
     } catch {
       // Ignore storage errors
     }
-  };
+  }, []);
+
+  // Global Keyboard Shortcut: Press '?' anywhere to immediately trigger the interactive guide
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        handleStartTour();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Restore state from URL Hash (if shared link) or LocalStorage on first mount
   useEffect(() => {
@@ -1248,9 +1273,7 @@ export function App() {
         onLoadSavedPortfolio={handleLoadSavedPortfolio}
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
         onOpenRecommender={() => setIsRecommenderOpen(true)}
-        onOpenWalkthrough={() =>
-          startInteractiveTour({ onTabSwitch: setActiveTab })
-        }
+        onStartInteractiveTour={handleStartTour}
         onOpenFactsheet={() => setIsFactsheetOpen(true)}
         onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
         onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
@@ -1419,20 +1442,6 @@ export function App() {
           }
         />
       )}
-
-      {/* First-Load Interactive Walkthrough Tour Modal */}
-      <WalkthroughModal
-        isOpen={isWalkthroughOpen}
-        onClose={handleCloseWalkthrough}
-        onOpenRecommender={() => {
-          handleCloseWalkthrough();
-          setIsRecommenderOpen(true);
-        }}
-        onStartSpotlightTour={() => {
-          handleCloseWalkthrough();
-          startInteractiveTour({ onTabSwitch: setActiveTab });
-        }}
-      />
 
       {/* Interactive Multiple-Choice Smart Portfolio Diagnostic & Recommender Modal */}
       <SmartPortfolioRecommenderModal

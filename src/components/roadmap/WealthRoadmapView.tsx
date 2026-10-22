@@ -254,7 +254,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <section id="tour-roadmap-calculator" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 5 Cols: Wealth Simulator Parameters */}
         <div className="ui-card space-y-4 rounded-xl p-5 lg:col-span-5">
           <div className="ui-border flex items-center gap-2 border-b pb-3">
@@ -773,7 +773,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* KALKULATOR TARGET KEBEBASAN FINANSIAL & BIAYA HIDUP PENSIUN (4% SWR VS DIVIDEN MURNI) */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="tour-dividend-retirement" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -1188,7 +1188,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* 5-YEAR HISTORICAL BACKTEST: REBALANCING FREQUENCY SIMULATOR (16:08) */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="tour-backtest-frequency" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">

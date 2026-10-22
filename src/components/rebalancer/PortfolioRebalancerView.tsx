@@ -512,7 +512,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         </div>
 
         {/* Market Crash / Bull Run Stress-Test Bar */}
-        <div className="ui-subtle mt-4 rounded-lg p-3.5">
+        <div id="tour-stress-scenarios" className="ui-subtle mt-4 rounded-lg p-3.5">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5 text-amber-500" />
@@ -768,7 +768,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-1.5">
               {/* Unified Broker Slip & Quick Copy Button Group */}
               {onOpenOrderSlip ? (
                 <div className="inline-flex rounded-md shadow-xs">
@@ -963,6 +963,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
           {rebalanceViewMode === 'table' ? (
             <div
+              id="tour-rebalance-table"
               tabIndex={0}
               role="region"
               aria-labelledby="rebalancer-table-caption"
@@ -1654,7 +1655,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       </section>
 
       {/* PRE-PLANNED LIMIT ORDER & CRASH BUYING LADDER (-10%, -20%, -35%, -50%) */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="tour-crash-ladder" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -1765,7 +1766,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       </section>
 
       {/* REBALANCING HISTORY JOURNAL & NET WORTH TRACKER */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="tour-rebalance-journal" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
