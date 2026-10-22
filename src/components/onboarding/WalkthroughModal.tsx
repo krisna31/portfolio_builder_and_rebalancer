@@ -16,6 +16,7 @@ interface WalkthroughModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenRecommender: () => void;
+  onStartSpotlightTour?: () => void;
 }
 
 interface WalkthroughStep {
@@ -117,6 +118,7 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
   isOpen,
   onClose,
   onOpenRecommender,
+  onStartSpotlightTour,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -253,17 +255,34 @@ export const WalkthroughModal: React.FC<WalkthroughModalProps> = ({
 
         {/* Footer Actions */}
         <div className="ui-border mt-5 flex flex-col gap-2.5 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              dialogRef.current?.close();
-              onOpenRecommender();
-            }}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
-          >
-            <Compass className="h-3.5 w-3.5" />
-            <span>Bantu Pilihkan Portfolio Saya (Kuis 30 Detik)</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                dialogRef.current?.close();
+                onOpenRecommender();
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+            >
+              <Compass className="h-3.5 w-3.5" />
+              <span>Bantu Pilihkan (Kuis)</span>
+            </button>
+
+            {onStartSpotlightTour && (
+              <button
+                type="button"
+                onClick={() => {
+                  dialogRef.current?.close();
+                  onStartSpotlightTour();
+                }}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-500/20 dark:text-purple-300"
+                title="Mulai tur interaktif dengan bayangan hitam dan spotlight fokus"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Tur Spotlight (Driver.js)</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center justify-end gap-2">
             {stepIndex > 0 && (

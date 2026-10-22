@@ -17,9 +17,11 @@ import {
   HelpCircle,
   SlidersHorizontal,
   ArrowRight,
+  ChevronDown,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
+import { formatIdr } from '../lib/formatters';
 
 export interface SavedPortfolioSnapshot {
   id: string;
@@ -83,8 +85,26 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
   const [newSaveName, setNewSaveName] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+
+  // Close tools dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        toolsMenuRef.current &&
+        !toolsMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsToolsMenuOpen(false);
+      }
+    };
+    if (isToolsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isToolsMenuOpen]);
 
   // Track currently rendered scheme ('light' | 'dark') for the icon display
   const [renderedScheme, setRenderedScheme] = useState<'light' | 'dark'>(() => {
@@ -219,6 +239,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Desktop Primary Navigation Tabs (Hidden on mobile because mobile uses thumb-friendly Bottom Bar) */}
             <nav
+              id="tour-nav-tabs"
               aria-label="Main Navigation"
               className="ui-subtle hidden items-center gap-1 rounded-lg p-1 lg:flex"
             >
@@ -260,10 +281,11 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </nav>
 
-            {/* Right Action Bar: Compact on Mobile, Full on Desktop */}
+            {/* Right Action Bar: Clean Partitioned Hierarchy */}
             <div className="flex items-center gap-1.5">
               {/* Primary CTA: Tanya Quant */}
               <button
+                id="tour-tanya-quant"
                 type="button"
                 onClick={onOpenRecommender}
                 title="Jawab 4 pertanyaan singkat untuk mengestimasi pilihan portfolio terbaik Anda"
@@ -273,83 +295,181 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Tanya Quant</span>
               </button>
 
-              {/* Desktop-only Secondary Controls */}
-              <div className="hidden items-center gap-1.5 lg:flex">
-                <button
-                  type="button"
-                  onClick={onOpenWalkthrough}
-                  title="Buka panduan fitur interaktif QuantPorto"
-                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-                >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  <span>Panduan</span>
-                </button>
+              {/* Interactive Spotlight Tour Trigger */}
+              <button
+                id="tour-guide-btn"
+                type="button"
+                onClick={onOpenWalkthrough}
+                title="Mulai tur panduan interaktif QuantPorto (Spotlight & Penjelasan)"
+                className="ui-subtle ui-text-main hidden items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition hover:border-emerald-500/50 sm:flex"
+              >
+                <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Panduan</span>
+              </button>
 
+              {/* Desktop-only Unified Tools & Settings Dropdown */}
+              <div ref={toolsMenuRef} className="relative hidden lg:block">
                 <button
+                  id="tour-tools-menu"
                   type="button"
-                  onClick={() => setRdptPromoActive(!rdptPromoActive)}
-                  title="Di menit 05:04, Leon membahas mencari Alpha RDPT dengan promo bonus +3% (9-10% p.a. vs 6-7% p.a.)."
-                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition ${
-                    rdptPromoActive
+                  onClick={() => setIsToolsMenuOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                    isToolsMenuOpen || rdptPromoActive
                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                      : 'ui-subtle ui-text-secondary'
+                      : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
+                  title="Menu Kurs USD, Promo RDPT, Sinkronisasi Harga, Simpan, dan Bagikan"
                 >
-                  <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                  <span>RDPT +3%</span>
-                </button>
-
-                <div className="ui-subtle flex items-center gap-1 rounded-md px-2 py-1 text-xs">
-                  <span className="ui-text-muted">USD:</span>
-                  <FormattedNumberInput
-                    step={100}
-                    min={1000}
-                    value={usdIdrRate}
-                    onChange={(val) => setUsdIdrRate(val)}
-                    className="ui-text-main w-14 bg-transparent font-mono font-semibold focus:outline-none"
-                    ariaLabel="USD to IDR Exchange Rate"
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Alat &amp; Pengaturan</span>
+                  <span className="font-mono text-[10px] ui-text-muted">
+                    (${Math.round(usdIdrRate / 1000)}k)
+                  </span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${
+                      isToolsMenuOpen ? 'rotate-180' : ''
+                    }`}
                   />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={onRefreshLivePrices}
-                  disabled={isFetchingPrices}
-                  title={`Sumber Harga: ${priceSourceText}${lastUpdatedText ? ` (${lastUpdatedText})` : ''}`}
-                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80 disabled:opacity-50"
-                >
-                  <RefreshCw
-                    className={`h-3 w-3 ${isFetchingPrices ? 'animate-spin' : ''}`}
-                  />
-                  <span>Sync</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => dialogRef.current?.showModal()}
-                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-                >
-                  <BookmarkCheck className="h-3.5 w-3.5" />
-                  <span>Saved ({savedPortfolios.length})</span>
-                </button>
+                {isToolsMenuOpen && (
+                  <div className="ui-card absolute right-0 z-50 mt-1.5 w-72 space-y-2.5 rounded-xl p-3 text-xs shadow-xl">
+                    <div className="ui-border flex items-center justify-between border-b pb-2">
+                      <span className="ui-text-main font-bold">
+                        Alat &amp; Pengaturan
+                      </span>
+                      <span className="ui-text-muted font-mono text-[10px]">
+                        QuantPorto
+                      </span>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={onCopyShareUrl}
-                  className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:opacity-80"
-                >
-                  {shareCopied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="h-3.5 w-3.5" />
-                      <span>Share</span>
-                    </>
-                  )}
-                </button>
+                    {/* Kurs USD Inline */}
+                    <div className="ui-subtle flex items-center justify-between rounded-lg p-2">
+                      <span className="ui-text-secondary font-medium">
+                        Asumsi Kurs USD:
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="ui-text-muted font-mono text-[11px]">
+                          Rp
+                        </span>
+                        <FormattedNumberInput
+                          step={100}
+                          min={1000}
+                          value={usdIdrRate}
+                          onChange={(val) => setUsdIdrRate(val)}
+                          className="ui-text-main w-20 bg-transparent text-right font-mono font-bold focus:outline-none"
+                          ariaLabel="USD to IDR Exchange Rate"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Promo RDPT +3% */}
+                    <button
+                      type="button"
+                      onClick={() => setRdptPromoActive(!rdptPromoActive)}
+                      className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                        rdptPromoActive
+                          ? 'border border-emerald-500/40 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300'
+                          : 'ui-subtle ui-text-secondary hover:opacity-80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Promo RDPT (+3% Alpha)</span>
+                      </div>
+                      <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
+                        {rdptPromoActive ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+
+                    {/* Live Market Price Sync */}
+                    <button
+                      type="button"
+                      onClick={onRefreshLivePrices}
+                      disabled={isFetchingPrices}
+                      className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${
+                            isFetchingPrices
+                              ? 'animate-spin text-emerald-600'
+                              : ''
+                          }`}
+                        />
+                        <span>Sync Harga Pasar Live</span>
+                      </div>
+                      <span className="ui-text-muted text-[10px]">
+                        {isFetchingPrices
+                          ? 'Fetching...'
+                          : lastUpdatedText || '5Y Baseline'}
+                      </span>
+                    </button>
+
+                    <div className="ui-border space-y-1.5 border-t pt-2">
+                      {/* Saved Portfolios */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsToolsMenuOpen(false);
+                          dialogRef.current?.showModal();
+                        }}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Portofolio Tersimpan</span>
+                        </div>
+                        <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold">
+                          {savedPortfolios.length}
+                        </span>
+                      </button>
+
+                      {/* Share Link */}
+                      <button
+                        type="button"
+                        onClick={onCopyShareUrl}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {shareCopied ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Share2 className="h-3.5 w-3.5" />
+                          )}
+                          <span>
+                            {shareCopied
+                              ? 'Tautan Tersalin ke Clipboard!'
+                              : 'Bagikan Link Portofolio'}
+                          </span>
+                        </div>
+                        <span className="ui-text-muted font-mono text-[10px]">
+                          #porto
+                        </span>
+                      </button>
+
+                      {/* Export / Import Backup */}
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={onExportJson}
+                          className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                        >
+                          <Download className="h-3 w-3" />
+                          <span>Export Backup</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                        >
+                          <Upload className="h-3 w-3" />
+                          <span>Import Backup</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Light / Dark Theme Toggle (Always accessible) */}

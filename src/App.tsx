@@ -20,6 +20,7 @@ import {
 } from './lib/quant/riskParitySolver';
 import { calculateRebalancePlan } from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
+import { startInteractiveTour } from './services/tourGuide';
 import { Header, SavedPortfolioSnapshot } from './components/Header';
 import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView';
 import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
@@ -103,6 +104,17 @@ export function App() {
   const [activePresetId, setActivePresetId] = useState<string | null>(
     defaultPreset.id
   );
+
+  // User-Pinned Preset IDs in the main comparison table (pinned to top)
+  const [pinnedPresetIds, setPinnedPresetIds] = useState<string[]>(['opt-4-rb-btc-90']);
+
+  const handleTogglePinPreset = (presetId: string) => {
+    setPinnedPresetIds((prev) =>
+      prev.includes(presetId)
+        ? prev.filter((id) => id !== presetId)
+        : [presetId, ...prev]
+    );
+  };
   const [allocationMethod, setAllocationMethod] =
     useState<AllocationMethod>('preset');
   const [convictionAssetId, setConvictionAssetId] = useState<string>('BTC');
@@ -308,6 +320,8 @@ export function App() {
         }
         if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
         if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
+        if (Array.isArray(saved.pinnedPresetIds))
+          setPinnedPresetIds(saved.pinnedPresetIds);
 
         // Restore custom tickers and modified CAGR/MaxDD return assumptions
         if (Array.isArray(saved.allAssets) && saved.allAssets.length > 0) {
@@ -356,6 +370,7 @@ export function App() {
           enableIdxLotRounding,
           enableBrokerFees,
           allAssets,
+          pinnedPresetIds,
         })
       );
     } catch {
@@ -1190,7 +1205,9 @@ export function App() {
         onLoadSavedPortfolio={handleLoadSavedPortfolio}
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
         onOpenRecommender={() => setIsRecommenderOpen(true)}
-        onOpenWalkthrough={() => setIsWalkthroughOpen(true)}
+        onOpenWalkthrough={() =>
+          startInteractiveTour({ onTabSwitch: setActiveTab })
+        }
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name
@@ -1245,6 +1262,8 @@ export function App() {
             hasCustomAssetAssumptions={hasCustomAssetAssumptions}
             onUpdateAssetAssumption={handleUpdateAssetAssumption}
             onResetAssetAssumptions={handleResetAssetAssumptions}
+            pinnedPresetIds={pinnedPresetIds}
+            onTogglePinPreset={handleTogglePinPreset}
           />
         )}
 
@@ -1315,6 +1334,10 @@ export function App() {
         onOpenRecommender={() => {
           handleCloseWalkthrough();
           setIsRecommenderOpen(true);
+        }}
+        onStartSpotlightTour={() => {
+          handleCloseWalkthrough();
+          startInteractiveTour({ onTabSwitch: setActiveTab });
         }}
       />
 

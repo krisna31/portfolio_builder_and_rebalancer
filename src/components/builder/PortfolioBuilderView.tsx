@@ -95,6 +95,8 @@ interface PortfolioBuilderViewProps {
     patch: { cagr?: number; maxDrawdown?: number }
   ) => void;
   onResetAssetAssumptions: () => void;
+  pinnedPresetIds?: string[];
+  onTogglePinPreset?: (presetId: string) => void;
 }
 
 export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
@@ -136,6 +138,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   hasCustomAssetAssumptions,
   onUpdateAssetAssumption,
   onResetAssetAssumptions,
+  pinnedPresetIds = [],
+  onTogglePinPreset,
 }) => {
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
@@ -202,6 +206,12 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
   const sortedCombinedRows = React.useMemo(() => {
     return [...combinedRows].sort((a, b) => {
+      // 1. PIN CHECK: Pinned rows bubble to the very top of the table
+      const aPinned = pinnedPresetIds.includes(a.id);
+      const bPinned = pinnedPresetIds.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
       if (tableSortKey === 'rank') {
         if (a.isCustomRow && !b.isCustomRow) return -1;
         if (!a.isCustomRow && b.isCustomRow) return 1;
@@ -224,7 +234,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       }
       return 0;
     });
-  }, [combinedRows, tableSortKey, tableSortOrder]);
+  }, [combinedRows, tableSortKey, tableSortOrder, pinnedPresetIds]);
 
   const handleToggleTableSort = (key: 'rank' | 'cagr' | 'maxDrawdown' | 'calmar') => {
     if (tableSortKey === key) {
@@ -1026,7 +1036,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          <div className="ui-subtle mt-3 rounded-lg p-2.5">
+          <div id="tour-quick-dca" className="ui-subtle mt-3 rounded-lg p-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="ui-text-secondary font-medium">
                 Custom DCA Bulanan (Rp):
@@ -1078,7 +1088,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       </section>
 
       {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA -> PTBA & PINNED CUSTOM ROWS) */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="tour-table-section" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1341,19 +1351,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             tabIndex={0}
             role="region"
             aria-labelledby="optimal-portfolios-caption"
-            className="ui-border mt-4 max-h-[520px] overflow-auto rounded-lg border"
+            className="ui-border mt-4 max-h-[580px] overflow-auto rounded-lg border"
           >
             <table className="w-full border-separate border-spacing-0 text-left text-xs">
               <caption id="optimal-portfolios-caption" className="sr-only">
                 Daftar 15 Portfolio Optimal dan Custom Rows berdasarkan CAGR, Maximum
                 Drawdown, dan Bobot Instrumen
               </caption>
-              <thead className="ui-subtle sticky top-0 z-20 text-[11px] font-semibold uppercase">
+              <thead className="ui-card ui-border sticky top-0 z-20 text-[11px] font-semibold uppercase shadow-xs">
                 <tr>
                   <th
                     rowSpan={2}
                     onClick={() => handleToggleTableSort('rank')}
-                    className="ui-subtle ui-border sticky left-0 z-30 min-w-[145px] max-w-[180px] cursor-pointer select-none border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] hover:text-emerald-600 sm:max-w-xs sm:px-3"
+                    className="ui-card ui-border sticky left-0 z-30 min-w-[160px] max-w-[200px] cursor-pointer select-none border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] hover:text-emerald-600 sm:max-w-xs sm:px-3"
                     title="Klik untuk sortir berdasarkan Rank / Default"
                   >
                     <div className="flex items-center justify-between">
@@ -1418,7 +1428,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       <th
                         key={slotId}
                         className={`ui-border border-b border-r px-1.5 py-1 text-right font-mono text-[11px] ${
-                          isSwapped ? 'bg-emerald-500/15' : 'ui-subtle'
+                          isSwapped ? 'bg-emerald-500/15' : 'ui-card'
                         }`}
                       >
                         <select
@@ -1459,7 +1469,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     return (
                       <th
                         key={extraId}
-                        className="ui-subtle ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
+                        className="ui-card ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
                       >
                         <div>{extraId}</div>
                         {extraAsset && (
@@ -1473,8 +1483,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {sortedCombinedRows.map((preset) => {
+                {sortedCombinedRows.map((preset, index) => {
                   const isSelected = activePresetId === preset.id;
+                  const isPinned = pinnedPresetIds.includes(preset.id);
                   const badge = getRiskTierBadge(preset.riskTier);
                   return (
                     <tr
@@ -1483,19 +1494,48 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       className={`cursor-pointer transition ${
                         isSelected
                           ? 'bg-emerald-500/10'
-                          : preset.isCustomRow
-                            ? 'bg-sky-500/5 hover:bg-sky-500/10'
-                            : !preset.isOptimal15
-                              ? 'opacity-60 hover:opacity-100'
-                              : 'hover:bg-zinc-500/5'
+                          : isPinned
+                            ? 'bg-amber-500/[0.06] hover:bg-amber-500/[0.10]'
+                            : preset.isCustomRow
+                              ? 'bg-sky-500/5 hover:bg-sky-500/10'
+                              : !preset.isOptimal15
+                                ? 'opacity-60 hover:opacity-100'
+                                : 'hover:bg-zinc-500/5'
                       }`}
                     >
                       <th
                         scope="row"
-                        className="ui-card ui-border sticky left-0 z-10 min-w-[145px] max-w-[180px] border-b border-r px-2.5 py-2 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] sm:max-w-xs sm:px-3"
+                        className="ui-card ui-border sticky left-0 z-10 min-w-[160px] max-w-[200px] border-b border-r px-2.5 py-2 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] sm:max-w-xs sm:px-3"
                       >
                         <div className="flex items-center justify-between gap-1.5">
                           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                            {onTogglePinPreset && (
+                              <button
+                                type="button"
+                                id={index === 0 ? 'tour-table-pin' : undefined}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTogglePinPreset(preset.id);
+                                }}
+                                title={
+                                  isPinned
+                                    ? 'Lepas sematan (unpin) baris ini dari paling atas'
+                                    : 'Sematkan (Pin) baris ini ke baris paling atas tabel'
+                                }
+                                className={`shrink-0 rounded p-1 transition ${
+                                  isPinned
+                                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                                    : 'ui-text-muted hover:bg-zinc-500/10 hover:ui-text-main'
+                                }`}
+                              >
+                                <Pin
+                                  className={`h-3.5 w-3.5 ${
+                                    isPinned ? 'fill-current rotate-45' : ''
+                                  }`}
+                                />
+                              </button>
+                            )}
+
                             {preset.isCustomRow ? (
                               <span className="shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
                                 CUSTOM
@@ -1507,9 +1547,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 </span>
                               )
                             )}
+
                             <div className="min-w-0">
-                              <div className="ui-text-main truncate text-xs font-semibold sm:whitespace-normal">
-                                {preset.name}
+                              <div className="flex items-center gap-1">
+                                <span className="ui-text-main truncate text-xs font-semibold sm:whitespace-normal">
+                                  {preset.name}
+                                </span>
+                                {isPinned && (
+                                  <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.2 font-mono text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                                    📌 Pin
+                                  </span>
+                                )}
                               </div>
                               {preset.videoNote && (
                                 <div className="ui-text-muted mt-0.5 hidden line-clamp-1 max-w-xs text-[10px] font-normal sm:block">
@@ -1606,6 +1654,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               const nonZeroWeights = Object.entries(preset.weights)
                 .filter(([, w]) => w > 0)
                 .sort((a, b) => b[1] - a[1]);
+              const isPinned = pinnedPresetIds.includes(preset.id);
 
               return (
                 <div
@@ -1614,12 +1663,39 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   className={`flex cursor-pointer flex-col justify-between rounded-xl border p-3.5 transition ${
                     isSelected
                       ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
-                      : 'ui-subtle ui-border hover:border-emerald-500/40'
+                      : isPinned
+                        ? 'border-amber-500/50 bg-amber-500/[0.05] hover:border-amber-500/80'
+                        : 'ui-subtle ui-border hover:border-emerald-500/40'
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-1.5">
+                        {onTogglePinPreset && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTogglePinPreset(preset.id);
+                            }}
+                            title={
+                              isPinned
+                                ? 'Lepas sematan (unpin) kartu ini'
+                                : 'Sematkan (Pin) kartu ini ke paling atas'
+                            }
+                            className={`shrink-0 rounded p-1 transition ${
+                              isPinned
+                                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                                : 'ui-text-muted hover:bg-zinc-500/10 hover:ui-text-main'
+                            }`}
+                          >
+                            <Pin
+                              className={`h-3.5 w-3.5 ${
+                                isPinned ? 'fill-current rotate-45' : ''
+                              }`}
+                            />
+                          </button>
+                        )}
                         {preset.isCustomRow ? (
                           <span className="rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[9px] font-bold text-white">
                             CUSTOM
@@ -1634,6 +1710,11 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         <h3 className="ui-text-main text-xs font-bold">
                           {preset.name}
                         </h3>
+                        {isPinned && (
+                          <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.2 font-mono text-[9px] font-bold text-amber-700 dark:text-amber-300">
+                            📌 Pin
+                          </span>
+                        )}
                       </div>
                       <span
                         className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${badge.bgClass} ${badge.textClass} ${badge.borderClass}`}

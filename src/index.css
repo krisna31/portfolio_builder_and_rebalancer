@@ -170,3 +170,87 @@ select option {
     background: var(--scrollbar-track);
   }
 }
+
+/* Custom Driver.js Spotlight & Popover Theme for QuantPorto */
+.driver-popover {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+  padding: 1.25rem !important;
+  max-width: 380px !important;
+  font-family: inherit !important;
+}
+
+.driver-popover-title {
+  color: var(--text-main) !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.driver-popover-description {
+  color: var(--text-secondary) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+.driver-popover-description strong {
+  color: var(--text-main) !important;
+}
+
+.driver-popover-progress-text {
+  color: var(--text-muted) !important;
+  font-size: 0.75rem !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+.driver-popover-next-btn {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  padding: 0.4rem 0.85rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.driver-popover-next-btn:hover {
+  opacity: 0.9 !important;
+}
+
+.driver-popover-prev-btn {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-close-btn {
+  color: var(--text-muted) !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: var(--text-main) !important;
+}
+
+.driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--bg-card) !important;
+}
+.driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--bg-card) !important;
+}
+.driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--bg-card) !important;
+}
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--bg-card) !important;
+}
+
