@@ -29,6 +29,7 @@ import {
   Copy,
   LayoutGrid,
   Table2,
+  Building2,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -80,6 +81,7 @@ interface PortfolioRebalancerViewProps {
     newTotalIdr: number,
     distributeBy: 'current' | 'target'
   ) => void;
+  onOpenOrderSlip?: () => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -115,6 +117,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onClearHoldingsForManualInput,
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
+  onOpenOrderSlip,
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(true);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
@@ -867,6 +870,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <Download className="h-3.5 w-3.5" />
                 <span>CSV</span>
               </button>
+
+              {onOpenOrderSlip && (
+                <button
+                  type="button"
+                  onClick={onOpenOrderSlip}
+                  className="flex items-center gap-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 text-xs font-semibold shadow-xs transition"
+                  title="Buka Slip Order Broker (Stockbit / Pluang / Reku / Makmur)"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Slip Order Broker</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1478,6 +1493,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {onOpenOrderSlip && (
+                <button
+                  type="button"
+                  onClick={onOpenOrderSlip}
+                  className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition"
+                  title="Buka slip instruksi order yang dikelompokkan berdasarkan aplikasi broker"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Buka Slip Order Broker</span>
+                </button>
+              )}
               <input
                 type="text"
                 value={rebalanceNoteInput}

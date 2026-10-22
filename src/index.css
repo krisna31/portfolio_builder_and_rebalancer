@@ -254,3 +254,51 @@ select option {
   border-bottom-color: var(--bg-card) !important;
 }
 
+/* =========================================================================
+   Print Styles for Institutional Portfolio Factsheet (A4 Export)
+   ========================================================================= */
+@media print {
+  /* Hide all elements by default */
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  /* Isolate and display only the printable factsheet sheet */
+  #quantporto-printable-factsheet,
+  #quantporto-printable-factsheet * {
+    visibility: visible !important;
+  }
+
+  #quantporto-printable-factsheet {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Force background colors and borders to print properly */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Optimize page breaks */
+  tr, .card, table {
+    page-break-inside: avoid;
+  }
+}
+
+

@@ -27,6 +27,8 @@ import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebala
 import { WealthRoadmapView } from './components/roadmap/WealthRoadmapView';
 import { WalkthroughModal } from './components/onboarding/WalkthroughModal';
 import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfolioRecommenderModal';
+import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetModal';
+import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 
 const STORAGE_KEY = 'quantporto_state_v2';
@@ -203,6 +205,8 @@ export function App() {
     }
   });
   const [isRecommenderOpen, setIsRecommenderOpen] = useState<boolean>(false);
+  const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
+  const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
 
   const handleCloseWalkthrough = () => {
     setIsWalkthroughOpen(false);
@@ -1208,6 +1212,8 @@ export function App() {
         onOpenWalkthrough={() =>
           startInteractiveTour({ onTabSwitch: setActiveTab })
         }
+        onOpenFactsheet={() => setIsFactsheetOpen(true)}
+        onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name
@@ -1264,6 +1270,7 @@ export function App() {
             onResetAssetAssumptions={handleResetAssetAssumptions}
             pinnedPresetIds={pinnedPresetIds}
             onTogglePinPreset={handleTogglePinPreset}
+            onOpenFactsheet={() => setIsFactsheetOpen(true)}
           />
         )}
 
@@ -1309,6 +1316,7 @@ export function App() {
             onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
+            onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
           />
         )}
 
@@ -1326,6 +1334,47 @@ export function App() {
           />
         )}
       </main>
+
+      {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
+      <PortfolioFactsheetModal
+        isOpen={isFactsheetOpen}
+        onClose={() => setIsFactsheetOpen(false)}
+        portfolioName={
+          exactPresetMatch
+            ? exactPresetMatch.name
+            : allocationMethod === 'risk-parity'
+              ? 'Custom Equal Risk Parity'
+              : allocationMethod === 'risk-budgeting'
+                ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                : 'Portfolio Custom Anda'
+        }
+        activeWeights={activeWeights}
+        allAssets={allAssets}
+        solvedMetrics={solvedMetrics}
+        initialCapitalIdr={initialCapitalIdr}
+        monthlySavingsIdr={monthlySavingsIdr}
+        targetGoalIdr={targetGoalIdr}
+        usdIdrRate={usdIdrRate}
+      />
+
+      {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
+      <BrokerOrderSlipModal
+        isOpen={isOrderSlipOpen}
+        onClose={() => setIsOrderSlipOpen(false)}
+        rebalanceResult={rebalanceResult}
+        allAssets={allAssets}
+        holdings={holdings}
+        usdIdrRate={usdIdrRate}
+        activePortfolioName={
+          exactPresetMatch
+            ? exactPresetMatch.name
+            : allocationMethod === 'risk-parity'
+              ? 'Custom Equal Risk Parity'
+              : allocationMethod === 'risk-budgeting'
+                ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                : 'Portfolio Custom Anda'
+        }
+      />
 
       {/* First-Load Interactive Walkthrough Tour Modal */}
       <WalkthroughModal

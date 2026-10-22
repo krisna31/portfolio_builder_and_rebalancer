@@ -18,6 +18,8 @@ import {
   SlidersHorizontal,
   ArrowRight,
   ChevronDown,
+  FileSpreadsheet,
+  Building2,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -53,6 +55,8 @@ interface HeaderProps {
   onDeleteSavedPortfolio: (id: string) => void;
   onOpenRecommender: () => void;
   onOpenWalkthrough: () => void;
+  onOpenFactsheet?: () => void;
+  onOpenOrderSlip?: () => void;
   activePortfolioName?: string;
   activeCagr?: number;
   activeMaxDrawdown?: number;
@@ -79,6 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
   onDeleteSavedPortfolio,
   onOpenRecommender,
   onOpenWalkthrough,
+  onOpenFactsheet,
+  onOpenOrderSlip,
   activePortfolioName = 'Portfolio Aktif',
   activeCagr = 0,
   activeMaxDrawdown = 0,
@@ -448,6 +454,45 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </button>
 
+                      {/* Institutional Factsheet & Broker Order Slips */}
+                      {onOpenFactsheet && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsToolsMenuOpen(false);
+                            onOpenFactsheet();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500" />
+                            <span>Factsheet Portofolio</span>
+                          </div>
+                          <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                            A4 / PNG
+                          </span>
+                        </button>
+                      )}
+
+                      {onOpenOrderSlip && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsToolsMenuOpen(false);
+                            onOpenOrderSlip();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                            <span>Slip Order Broker</span>
+                          </div>
+                          <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
+                            Multi-App
+                          </span>
+                        </button>
+                      )}
+
                       {/* Export / Import Backup */}
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
                         <button
@@ -611,6 +656,36 @@ export const Header: React.FC<HeaderProps> = ({
                   <HelpCircle className="h-3.5 w-3.5" />
                   <span>Panduan Fitur</span>
                 </button>
+
+                {/* Factsheet Report Mobile */}
+                {onOpenFactsheet && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenFactsheet();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    <span>Factsheet A4</span>
+                  </button>
+                )}
+
+                {/* Broker Order Slip Mobile */}
+                {onOpenOrderSlip && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenOrderSlip();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-sky-500 dark:text-sky-400"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span>Slip Broker</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

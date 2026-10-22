@@ -51,6 +51,7 @@ import {
   LayoutGrid,
   Table2,
   ArrowLeftRight,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -97,6 +98,7 @@ interface PortfolioBuilderViewProps {
   onResetAssetAssumptions: () => void;
   pinnedPresetIds?: string[];
   onTogglePinPreset?: (presetId: string) => void;
+  onOpenFactsheet?: () => void;
 }
 
 export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
@@ -140,6 +142,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   onResetAssetAssumptions,
   pinnedPresetIds = [],
   onTogglePinPreset,
+  onOpenFactsheet,
 }) => {
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
@@ -593,6 +596,18 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Compass className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Cari Portfolio Ideal Saya (Kuis Quant)</span>
                 </button>
+
+                {onOpenFactsheet && (
+                  <button
+                    type="button"
+                    onClick={onOpenFactsheet}
+                    className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-indigo-500/40 px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+                    title="Buka Factsheet 1-Halaman Siap Cetak A4 & Unduh PNG"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
+                    <span>Factsheet Portofolio (A4)</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
