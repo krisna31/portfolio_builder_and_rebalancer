@@ -70,6 +70,10 @@ interface PortfolioRebalancerViewProps {
   monthlySavingsMenu1Idr: number;
   activePortfolioName: string;
   isHoldingsSyncedWithMenu1: boolean;
+  enableIdxLotRounding?: boolean;
+  setEnableIdxLotRounding?: (val: boolean) => void;
+  enableBrokerFees?: boolean;
+  setEnableBrokerFees?: (val: boolean) => void;
   onClearHoldingsForManualInput: () => void;
   onSetupInitialBuyFromMenu1: () => void;
   onScaleTotalHoldingsIdr: (
@@ -104,6 +108,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   monthlySavingsMenu1Idr,
   activePortfolioName,
   isHoldingsSyncedWithMenu1,
+  enableIdxLotRounding = true,
+  setEnableIdxLotRounding,
+  enableBrokerFees = false,
+  setEnableBrokerFees,
   onClearHoldingsForManualInput,
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
@@ -111,7 +119,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const [showShockSliders, setShowShockSliders] = useState(true);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
-  const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>('table');
+  const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'cards';
+    }
+    return 'table';
+  });
   const [slipCopied, setSlipCopied] = useState(false);
   const [holdingEntryMode, setHoldingEntryMode] = useState<
     'nominal' | 'units' | 'percent'
@@ -190,6 +203,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       'Trade Amount (USD)',
       'Trade Units',
       'Trade IDX Lots',
+      'Trade Lots Integer',
+      'Lot Remainder (IDR)',
+      'Estimated Fee (IDR)',
     ];
     const rows = rebalanceResult.items.map((i) => [
       i.symbol,
@@ -204,6 +220,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       i.tradeAmountUsd,
       i.tradeUnits,
       i.tradeLots ?? '',
+      i.tradeLotsInteger ?? '',
+      i.tradeLotsRemainderIdr ?? 0,
+      i.estimatedFeeIdr ?? 0,
     ]);
     const csvContent =
       'data:text/csv;charset=utf-8,' +
@@ -240,6 +259,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       if (asset?.currency === 'USD') {
         return `${formatUsd(Math.abs(item.tradeAmountUsd))} / ${Math.abs(item.tradeUnits)} unit`;
       }
+      if (item.tradeLotsInteger !== undefined) {
+        return `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`;
+      }
       if (item.tradeLots !== undefined) {
         return `≈ ${Math.abs(item.tradeLots)} Lot (${Math.abs(item.tradeUnits)} lbr)`;
       }
@@ -257,8 +279,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       `⚙️ Mode: ${
         rebalanceMode === 'sell-and-buy' ? 'Full Sell + Buy' : 'Buy-Only DCA'
       }`,
+      enableIdxLotRounding ? `📦 Pembulatan: Lot Bulat BEI (1 Lot = 100 lbr)` : '',
+      enableBrokerFees &&
+      rebalanceResult.totalEstimatedFeeIdr !== undefined &&
+      rebalanceResult.totalEstimatedFeeIdr > 0
+        ? `💸 Estimasi Fee Broker & Pajak: ≈ ${formatIdr(rebalanceResult.totalEstimatedFeeIdr)}`
+        : '',
+      rebalanceResult.unallocatedCashRemainderIdr && Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100
+        ? `🪙 Sisa Kas Pecahan Lot (ke RDPT/Kas): ${formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}`
+        : '',
       '',
-    ];
+    ].filter(Boolean);
 
     if (sells.length > 0) {
       lines.push(`🔴 *INSTRUKSI JUAL (TAKE PROFIT):*`);
@@ -839,6 +870,62 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
           </div>
 
+          {/* Practical Execution Settings: Lot Rounding & Broker Fee Toggles */}
+          <div className="ui-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="ui-text-muted font-medium">Pengaturan Eksekusi:</span>
+
+              {setEnableIdxLotRounding && (
+                <button
+                  type="button"
+                  onClick={() => setEnableIdxLotRounding(!enableIdxLotRounding)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
+                    enableIdxLotRounding
+                      ? 'bg-emerald-600 font-semibold text-white'
+                      : 'ui-card ui-text-secondary hover:opacity-80'
+                  }`}
+                  title="Bulatkan order saham Indonesia ke kelipatan 100 lembar (1 Lot BEI). Sisa receh otomatis dialihkan ke RDPT/RDPU."
+                >
+                  <span>📦 Bulatkan Lot BEI (1 Lot = 100 lbr)</span>
+                  <span className="rounded bg-black/20 px-1 text-[10px]">
+                    {enableIdxLotRounding ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              )}
+
+              {setEnableBrokerFees && (
+                <button
+                  type="button"
+                  onClick={() => setEnableBrokerFees(!enableBrokerFees)}
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
+                    enableBrokerFees
+                      ? 'bg-amber-600 font-semibold text-white'
+                      : 'ui-card ui-text-secondary hover:opacity-80'
+                  }`}
+                  title="Hitung estimasi fee broker & pajak final (IDX beli 0.15%, jual 0.25%, US 0.1%, Crypto 0.15%, Reksadana 0%)"
+                >
+                  <span>💸 Fee Broker &amp; Pajak</span>
+                  <span className="rounded bg-black/20 px-1 text-[10px]">
+                    {enableBrokerFees ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {rebalanceResult.unallocatedCashRemainderIdr &&
+            Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
+              <div className="flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
+                <span>Sisa Pecahan Lot:</span>
+                <strong className="font-bold">
+                  {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                </strong>
+                <span className="ui-text-muted font-sans text-[10px]">
+                  (dialihkan ke RDPT)
+                </span>
+              </div>
+            ) : null}
+          </div>
+
           {rebalanceViewMode === 'table' ? (
             <div
               tabIndex={0}
@@ -1084,10 +1171,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {asset?.currency === 'USD'
                                   ? `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
-                                  : item.tradeLots !== undefined
-                                    ? `≈ ${item.tradeLots} Lot (${item.tradeUnits} lbr)`
-                                    : `≈ ${item.tradeUnits} unit`}
+                                  : item.tradeLotsInteger !== undefined
+                                    ? `≈ ${item.tradeLotsInteger} Lot (${item.tradeLotsInteger * 100} lbr)`
+                                    : item.tradeLots !== undefined
+                                      ? `≈ ${item.tradeLots} Lot (${item.tradeUnits} lbr)`
+                                      : `≈ ${item.tradeUnits} unit`}
                               </div>
+                              {enableBrokerFees &&
+                                item.estimatedFeeIdr !== undefined &&
+                                item.estimatedFeeIdr > 0 && (
+                                  <div className="font-mono text-[9px] text-amber-600 dark:text-amber-400">
+                                    Fee: ≈ {formatIdr(item.estimatedFeeIdr)}
+                                  </div>
+                                )}
+                              {item.tradeLotsRemainderIdr !== undefined &&
+                                Math.abs(item.tradeLotsRemainderIdr) > 100 && (
+                                  <div className="ui-text-muted font-mono text-[9px]">
+                                    Sisa: {formatIdr(item.tradeLotsRemainderIdr)}
+                                  </div>
+                                )}
                             </div>
                           ) : item.action === 'SELL' ? (
                             <div className="inline-flex flex-col items-end rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1">
@@ -1100,10 +1202,20 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {asset?.currency === 'USD'
                                   ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
-                                  : item.tradeLots !== undefined
-                                    ? `≈ ${Math.abs(item.tradeLots)} Lot (${Math.abs(item.tradeUnits)} lbr)`
-                                    : `≈ ${Math.abs(item.tradeUnits)} unit`}
+                                  : item.tradeLotsInteger !== undefined
+                                    ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
+                                    : item.tradeLots !== undefined
+                                      ? `≈ ${Math.abs(item.tradeLots)} Lot (${Math.abs(item.tradeUnits)} lbr)`
+                                      : `≈ ${Math.abs(item.tradeUnits)} unit`}
                               </div>
+                              {enableBrokerFees &&
+                                item.estimatedFeeIdr !== undefined &&
+                                item.estimatedFeeIdr > 0 && (
+                                  <div className="font-mono text-[9px] text-amber-600 dark:text-amber-400">
+                                    Fee &amp; Pajak: ≈{' '}
+                                    {formatIdr(item.estimatedFeeIdr)}
+                                  </div>
+                                )}
                             </div>
                           ) : (
                             <span className="ui-subtle ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
@@ -1310,23 +1422,42 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
                     {item.action !== 'HOLD' && (
                       <div
-                        className={`mt-2.5 flex items-center justify-between rounded-lg px-2.5 py-1.5 font-mono text-xs ${
+                        className={`mt-2.5 flex flex-col gap-1 rounded-lg px-2.5 py-1.5 font-mono text-xs ${
                           item.action === 'BUY'
                             ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                             : 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
                         }`}
                       >
-                        <span className="font-bold">
-                          {item.action === 'BUY' ? 'Beli:' : 'Jual:'}{' '}
-                          {formatIdr(Math.abs(item.tradeAmountIdr))}
-                        </span>
-                        <span className="text-[10px]">
-                          {asset?.currency === 'USD'
-                            ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
-                            : item.tradeLots !== undefined
-                              ? `≈ ${Math.abs(item.tradeLots)} Lot`
-                              : `≈ ${Math.abs(item.tradeUnits)} unit`}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">
+                            {item.action === 'BUY' ? 'Beli:' : 'Jual:'}{' '}
+                            {formatIdr(Math.abs(item.tradeAmountIdr))}
+                          </span>
+                          <span className="text-[10px]">
+                            {asset?.currency === 'USD'
+                              ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
+                              : item.tradeLotsInteger !== undefined
+                                ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
+                                : item.tradeLots !== undefined
+                                  ? `≈ ${Math.abs(item.tradeLots)} Lot`
+                                  : `≈ ${Math.abs(item.tradeUnits)} unit`}
+                          </span>
+                        </div>
+                        {enableBrokerFees &&
+                          item.estimatedFeeIdr !== undefined &&
+                          item.estimatedFeeIdr > 0 && (
+                            <div className="flex justify-between text-[10px] text-amber-600 dark:text-amber-400">
+                              <span>Fee &amp; Pajak:</span>
+                              <span>≈ {formatIdr(item.estimatedFeeIdr)}</span>
+                            </div>
+                          )}
+                        {item.tradeLotsRemainderIdr !== undefined &&
+                          Math.abs(item.tradeLotsRemainderIdr) > 100 && (
+                            <div className="ui-text-muted flex justify-between text-[10px]">
+                              <span>Sisa kas pecahan:</span>
+                              <span>{formatIdr(item.tradeLotsRemainderIdr)}</span>
+                            </div>
+                          )}
                       </div>
                     )}
                   </div>
@@ -1446,6 +1577,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   {formatIdr(rebalanceResult.totalBuyIdr)}
                 </span>
               </div>
+              {enableBrokerFees &&
+                rebalanceResult.totalEstimatedFeeIdr !== undefined &&
+                rebalanceResult.totalEstimatedFeeIdr > 0 && (
+                  <div className="ui-border flex justify-between border-b pb-2 text-amber-600 dark:text-amber-400">
+                    <span>Estimasi Fee Broker &amp; Pajak:</span>
+                    <span className="font-mono font-semibold">
+                      ≈ {formatIdr(rebalanceResult.totalEstimatedFeeIdr)}
+                    </span>
+                  </div>
+                )}
+              {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
+                Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 && (
+                  <div className="ui-border flex justify-between border-b pb-2 text-emerald-600 dark:text-emerald-400">
+                    <span>Sisa Kas Pecahan Lot (ke RDPT):</span>
+                    <span className="font-mono font-semibold">
+                      {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                    </span>
+                  </div>
+                )}
               <div className="flex justify-between pt-1 text-sm font-bold">
                 <span className="ui-text-main">Nilai Akhir Portfolio:</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400">

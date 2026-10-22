@@ -114,11 +114,15 @@ export const Header: React.FC<HeaderProps> = ({
       if (meta) {
         meta.setAttribute('content', stored ?? 'light dark');
       }
-      if (stored === 'light' || stored === 'dark') {
-        setRenderedScheme(stored);
-      } else {
-        setRenderedScheme(mql.matches ? 'dark' : 'light');
-      }
+      const activeScheme =
+        stored === 'light' || stored === 'dark'
+          ? stored
+          : mql.matches
+            ? 'dark'
+            : 'light';
+      setRenderedScheme(activeScheme);
+      document.documentElement.classList.toggle('dark', activeScheme === 'dark');
+      document.documentElement.setAttribute('data-theme', activeScheme);
     };
 
     syncScheme();
@@ -151,6 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
       if (meta) meta.setAttribute('content', targetScheme);
     }
     setRenderedScheme(targetScheme);
+    document.documentElement.classList.toggle('dark', targetScheme === 'dark');
+    document.documentElement.setAttribute('data-theme', targetScheme);
   };
 
   // Mandatory modern-web-guidance fallback for <dialog closedby="any"> light-dismiss

@@ -140,7 +140,15 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
   const [customRowName, setCustomRowName] = useState('');
-  const [tableViewMode, setTableViewMode] = useState<'table' | 'cards'>('table');
+  const [tableViewMode, setTableViewMode] = useState<'table' | 'cards'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768
+      ? 'cards'
+      : 'table';
+  });
+  const [tableSortKey, setTableSortKey] = useState<
+    'rank' | 'cagr' | 'maxDrawdown' | 'calmar'
+  >('rank');
+  const [tableSortOrder, setTableSortOrder] = useState<'asc' | 'desc'>('asc');
   const [cellDisplayMode, setCellDisplayMode] = useState<
     'both' | 'percent' | 'nominal'
   >('both');
@@ -191,6 +199,41 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       return true;
     }),
   ];
+
+  const sortedCombinedRows = React.useMemo(() => {
+    return [...combinedRows].sort((a, b) => {
+      if (tableSortKey === 'rank') {
+        if (a.isCustomRow && !b.isCustomRow) return -1;
+        if (!a.isCustomRow && b.isCustomRow) return 1;
+        return tableSortOrder === 'asc'
+          ? (a.rank ?? 999) - (b.rank ?? 999)
+          : (b.rank ?? 999) - (a.rank ?? 999);
+      }
+      if (tableSortKey === 'cagr') {
+        return tableSortOrder === 'desc' ? b.cagr - a.cagr : a.cagr - b.cagr;
+      }
+      if (tableSortKey === 'maxDrawdown') {
+        return tableSortOrder === 'asc'
+          ? a.maxDrawdown - b.maxDrawdown
+          : b.maxDrawdown - a.maxDrawdown;
+      }
+      if (tableSortKey === 'calmar') {
+        const calA = a.cagr / Math.max(0.5, a.maxDrawdown);
+        const calB = b.cagr / Math.max(0.5, b.maxDrawdown);
+        return tableSortOrder === 'desc' ? calB - calA : calA - calB;
+      }
+      return 0;
+    });
+  }, [combinedRows, tableSortKey, tableSortOrder]);
+
+  const handleToggleTableSort = (key: 'rank' | 'cagr' | 'maxDrawdown' | 'calmar') => {
+    if (tableSortKey === key) {
+      setTableSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTableSortKey(key);
+      setTableSortOrder(key === 'cagr' || key === 'calmar' ? 'desc' : 'asc');
+    }
+  };
 
   // Simulate time to targetGoalIdr (default Rp 1 Miliar, selectable to Rp 10 Miliar) starting from initialCapitalIdr (default Rp 100 Juta)
   const sim3M = simulateWealthToGoal({
@@ -1170,6 +1213,57 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               ))}
             </div>
 
+            {/* Quick Sorting Selector */}
+            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5 text-xs">
+              <span className="ui-text-muted px-1.5 text-[10px] font-medium hidden sm:inline">
+                Sort:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleToggleTableSort('rank')}
+                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                  tableSortKey === 'rank'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Rank {tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleTableSort('cagr')}
+                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                  tableSortKey === 'cagr'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                CAGR {tableSortKey === 'cagr' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleTableSort('maxDrawdown')}
+                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                  tableSortKey === 'maxDrawdown'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Max DD {tableSortKey === 'maxDrawdown' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleTableSort('calmar')}
+                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                  tableSortKey === 'calmar'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Calmar {tableSortKey === 'calmar' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
+              </button>
+            </div>
+
             {/* Hybrid Table vs Mobile Card View Toggle */}
             <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
               <button
@@ -1258,9 +1352,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <tr>
                   <th
                     rowSpan={2}
-                    className="ui-subtle ui-border sticky left-0 z-30 min-w-[145px] max-w-[180px] border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] sm:max-w-xs sm:px-3"
+                    onClick={() => handleToggleTableSort('rank')}
+                    className="ui-subtle ui-border sticky left-0 z-30 min-w-[145px] max-w-[180px] cursor-pointer select-none border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] hover:text-emerald-600 sm:max-w-xs sm:px-3"
+                    title="Klik untuk sortir berdasarkan Rank / Default"
                   >
-                    Strategy ({combinedRows.length})
+                    <div className="flex items-center justify-between">
+                      <span>Strategy ({sortedCombinedRows.length})</span>
+                      <span className="font-mono text-[10px]">
+                        {tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </span>
+                    </div>
                   </th>
                   <th
                     rowSpan={2}
@@ -1270,15 +1371,29 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   </th>
                   <th
                     rowSpan={2}
-                    className="ui-border border-b border-r px-3 py-2 text-right"
+                    onClick={() => handleToggleTableSort('cagr')}
+                    className="ui-border cursor-pointer select-none border-b border-r px-3 py-2 text-right hover:text-emerald-600"
+                    title="Klik untuk sortir berdasarkan CAGR"
                   >
-                    CAGR
+                    <div className="flex items-center justify-end gap-1">
+                      <span>CAGR</span>
+                      <span className="font-mono text-[10px]">
+                        {tableSortKey === 'cagr' ? (tableSortOrder === 'desc' ? '▼' : '▲') : ''}
+                      </span>
+                    </div>
                   </th>
                   <th
                     rowSpan={2}
-                    className="ui-border border-b border-r px-3 py-2 text-right"
+                    onClick={() => handleToggleTableSort('maxDrawdown')}
+                    className="ui-border cursor-pointer select-none border-b border-r px-3 py-2 text-right hover:text-emerald-600"
+                    title="Klik untuk sortir berdasarkan Max Drawdown (Terendah / Paling Aman)"
                   >
-                    Max DD
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Max DD</span>
+                      <span className="font-mono text-[10px]">
+                        {tableSortKey === 'maxDrawdown' ? (tableSortOrder === 'asc' ? '▲' : '▼') : ''}
+                      </span>
+                    </div>
                   </th>
                   <th
                     colSpan={core8Slots.length + extraCustomAssetIds.length}
@@ -1358,7 +1473,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {combinedRows.map((preset) => {
+                {sortedCombinedRows.map((preset) => {
                   const isSelected = activePresetId === preset.id;
                   const badge = getRiskTierBadge(preset.riskTier);
                   return (
@@ -1485,7 +1600,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         ) : (
           /* Mode 2: Zero-Horizontal-Scroll Responsive Card View */
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {combinedRows.map((preset) => {
+            {sortedCombinedRows.map((preset) => {
               const isSelected = activePresetId === preset.id;
               const badge = getRiskTierBadge(preset.riskTier);
               const nonZeroWeights = Object.entries(preset.weights)

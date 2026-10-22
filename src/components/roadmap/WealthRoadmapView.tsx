@@ -24,7 +24,9 @@ import {
   Award,
   Coins,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react';
+import { FormattedNumberInput } from '../FormattedNumberInput';
 
 interface WealthRoadmapViewProps {
   allAssets: AssetDefinition[];
@@ -50,6 +52,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   setMonthlySavingsIdr,
 }) => {
   const [annualStepUpPct, setAnnualStepUpPct] = useState(0);
+  const [annualInflationPercent, setAnnualInflationPercent] = useState<number>(0);
+  const [monthlyLivingCostTargetIdr, setMonthlyLivingCostTargetIdr] = useState<number>(10_000_000);
 
   // Dividend Estimator State
   const [taxMode, setTaxMode] = useState<
@@ -149,6 +153,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     targetWealthIdr: targetGoalIdr,
     annualStepUpPercent: annualStepUpPct,
     maxYears: 30,
+    annualInflationPercent,
+    monthlyLivingCostTargetIdr,
+    netDividendYieldPercent: dividendBreakdown.weightedNetYieldPct,
   });
 
   const sim10Pct25Y = simulateWealthToGoal({
@@ -159,6 +166,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     targetWealthIdr: targetGoalIdr,
     annualStepUpPercent: annualStepUpPct,
     maxYears: 25,
+    annualInflationPercent,
+    monthlyLivingCostTargetIdr,
   });
   const sim15Pct25Y = simulateWealthToGoal({
     initialCapitalIdr,
@@ -168,6 +177,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     targetWealthIdr: targetGoalIdr,
     annualStepUpPercent: annualStepUpPct,
     maxYears: 25,
+    annualInflationPercent,
+    monthlyLivingCostTargetIdr,
   });
 
   const displayYears = Math.min(30, Math.max(12, sim.yearsToGoal + 4));
@@ -176,6 +187,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     ModalTabungan: Math.round(pt.totalPrincipalIdr / 1_000_000),
     NilaiPortfolio: Math.round(pt.totalValueIdr / 1_000_000),
     WorstCaseCrash: Math.round(pt.drawdownFloorIdr / 1_000_000),
+    DayaBeliRiil:
+      annualInflationPercent > 0
+        ? Math.round((pt.realPurchasingPowerIdr ?? pt.totalValueIdr) / 1_000_000)
+        : undefined,
   }));
 
   // 5-Year Historical Rebalancing Frequency Backtest (Monthly vs Quarterly vs Annual vs Buy & Hold)
@@ -337,6 +352,41 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Real Purchasing Power (Inflation Toggle) */}
+            <div>
+              <div className="flex justify-between text-xs">
+                <label className="ui-text-secondary font-medium">
+                  Penyesuaian Inflasi (Daya Beli Riil):
+                </label>
+                <span className="font-mono font-semibold text-purple-600 dark:text-purple-400">
+                  {annualInflationPercent > 0
+                    ? `${annualInflationPercent}% / thn`
+                    : '0% (Nominal)'}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1 text-[11px]">
+                {[
+                  { label: '0% Nominal', val: 0 },
+                  { label: '3.5% (BPS Historis)', val: 3.5 },
+                  { label: '4.0% (Standar BI)', val: 4.0 },
+                  { label: '5.0% (Konservatif)', val: 5.0 },
+                ].map((inf) => (
+                  <button
+                    key={inf.val}
+                    type="button"
+                    onClick={() => setAnnualInflationPercent(inf.val)}
+                    className={`rounded px-2 py-0.5 font-mono transition ${
+                      annualInflationPercent === inf.val
+                        ? 'bg-purple-600 font-semibold text-white'
+                        : 'ui-subtle ui-text-secondary hover:opacity-80'
+                    }`}
+                  >
+                    {inf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="ui-subtle rounded-lg p-4">
@@ -350,6 +400,27 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               {sim.yearsToGoal} Tahun{' '}
               {sim.monthsToGoal > 0 ? `${sim.monthsToGoal} Bulan` : ''}
             </div>
+
+            {annualInflationPercent > 0 && (
+              <div className="mt-2 rounded-lg bg-purple-500/10 p-2 text-xs">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-purple-700 dark:text-purple-300">
+                    Daya Beli Riil saat Rp {formatIdr(targetGoalIdr, true)} tercapai:
+                  </span>
+                  <span className="font-mono font-bold text-purple-700 dark:text-purple-300">
+                    ≈{' '}
+                    {formatIdr(
+                      sim.realPurchasingPowerAtGoalIdr ?? targetGoalIdr,
+                      true
+                    )}
+                  </span>
+                </div>
+                <div className="ui-text-muted mt-0.5 text-[10px]">
+                  Waktu capai target riil penuh: <strong>{sim.realYearsToGoalFloat} Tahun</strong> (efek inflasi {annualInflationPercent}%/thn)
+                </div>
+              </div>
+            )}
+
             <div className="ui-border mt-2 grid grid-cols-2 gap-2 border-t pt-2 text-xs">
               <div>
                 <span className="ui-text-muted">Total Modal Pokok:</span>
@@ -432,6 +503,17 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     fill="#10b981"
                     fillOpacity={0.2}
                   />
+                  {annualInflationPercent > 0 && (
+                    <Area
+                      type="monotone"
+                      dataKey="DayaBeliRiil"
+                      name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
+                      stroke="#8b5cf6"
+                      fill="#8b5cf6"
+                      strokeDasharray="4 4"
+                      fillOpacity={0.08}
+                    />
+                  )}
                   <Area
                     type="monotone"
                     dataKey="WorstCaseCrash"
@@ -486,6 +568,193 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </div>
               <div className="ui-text-muted mt-0.5 text-[11px]">
                 Max Drawdown -{solvedMetrics.maxDrawdown}%
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* KALKULATOR TARGET KEBEBASAN FINANSIAL & BIAYA HIDUP PENSIUN (4% SWR VS DIVIDEN MURNI) */}
+      <section className="ui-card rounded-xl p-5">
+        <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="ui-text-main text-sm font-bold">
+                Kalkulator Kebebasan Finansial (Financial Freedom &amp; Biaya Hidup Pensiun)
+              </h3>
+            </div>
+            <p className="ui-text-muted mt-0.5 text-xs">
+              Hitung kapan portofolio Anda mampu menutup seluruh biaya hidup tanpa harus bekerja aktif, baik lewat <strong>4% Safe Withdrawal Rate</strong> (Trinity Study) maupun <strong>100% Dividen Murni</strong>:
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="ui-text-secondary font-medium">Target Biaya Hidup:</span>
+            <div className="ui-card flex items-center gap-1 rounded-md border px-2 py-1">
+              <span className="ui-text-muted font-mono text-[11px]">Rp</span>
+              <FormattedNumberInput
+                step={1_000_000}
+                min={1_000_000}
+                value={monthlyLivingCostTargetIdr}
+                onChange={(val) => setMonthlyLivingCostTargetIdr(val)}
+                className="ui-text-main w-24 bg-transparent font-mono text-xs font-bold focus:outline-none"
+                ariaLabel="Monthly Living Cost Target in IDR"
+              />
+              <span className="ui-text-muted text-[10px]">/bln</span>
+            </div>
+            <div className="flex flex-wrap gap-1 text-[10px]">
+              {[5_000_000, 10_000_000, 15_000_000, 25_000_000, 50_000_000].map(
+                (costPreset) => (
+                  <button
+                    key={costPreset}
+                    type="button"
+                    onClick={() => setMonthlyLivingCostTargetIdr(costPreset)}
+                    className={`rounded px-1.5 py-0.5 font-mono ${
+                      monthlyLivingCostTargetIdr === costPreset
+                        ? 'bg-emerald-600 font-semibold text-white'
+                        : 'ui-subtle ui-text-secondary hover:opacity-80'
+                    }`}
+                  >
+                    {formatIdr(costPreset, true)}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Financial Freedom KPI Cards */}
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* SWR 4% Card */}
+          <div className="ui-subtle rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <span className="ui-text-muted text-xs font-semibold uppercase">
+                Metode 1: 4% Rule (Safe Withdrawal)
+              </span>
+              <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="ui-text-main mt-1 font-mono text-lg font-bold">
+              Target Pokok:{' '}
+              {formatIdr(
+                sim.requiredNestEggSWRIdr ?? monthlyLivingCostTargetIdr * 12 * 25,
+                true
+              )}
+            </div>
+            <p className="ui-text-muted mt-0.5 text-[11px]">
+              Tarik 4% per tahun (≈ {formatIdr(monthlyLivingCostTargetIdr, true)}/bln). Modal pokok tetap bertahan puluhan tahun menurut Trinity Study.
+            </p>
+            <div className="mt-3 rounded-lg bg-emerald-500/10 p-2.5">
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                Estimasi Waktu Tercapai:
+              </div>
+              <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-300">
+                {sim.monthsToFinancialFreedomSWR === 0
+                  ? 'Sudah Tercapai Sekarang! 🎉'
+                  : sim.monthsToFinancialFreedomSWR
+                    ? `${Math.floor(sim.monthsToFinancialFreedomSWR / 12)} Tahun ${
+                        sim.monthsToFinancialFreedomSWR % 12 > 0
+                          ? (sim.monthsToFinancialFreedomSWR % 12) + ' Bulan'
+                          : ''
+                      }`
+                    : '> 30 Tahun (Tingkatkan Tabungan Bulanan)'}
+              </div>
+            </div>
+          </div>
+
+          {/* 100% Pure Dividend Card */}
+          <div className="ui-subtle rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <span className="ui-text-muted text-xs font-semibold uppercase">
+                Metode 2: 100% Dividen Murni
+              </span>
+              <Coins className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="ui-text-main mt-1 font-mono text-lg font-bold">
+              Target Pokok:{' '}
+              {dividendBreakdown.weightedNetYieldPct > 0
+                ? formatIdr(
+                    (monthlyLivingCostTargetIdr * 12) /
+                      (dividendBreakdown.weightedNetYieldPct / 100),
+                    true
+                  )
+                : 'N/A (Yield 0%)'}
+            </div>
+            <p className="ui-text-muted mt-0.5 text-[11px]">
+              Biaya hidup ditutup 100% dari kupon/dividen bersih (Yield saat ini {dividendBreakdown.weightedNetYieldPct.toFixed(2)}%) tanpa pernah menjual aset pokok sama sekali.
+            </p>
+            <div className="mt-3 rounded-lg bg-purple-500/10 p-2.5">
+              <div className="text-[11px] text-purple-700 dark:text-purple-300">
+                Estimasi Waktu Tercapai:
+              </div>
+              <div className="font-mono text-base font-bold text-purple-700 dark:text-purple-300">
+                {sim.monthsToFinancialFreedomDividends === 0
+                  ? 'Sudah Tercapai Sekarang! 🎉'
+                  : sim.monthsToFinancialFreedomDividends
+                    ? `${Math.floor(sim.monthsToFinancialFreedomDividends / 12)} Tahun ${
+                        sim.monthsToFinancialFreedomDividends % 12 > 0
+                          ? (sim.monthsToFinancialFreedomDividends % 12) + ' Bulan'
+                          : ''
+                      }`
+                    : '> 30 Tahun (Tingkatkan Tabungan Bulanan)'}
+              </div>
+            </div>
+          </div>
+
+          {/* Living Cost Progress Meter */}
+          <div className="ui-subtle flex flex-col justify-between rounded-xl p-4">
+            <div>
+              <span className="ui-text-muted text-xs font-semibold uppercase">
+                Status Coverage Biaya Hidup Saat Ini
+              </span>
+              <div className="ui-text-main mt-1 text-xs">
+                Modal Awal ({formatIdr(initialCapitalIdr, true)}) menghasilkan:
+              </div>
+              <div className="mt-2 space-y-1.5 text-xs">
+                <div className="flex justify-between font-mono">
+                  <span className="ui-text-muted">Dividen Bersih:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatIdr(dividendBreakdown.monthlyPassiveAtInitialIdr)} / bln
+                  </span>
+                </div>
+                <div className="flex justify-between font-mono">
+                  <span className="ui-text-muted">Safe Withdrawal (4%):</span>
+                  <span className="ui-text-main font-bold">
+                    {formatIdr((initialCapitalIdr * 0.04) / 12)} / bln
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="ui-border mt-3 border-t pt-2">
+              <div className="flex justify-between text-[11px]">
+                <span className="ui-text-muted">Coverage Biaya Hidup (4% SWR):</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {Math.min(
+                    100,
+                    Math.round(
+                      (((initialCapitalIdr * 0.04) / 12) /
+                        Math.max(1, monthlyLivingCostTargetIdr)) *
+                        100
+                    )
+                  )}%
+                </span>
+              </div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(
+                        0,
+                        (((initialCapitalIdr * 0.04) / 12) /
+                          Math.max(1, monthlyLivingCostTargetIdr)) *
+                          100
+                      )
+                    )}%`,
+                  }}
+                />
               </div>
             </div>
           </div>

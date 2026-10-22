@@ -17,6 +17,9 @@ export function simulateWealthToGoal(params: {
   targetWealthIdr?: number;
   annualStepUpPercent?: number; // Optional annual salary/saving increase %
   maxYears?: number;
+  annualInflationPercent?: number; // Optional annual inflation rate (e.g. 3.5% or 4.0%)
+  monthlyLivingCostTargetIdr?: number; // Optional target living expenses (e.g. Rp 10 Jt/bln)
+  netDividendYieldPercent?: number; // Weighted net dividend yield %
 }): WealthSimulationResult {
   const {
     initialCapitalIdr,
@@ -26,22 +29,43 @@ export function simulateWealthToGoal(params: {
     targetWealthIdr = 10_000_000_000, // Default Rp 10 Miliar
     annualStepUpPercent = 0,
     maxYears = 45,
+    annualInflationPercent = 0,
+    monthlyLivingCostTargetIdr = 10_000_000,
+    netDividendYieldPercent = 0,
   } = params;
 
   // Effective monthly compounding rate from annualized rate
   const annualRate = Math.max(0, annualCagrPercent) / 100;
-  // Use standard nominal monthly compounding rate (annualRate / 12) or geometric (1+r)^(1/12)-1
-  // Note: Financial calculators in the video use geometric monthly equivalent: (1 + CAGR)^(1/12) - 1
+  // Financial calculators in the video use geometric monthly equivalent: (1 + CAGR)^(1/12) - 1
   const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+  const inflationDec = Math.max(0, annualInflationPercent) / 100;
+  const monthlyInflationRate = Math.pow(1 + inflationDec, 1 / 12) - 1;
 
   let currentWealth = Math.max(0, initialCapitalIdr);
   let totalPrincipal = Math.max(0, initialCapitalIdr);
   let currentMonthlyPmt = Math.max(0, monthlyContributionIdr);
 
   let reachedMonth: number | null = currentWealth >= targetWealthIdr ? 0 : null;
+  let reachedRealMonth: number | null = null;
   let principalAtGoal = totalPrincipal;
   let gainAtGoal = 0;
   let valueAt25Y = currentWealth;
+
+  // Financial freedom tracking
+  let freedomMonthDividends: number | null = null;
+  let freedomMonthSWR: number | null = null;
+
+  const getMonthlyNetDividend = (wealth: number) =>
+    (wealth * (Math.max(0, netDividendYieldPercent) / 100)) / 12;
+
+  const getMonthlySWR = (wealth: number) => (wealth * 0.04) / 12; // 4% Rule
+
+  if (getMonthlyNetDividend(currentWealth) >= monthlyLivingCostTargetIdr) {
+    freedomMonthDividends = 0;
+  }
+  if (getMonthlySWR(currentWealth) >= monthlyLivingCostTargetIdr) {
+    freedomMonthSWR = 0;
+  }
 
   const timeline: WealthProjectionPoint[] = [
     {
@@ -51,6 +75,7 @@ export function simulateWealthToGoal(params: {
       totalValueIdr: Math.round(currentWealth),
       totalGainIdr: 0,
       drawdownFloorIdr: Math.round(currentWealth * (1 - maxDrawdownPercent / 100)),
+      realPurchasingPowerIdr: Math.round(currentWealth),
     },
   ];
 
@@ -66,10 +91,31 @@ export function simulateWealthToGoal(params: {
     currentWealth = currentWealth * (1 + monthlyRate) + currentMonthlyPmt;
     totalPrincipal += currentMonthlyPmt;
 
+    // Inflation discount factor to today's purchasing power
+    const inflationDiscount = Math.pow(1 + monthlyInflationRate, m);
+    const realPurchasingPower = currentWealth / inflationDiscount;
+
     if (reachedMonth === null && currentWealth >= targetWealthIdr) {
       reachedMonth = m;
       principalAtGoal = totalPrincipal;
       gainAtGoal = currentWealth - totalPrincipal;
+    }
+
+    if (reachedRealMonth === null && realPurchasingPower >= targetWealthIdr) {
+      reachedRealMonth = m;
+    }
+
+    // Check financial freedom milestones (indexed to inflation-adjusted living cost)
+    const livingCostAtMonth = monthlyLivingCostTargetIdr * inflationDiscount;
+    if (freedomMonthDividends === null && netDividendYieldPercent > 0) {
+      if (getMonthlyNetDividend(currentWealth) >= livingCostAtMonth) {
+        freedomMonthDividends = m;
+      }
+    }
+    if (freedomMonthSWR === null) {
+      if (getMonthlySWR(currentWealth) >= livingCostAtMonth) {
+        freedomMonthSWR = m;
+      }
     }
 
     if (m === 25 * 12) {
@@ -86,6 +132,7 @@ export function simulateWealthToGoal(params: {
         totalValueIdr: Math.round(currentWealth),
         totalGainIdr: Math.round(currentWealth - totalPrincipal),
         drawdownFloorIdr: Math.round(currentWealth * (1 - maxDrawdownPercent / 100)),
+        realPurchasingPowerIdr: Math.round(realPurchasingPower),
       });
     }
   }
@@ -94,6 +141,10 @@ export function simulateWealthToGoal(params: {
   const yearsToGoal = Math.floor(finalMonth / 12);
   const monthsToGoal = finalMonth % 12;
   const exactYearsFloat = Number((finalMonth / 12).toFixed(1));
+
+  const realPurchasingPowerAtGoalIdr = Math.round(
+    currentWealth / Math.pow(1 + monthlyInflationRate, finalMonth)
+  );
 
   return {
     yearsToGoal,
@@ -107,6 +158,20 @@ export function simulateWealthToGoal(params: {
     totalGainAtGoalIdr: Math.round(
       reachedMonth !== null ? gainAtGoal : currentWealth - totalPrincipal
     ),
+    realInflationRatePercent: annualInflationPercent,
+    realPurchasingPowerAtGoalIdr,
+    realYearsToGoalFloat:
+      reachedRealMonth !== null ? Number((reachedRealMonth / 12).toFixed(1)) : undefined,
+    monthlyLivingCostTargetIdr,
+    requiredNestEggSWRIdr: Math.round(monthlyLivingCostTargetIdr * 12 * 25),
+    monthsToFinancialFreedomDividends: freedomMonthDividends,
+    monthsToFinancialFreedomSWR: freedomMonthSWR,
+    yearsToFinancialFreedomDividendsFloat:
+      freedomMonthDividends !== null
+        ? Number((freedomMonthDividends / 12).toFixed(1))
+        : null,
+    yearsToFinancialFreedomSWRFloat:
+      freedomMonthSWR !== null ? Number((freedomMonthSWR / 12).toFixed(1)) : null,
     timeline,
   };
 }

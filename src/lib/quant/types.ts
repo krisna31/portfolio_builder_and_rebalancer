@@ -153,6 +153,12 @@ export interface RebalanceItemResult {
   tradeUnits: number;
   /** Number of IDX lots (if lotSize === 100) */
   tradeLots?: number;
+  /** Whole integer lots for IDX stocks (1 Lot = 100 lembar) */
+  tradeLotsInteger?: number;
+  /** Unallocated remainder Rupiah from fractional lot rounding */
+  tradeLotsRemainderIdr?: number;
+  /** Estimated broker transaction fee & taxes (IDR) */
+  estimatedFeeIdr?: number;
   action: 'BUY' | 'SELL' | 'HOLD';
 }
 
@@ -165,6 +171,9 @@ export interface RebalanceSummaryResult {
   totalSellIdr: number;
   maxAbsoluteDrift: number;
   breachedCount: number;
+  lotRoundingEnabled?: boolean;
+  unallocatedCashRemainderIdr?: number;
+  totalEstimatedFeeIdr?: number;
   items: RebalanceItemResult[];
 }
 
@@ -175,6 +184,8 @@ export interface WealthProjectionPoint {
   totalValueIdr: number;
   totalGainIdr: number;
   drawdownFloorIdr: number;
+  /** Real purchasing power adjusted for annual inflation */
+  realPurchasingPowerIdr?: number;
 }
 
 export interface WealthSimulationResult {
@@ -185,6 +196,15 @@ export interface WealthSimulationResult {
   finalValueAfter25YIdr: number;
   totalPrincipalAtGoalIdr: number;
   totalGainAtGoalIdr: number;
+  realInflationRatePercent?: number;
+  realPurchasingPowerAtGoalIdr?: number;
+  realYearsToGoalFloat?: number;
+  monthlyLivingCostTargetIdr?: number;
+  requiredNestEggSWRIdr?: number;
+  monthsToFinancialFreedomDividends?: number | null;
+  monthsToFinancialFreedomSWR?: number | null;
+  yearsToFinancialFreedomDividendsFloat?: number | null;
+  yearsToFinancialFreedomSWRFloat?: number | null;
   timeline: WealthProjectionPoint[];
 }
 

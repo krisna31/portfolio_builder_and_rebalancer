@@ -26,6 +26,9 @@ export function calculateRebalancePlan(params: {
   cashInjectionIdr: number;
   rebalanceMode: RebalanceMode;
   driftThresholdAbsolutePercent: number; // e.g. 3% absolute drift
+  enableIdxLotRounding?: boolean;
+  sweepRemainderToDefensive?: boolean;
+  enableBrokerFees?: boolean;
 }): RebalanceSummaryResult {
   const {
     assets,
@@ -36,6 +39,9 @@ export function calculateRebalancePlan(params: {
     cashInjectionIdr,
     rebalanceMode,
     driftThresholdAbsolutePercent,
+    enableIdxLotRounding = true,
+    sweepRemainderToDefensive = true,
+    enableBrokerFees = false,
   } = params;
 
   // Consider all assets that either have a target weight > 0 or current holding > 0
@@ -139,6 +145,8 @@ export function calculateRebalancePlan(params: {
   let totalSellIdr = 0;
   let maxAbsoluteDrift = 0;
   let breachedCount = 0;
+  let totalUnallocatedRemainderIdr = 0;
+  let totalEstimatedFeeIdr = 0;
 
   const items: RebalanceItemResult[] = computedHoldings.map((item) => {
     const normTargetWeight =
@@ -182,8 +190,53 @@ export function calculateRebalancePlan(params: {
     }
 
     const targetValueIdr = Math.round(targetValuesByAsset[item.asset.id] ?? 0);
-    const tradeAmountIdr = Math.round(targetValueIdr - item.postShockValIdr);
+    let tradeAmountIdr = Math.round(targetValueIdr - item.postShockValIdr);
+
+    let tradeLots: number | undefined;
+    let tradeLotsInteger: number | undefined;
+    let tradeLotsRemainderIdr: number | undefined;
+    let tradeUnits = 0;
+
+    const rawUnits = tradeAmountIdr / item.postShockUnitPriceIdr;
+
+    if (item.asset.lotSize === 100) {
+      const rawLots = rawUnits / 100;
+      tradeLots = Number(rawLots.toFixed(1));
+
+      if (enableIdxLotRounding) {
+        // Integer lot rounding: 1 Lot = 100 lembar
+        const intLots =
+          tradeAmountIdr >= 0
+            ? Math.round(Math.max(0, rawLots))
+            : -Math.round(Math.max(0, Math.abs(rawLots)));
+
+        tradeLotsInteger = intLots;
+        tradeUnits = intLots * 100;
+        const executedValueIdr = Math.round(tradeUnits * item.postShockUnitPriceIdr);
+        tradeLotsRemainderIdr = tradeAmountIdr - executedValueIdr;
+
+        // In Buy mode with Lot Rounding, tradeAmountIdr aligns with the executed lot value
+        if (Math.abs(tradeUnits) > 0) {
+          tradeAmountIdr = executedValueIdr;
+        } else {
+          tradeLotsRemainderIdr = tradeAmountIdr;
+          tradeAmountIdr = 0;
+        }
+        totalUnallocatedRemainderIdr += tradeLotsRemainderIdr;
+      } else {
+        tradeUnits = Math.round(rawUnits);
+      }
+    } else {
+      tradeUnits = item.asset.allowFractional
+        ? Number(rawUnits.toFixed(4))
+        : Math.round(rawUnits);
+    }
+
     const tradeAmountUsd = Number((tradeAmountIdr / Math.max(1, usdIdrRate)).toFixed(2));
+
+    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    if (tradeAmountIdr > 10_000) action = 'BUY';
+    else if (tradeAmountIdr < -10_000) action = 'SELL';
 
     if (tradeAmountIdr > 1000) {
       totalBuyIdr += tradeAmountIdr;
@@ -191,19 +244,25 @@ export function calculateRebalancePlan(params: {
       totalSellIdr += Math.abs(tradeAmountIdr);
     }
 
-    const rawUnits = tradeAmountIdr / item.postShockUnitPriceIdr;
-    const tradeUnits = item.asset.allowFractional
-      ? Number(rawUnits.toFixed(4))
-      : Math.round(rawUnits);
-
-    const tradeLots =
-      item.asset.lotSize === 100
-        ? Number((rawUnits / 100).toFixed(1))
-        : undefined;
-
-    let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
-    if (tradeAmountIdr > 10_000) action = 'BUY';
-    else if (tradeAmountIdr < -10_000) action = 'SELL';
+    // Broker Transaction Fee & Tax Estimation
+    let estimatedFeeIdr = 0;
+    if (enableBrokerFees && action !== 'HOLD') {
+      const absTrade = Math.abs(tradeAmountIdr);
+      if (item.asset.category === 'idx-equity') {
+        // IDX: Buy ~0.15%, Sell ~0.25% (0.15% fee + 0.10% final PPh tax)
+        estimatedFeeIdr = Math.round(absTrade * (action === 'BUY' ? 0.0015 : 0.0025));
+      } else if (item.asset.category === 'us-equity') {
+        // US ETF / Stocks: ~0.10%
+        estimatedFeeIdr = Math.round(absTrade * 0.001);
+      } else if (item.asset.category === 'crypto') {
+        // Crypto: ~0.15% (tax + exchange fee)
+        estimatedFeeIdr = Math.round(absTrade * 0.0015);
+      } else if (item.asset.category === 'gold') {
+        // Gold: ~0.10%
+        estimatedFeeIdr = Math.round(absTrade * 0.001);
+      }
+      totalEstimatedFeeIdr += estimatedFeeIdr;
+    }
 
     return {
       assetId: item.asset.id,
@@ -222,9 +281,44 @@ export function calculateRebalancePlan(params: {
       tradeAmountUsd,
       tradeUnits,
       tradeLots,
+      tradeLotsInteger,
+      tradeLotsRemainderIdr,
+      estimatedFeeIdr,
       action,
     };
   });
+
+  // Optional: Sweep unallocated lot remainder to main defensive anchor (RDPT or RDPU) if active
+  if (
+    enableIdxLotRounding &&
+    sweepRemainderToDefensive &&
+    Math.abs(totalUnallocatedRemainderIdr) >= 10_000
+  ) {
+    const defensiveItem =
+      items.find((i) => i.assetId === 'RDPT' && (targetWeights.RDPT ?? 0) > 0) ??
+      items.find((i) => i.assetId === 'RDPU' && (targetWeights.RDPU ?? 0) > 0);
+
+    if (defensiveItem) {
+      defensiveItem.tradeAmountIdr += totalUnallocatedRemainderIdr;
+      const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
+      const defHold = holdings[defensiveItem.assetId];
+      const defPriceIdr =
+        defAsset?.currency === 'USD'
+          ? (defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1) * usdIdrRate
+          : defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1;
+
+      defensiveItem.tradeUnits = Number(
+        (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
+      );
+      if (defensiveItem.tradeAmountIdr > 10_000) {
+        defensiveItem.action = 'BUY';
+      } else if (defensiveItem.tradeAmountIdr < -10_000) {
+        defensiveItem.action = 'SELL';
+      } else {
+        defensiveItem.action = 'HOLD';
+      }
+    }
+  }
 
   return {
     initialTotalIdr: Math.round(initialTotalIdr),
@@ -235,6 +329,9 @@ export function calculateRebalancePlan(params: {
     totalSellIdr: Math.round(totalSellIdr),
     maxAbsoluteDrift: Number(maxAbsoluteDrift.toFixed(2)),
     breachedCount,
+    lotRoundingEnabled: enableIdxLotRounding,
+    unallocatedCashRemainderIdr: Math.round(totalUnallocatedRemainderIdr),
+    totalEstimatedFeeIdr: Math.round(totalEstimatedFeeIdr),
     items,
   };
 }

@@ -136,6 +136,8 @@ export function App() {
   const [driftThresholdPercent, setDriftThresholdPercent] = useState<number>(3);
   const [isHoldingsSyncedWithMenu1, setIsHoldingsSyncedWithMenu1] =
     useState<boolean>(true);
+  const [enableIdxLotRounding, setEnableIdxLotRounding] = useState<boolean>(true);
+  const [enableBrokerFees, setEnableBrokerFees] = useState<boolean>(false);
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     const init: Record<string, HoldingEntry> = {};
@@ -202,68 +204,130 @@ export function App() {
   // Restore state from URL Hash (if shared link) or LocalStorage on first mount
   useEffect(() => {
     try {
+      let hashParsed: Record<string, any> | null = null;
       if (window.location.hash.startsWith('#porto=')) {
-        const encoded = decodeURIComponent(window.location.hash.slice(7));
-        const parsed = JSON.parse(atob(encoded));
-        if (parsed.weights) {
-          setActiveWeights(parsed.weights);
-          setActivePresetId(parsed.presetId ?? null);
-          setAllocationMethod(parsed.method ?? 'custom');
+        try {
+          const encoded = decodeURIComponent(window.location.hash.slice(7));
+          hashParsed = JSON.parse(atob(encoded));
+          if (hashParsed?.weights) {
+            setActiveWeights(hashParsed.weights);
+            setActivePresetId(hashParsed.presetId ?? null);
+            setAllocationMethod(hashParsed.method ?? 'custom');
+          }
+          if (hashParsed?.slotMap) setSlotMap(hashParsed.slotMap);
+          if (hashParsed?.rdptPromo !== undefined)
+            setRdptPromoActive(Boolean(hashParsed.rdptPromo));
+          if (hashParsed?.capital !== undefined)
+            setInitialCapitalIdr(hashParsed.capital);
+          if (hashParsed?.dca !== undefined)
+            setMonthlySavingsIdr(hashParsed.dca);
+          if (hashParsed?.goal !== undefined)
+            setTargetGoalIdr(hashParsed.goal);
+          if (
+            Array.isArray(hashParsed?.customAssets) &&
+            hashParsed.customAssets.length > 0
+          ) {
+            setAllAssets((prev) => {
+              const prevIds = new Set(prev.map((a) => a.id));
+              const additions = hashParsed!.customAssets.filter(
+                (a: AssetDefinition) => !prevIds.has(a.id)
+              );
+              return additions.length > 0 ? [...prev, ...additions] : prev;
+            });
+          }
+        } catch {
+          // Ignore malformed URL hash
         }
-        return;
       }
 
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved.activeWeights) {
-          const matchedPreset = saved.activePresetId
-            ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === saved.activePresetId)
-            : null;
-          const sumW = Object.values(
-            saved.activeWeights as Record<string, number>
-          ).reduce((a, b) => a + b, 0);
-          if (
-            matchedPreset &&
-            (!saved.allocationMethod || saved.allocationMethod === 'preset') &&
-            Math.abs(sumW - 100) >= 0.5
-          ) {
-            setActiveWeights({ ...matchedPreset.weights });
-          } else {
-            setActiveWeights(saved.activeWeights);
+        if (!hashParsed) {
+          if (saved.activeWeights) {
+            const matchedPreset = saved.activePresetId
+              ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === saved.activePresetId)
+              : null;
+            const sumW = Object.values(
+              saved.activeWeights as Record<string, number>
+            ).reduce((a, b) => a + b, 0);
+            if (
+              matchedPreset &&
+              (!saved.allocationMethod || saved.allocationMethod === 'preset') &&
+              Math.abs(sumW - 100) >= 0.5
+            ) {
+              setActiveWeights({ ...matchedPreset.weights });
+            } else {
+              setActiveWeights(saved.activeWeights);
+            }
           }
+          if (saved.activePresetId !== undefined)
+            setActivePresetId(saved.activePresetId);
+          if (saved.allocationMethod) setAllocationMethod(saved.allocationMethod);
+          if (saved.initialCapitalIdr !== undefined)
+            setInitialCapitalIdr(saved.initialCapitalIdr);
+          if (saved.targetGoalIdr !== undefined)
+            setTargetGoalIdr(saved.targetGoalIdr);
+          if (saved.monthlySavingsIdr !== undefined) {
+            const migratedDca3M = localStorage.getItem(
+              'quantporto_dca_3m_default_v1'
+            );
+            if (!migratedDca3M && saved.monthlySavingsIdr === 10_000_000) {
+              setMonthlySavingsIdr(3_000_000);
+              localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
+            } else {
+              setMonthlySavingsIdr(saved.monthlySavingsIdr);
+            }
+          }
+          if (saved.slotMap) setSlotMap(saved.slotMap);
+          if (saved.rdptPromoActive !== undefined)
+            setRdptPromoActive(Boolean(saved.rdptPromoActive));
         }
-        if (saved.activePresetId !== undefined)
-          setActivePresetId(saved.activePresetId);
-        if (saved.allocationMethod) setAllocationMethod(saved.allocationMethod);
+
         if (saved.holdings) setHoldings((prev) => ({ ...prev, ...saved.holdings }));
-        if (saved.initialCapitalIdr !== undefined)
-          setInitialCapitalIdr(saved.initialCapitalIdr);
-        if (saved.targetGoalIdr !== undefined)
-          setTargetGoalIdr(saved.targetGoalIdr);
-        if (saved.monthlySavingsIdr !== undefined) {
-          const migratedDca3M = localStorage.getItem('quantporto_dca_3m_default_v1');
-          if (!migratedDca3M && saved.monthlySavingsIdr === 10_000_000) {
-            setMonthlySavingsIdr(3_000_000);
-            localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
-          } else {
-            setMonthlySavingsIdr(saved.monthlySavingsIdr);
-          }
-        }
         if (saved.isHoldingsSyncedWithMenu1 !== undefined)
           setIsHoldingsSyncedWithMenu1(saved.isHoldingsSyncedWithMenu1);
+        if (saved.enableIdxLotRounding !== undefined)
+          setEnableIdxLotRounding(Boolean(saved.enableIdxLotRounding));
+        if (saved.enableBrokerFees !== undefined)
+          setEnableBrokerFees(Boolean(saved.enableBrokerFees));
+
         if (saved.usdIdrRate) {
-          const migratedUsd18k = localStorage.getItem('quantporto_usd_18k_default_v1');
-          if (!migratedUsd18k && (saved.usdIdrRate === 15600 || saved.usdIdrRate === 15500)) {
+          const migratedUsd18k = localStorage.getItem(
+            'quantporto_usd_18k_default_v1'
+          );
+          if (
+            !migratedUsd18k &&
+            (saved.usdIdrRate === 15600 || saved.usdIdrRate === 15500)
+          ) {
             setUsdIdrRate(18000);
             localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
           } else {
             setUsdIdrRate(saved.usdIdrRate);
           }
         }
-        if (saved.slotMap) setSlotMap(saved.slotMap);
         if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
         if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
+
+        // Restore custom tickers and modified CAGR/MaxDD return assumptions
+        if (Array.isArray(saved.allAssets) && saved.allAssets.length > 0) {
+          setAllAssets((prev) => {
+            const savedMap = new Map<string, AssetDefinition>(
+              saved.allAssets.map((a: AssetDefinition) => [a.id, a])
+            );
+            const merged = prev.map((curr) => {
+              const s = savedMap.get(curr.id);
+              return s
+                ? { ...curr, cagr: s.cagr, maxDrawdown: s.maxDrawdown }
+                : curr;
+            });
+            const currIds = new Set(prev.map((a) => a.id));
+            const additions = saved.allAssets.filter(
+              (a: AssetDefinition) => !currIds.has(a.id)
+            );
+            return [...merged, ...additions];
+          });
+        }
       }
     } catch {
       // Ignore malformed storage
@@ -288,6 +352,10 @@ export function App() {
           slotMap,
           customTableRows,
           rebalanceHistory,
+          rdptPromoActive,
+          enableIdxLotRounding,
+          enableBrokerFees,
+          allAssets,
         })
       );
     } catch {
@@ -306,6 +374,10 @@ export function App() {
     slotMap,
     customTableRows,
     rebalanceHistory,
+    rdptPromoActive,
+    enableIdxLotRounding,
+    enableBrokerFees,
+    allAssets,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -429,6 +501,9 @@ export function App() {
         cashInjectionIdr,
         rebalanceMode,
         driftThresholdAbsolutePercent: driftThresholdPercent,
+        enableIdxLotRounding,
+        sweepRemainderToDefensive: true,
+        enableBrokerFees,
       }),
     [
       allAssets,
@@ -439,6 +514,8 @@ export function App() {
       cashInjectionIdr,
       rebalanceMode,
       driftThresholdPercent,
+      enableIdxLotRounding,
+      enableBrokerFees,
     ]
   );
 
@@ -988,11 +1065,20 @@ export function App() {
   };
 
   const handleCopyShareUrl = () => {
+    const customAssets = allAssets.filter(
+      (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
+    );
     const shareData = btoa(
       JSON.stringify({
         weights: activeWeights,
         presetId: activePresetId,
         method: allocationMethod,
+        slotMap,
+        rdptPromo: rdptPromoActive,
+        capital: initialCapitalIdr,
+        dca: monthlySavingsIdr,
+        goal: targetGoalIdr,
+        customAssets,
       })
     );
     const url = `${window.location.origin}${window.location.pathname}#porto=${encodeURIComponent(
@@ -1197,6 +1283,10 @@ export function App() {
                     : 'Portfolio Custom Anda'
             }
             isHoldingsSyncedWithMenu1={isHoldingsSyncedWithMenu1}
+            enableIdxLotRounding={enableIdxLotRounding}
+            setEnableIdxLotRounding={setEnableIdxLotRounding}
+            enableBrokerFees={enableBrokerFees}
+            setEnableBrokerFees={setEnableBrokerFees}
             onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}

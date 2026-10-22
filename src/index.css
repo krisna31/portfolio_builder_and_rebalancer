@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *, :root:has(> head > meta[name="color-scheme"][content="dark"]), :root:has(> head > meta[name="color-scheme"][content="dark"]) *));
+
 :root {
   /* Raw tokens for fallback & light-dark() */
   --bg-page-light: #fafafa;
@@ -102,6 +104,12 @@
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   }
+}
+
+/* Ensure native select options adapt cleanly in both Light and Dark mode */
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 /* Semantic Minimalist Utility Classes that adapt seamlessly between Light & Dark */
