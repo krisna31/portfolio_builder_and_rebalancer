@@ -807,24 +807,84 @@ export function App() {
 
   // Handler: Update individual holding in Rebalancer
   const handleUpdateHolding = (assetId: string, patch: Partial<HoldingEntry>) => {
-    // If user manually edits currentValueIdr or units, lock manual holdings so Menu 1 changes don't overwrite them
-    if (patch.currentValueIdr !== undefined || patch.units !== undefined) {
+    // If user manually edits currentValueIdr, units, or currentPrice, lock manual holdings so Menu 1 changes don't overwrite them
+    if (
+      patch.currentValueIdr !== undefined ||
+      patch.units !== undefined ||
+      patch.currentPrice !== undefined
+    ) {
       setIsHoldingsSyncedWithMenu1(false);
     }
-    setHoldings((prev) => ({
-      ...prev,
-      [assetId]: {
-        ...(prev[assetId] ?? {
-          assetId,
-          currentValueIdr: 0,
-          units: 0,
-          currentPrice:
-            allAssets.find((a) => a.id === assetId)?.defaultPrice ?? 1,
-          shockPercent: 0,
-        }),
-        ...patch,
-      },
-    }));
+    setHoldings((prev) => {
+      const asset = allAssets.find((a) => a.id === assetId);
+      const existing = prev[assetId] ?? {
+        assetId,
+        currentValueIdr: 0,
+        units: 0,
+        currentPrice: asset?.defaultPrice ?? 1,
+        shockPercent: 0,
+      };
+
+      const updated = { ...existing, ...patch };
+
+      // Case 1: Price is changed -> units are preserved, currentValueIdr is updated: units * newPriceIdr
+      if (patch.currentPrice !== undefined && patch.currentValueIdr === undefined) {
+        const pNative = Math.max(0.000001, patch.currentPrice);
+        const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+
+        let units = existing.units;
+        // If units were 0 or not calculated, derive from existing currentValueIdr
+        if (units <= 0 && existing.currentValueIdr > 0) {
+          const oldPriceNative =
+            existing.currentPrice > 0 ? existing.currentPrice : (asset?.defaultPrice ?? 1);
+          const oldPriceIdr =
+            asset?.currency === 'USD' ? oldPriceNative * usdIdrRate : oldPriceNative;
+          units = existing.currentValueIdr / Math.max(0.0001, oldPriceIdr);
+        }
+
+        updated.currentPrice = pNative;
+        updated.units = Number(units.toFixed(6));
+        updated.currentValueIdr = Math.round(units * pIdr);
+      }
+      // Case 2: Nominal value is changed -> units are updated: currentValueIdr / priceIdr
+      else if (patch.currentValueIdr !== undefined && patch.units === undefined) {
+        const pNative =
+          updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
+        const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+        updated.units = Number((patch.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+      }
+      // Case 3: Units are changed -> currentValueIdr is updated: units * priceIdr
+      else if (patch.units !== undefined && patch.currentValueIdr === undefined) {
+        const pNative =
+          updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
+        const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+        updated.currentValueIdr = Math.round(patch.units * pIdr);
+      }
+
+      return {
+        ...prev,
+        [assetId]: updated,
+      };
+    });
+  };
+
+  // Handler: Reset all asset spot prices back to baseline/default market prices
+  const handleResetAllAssetPrices = () => {
+    setHoldings((prev) => {
+      const next = { ...prev };
+      for (const a of allAssets) {
+        const existing = next[a.id];
+        if (!existing) continue;
+        const defaultPrice = a.defaultPrice;
+        const pIdr = a.currency === 'USD' ? defaultPrice * usdIdrRate : defaultPrice;
+        next[a.id] = {
+          ...existing,
+          currentPrice: defaultPrice,
+          currentValueIdr: Math.round(existing.units * pIdr),
+        };
+      }
+      return next;
+    });
   };
 
   // Handler: Populate Rebalancer Holdings with a specific Capital Amount (e.g. Rp 100 Juta) matching active target weights
@@ -1388,6 +1448,7 @@ export function App() {
             filterDustTrades={filterDustTrades}
             setFilterDustTrades={setFilterDustTrades}
             onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
+            onResetAllAssetPrices={handleResetAllAssetPrices}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
             onOpenOrderSlip={() => setIsOrderSlipOpen(true)}

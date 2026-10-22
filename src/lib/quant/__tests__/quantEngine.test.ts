@@ -321,6 +321,57 @@ describe('Portfolio Rebalancer & Crash Stress-Test Engine', () => {
     expect(eth.isDustFiltered).toBe(true);
     expect(result.suppressedDustTradesCount).toBeGreaterThanOrEqual(1);
   });
+
+  it('accurately recalculates rebalance BUY targets when asset price drops manually (Price Drop Simulator)', () => {
+    // BBCA base price Rp 10.000. User holds 1000 shares (10 lots) = Rp 10.000.000.
+    // RDPT holds Rp 90.000.000.
+    // Target: BBCA 20%, RDPT 80% (Total portfolio was Rp 100M).
+    // Now simulate BBCA price crashing -50% to Rp 5.000.
+    // New holding value of BBCA is 1000 shares * Rp 5.000 = Rp 5.000.000.
+    // Total portfolio shrinks to Rp 95.000.000.
+    // BBCA target 20% of 95M = Rp 19.000.000.
+    // BBCA needs BUY of Rp 14.000.000 (19M - 5M).
+    // At Rp 5.000/share (Rp 500.000/lot), BUY order must equal exactly 28 Lots!
+    const holdings: Record<string, HoldingEntry> = {
+      BBCA: {
+        assetId: 'BBCA',
+        currentValueIdr: 5_000_000,
+        units: 1000,
+        currentPrice: 5_000,
+        shockPercent: 0,
+      },
+      RDPT: {
+        assetId: 'RDPT',
+        currentValueIdr: 90_000_000,
+        units: 90,
+        currentPrice: 1_000_000,
+        shockPercent: 0,
+      },
+    };
+
+    const targetWeights = {
+      BBCA: 20,
+      RDPT: 80,
+    };
+
+    const result = calculateRebalancePlan({
+      assets: CORE_AND_EXPANDED_ASSETS.filter((a) => ['BBCA', 'RDPT'].includes(a.id)),
+      targetWeights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 16000,
+      cashInjectionIdr: 0,
+      rebalanceMode: 'sell-and-buy',
+      driftThresholdAbsolutePercent: 1,
+      enableIdxLotRounding: true,
+    });
+
+    const bbca = result.items.find((i) => i.assetId === 'BBCA')!;
+    expect(bbca.action).toBe('BUY');
+    expect(bbca.tradeAmountIdr).toBe(14_000_000);
+    // At Rp 500.000 per lot (100 shares * Rp 5.000), Rp 14.000.000 buys exactly 28 lots!
+    expect(bbca.tradeLotsInteger).toBe(28);
+  });
 });
 
 describe('Rp10 Miliar Pertama Wealth Simulator', () => {

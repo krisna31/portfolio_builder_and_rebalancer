@@ -78,6 +78,7 @@ interface PortfolioRebalancerViewProps {
   filterDustTrades?: boolean;
   setFilterDustTrades?: (val: boolean) => void;
   onClearHoldingsForManualInput: () => void;
+  onResetAllAssetPrices?: () => void;
   onSetupInitialBuyFromMenu1: () => void;
   onScaleTotalHoldingsIdr: (
     newTotalIdr: number,
@@ -119,6 +120,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   filterDustTrades = true,
   setFilterDustTrades,
   onClearHoldingsForManualInput,
+  onResetAllAssetPrices,
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
   onOpenOrderSlip,
@@ -137,6 +139,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     'nominal' | 'units' | 'percent'
   >(inputMode);
   const [quickTotalIdr, setQuickTotalIdr] = useState<number>(initialCapitalMenu1Idr);
+
+  const anyPriceModified = useMemo(() => {
+    return allAssets.some((a) => {
+      const h = holdings[a.id];
+      if (!h || !h.currentPrice) return false;
+      return Math.abs(h.currentPrice - a.defaultPrice) > 0.0001;
+    });
+  }, [allAssets, holdings]);
+
+  const formatPriceDisplay = (price: number, currency?: string) => {
+    if (currency === 'USD') {
+      return price < 10 ? `$${price.toFixed(4)}` : `$${price.toLocaleString()}`;
+    }
+    return `Rp ${price.toLocaleString('id-ID')}`;
+  };
 
   // Active assets for the Crash Limit Order Ladder
   const activeCandidateAssets = useMemo(() => {
@@ -1056,6 +1073,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     ✨ {rebalanceResult.suppressedDustTradesCount} order receh disaring
                   </span>
                 )}
+
+              {anyPriceModified && onResetAllAssetPrices && (
+                <button
+                  type="button"
+                  onClick={onResetAllAssetPrices}
+                  className="flex items-center gap-1.5 rounded-md bg-rose-500/15 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 transition"
+                  title="Kembalikan semua harga spot aset ke harga pasar default"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Reset Semua Harga Pasar</span>
+                </button>
+              )}
             </div>
 
             {rebalanceResult.unallocatedCashRemainderIdr &&
@@ -1129,24 +1158,109 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       >
                         <th
                           scope="row"
-                          className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2.5 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]"
+                          className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2.5 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] min-w-[170px]"
                         >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <div>
-                              <div className="ui-text-main font-semibold">
-                                {item.symbol}
+                          {(() => {
+                            const priceDiffPct = asset?.defaultPrice
+                              ? ((h.currentPrice - asset.defaultPrice) / asset.defaultPrice) * 100
+                              : 0;
+                            const isPriceCustom = Math.abs(priceDiffPct) >= 0.1;
+
+                            return (
+                              <div className="flex items-start gap-2">
+                                <span
+                                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="ui-text-main font-bold text-xs">{item.symbol}</span>
+                                    {isPriceCustom && (
+                                      <span
+                                        className={`rounded px-1 py-0.2 font-mono text-[9px] font-bold ${
+                                          priceDiffPct < 0
+                                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                        }`}
+                                        title={`Perubahan harga: ${priceDiffPct > 0 ? '+' : ''}${priceDiffPct.toFixed(1)}% dari harga normal (${formatPriceDisplay(asset?.defaultPrice ?? 1, asset?.currency)})`}
+                                      >
+                                        {priceDiffPct < 0 ? '▼' : '▲'} {Math.abs(priceDiffPct).toFixed(1)}%
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Editable Spot Price Input */}
+                                  <div className="flex items-center gap-1">
+                                    <span className="ui-text-muted font-mono text-[10px] select-none">
+                                      {asset?.currency === 'USD' ? '$' : 'Rp'}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                      min={0.0001}
+                                      value={h.currentPrice}
+                                      onChange={(e) =>
+                                        onUpdateHolding(item.assetId, {
+                                          currentPrice: Math.max(0.000001, Number(e.target.value)),
+                                        })
+                                      }
+                                      className={`ui-input rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold text-right ${
+                                        isPriceCustom ? 'border-amber-500 text-amber-600 dark:text-amber-400' : ''
+                                      }`}
+                                      style={{ width: asset?.currency === 'USD' ? '5.5rem' : '6.5rem' }}
+                                      title={`Ketik harga pasar untuk simulasi. Normal: ${formatPriceDisplay(asset?.defaultPrice ?? 1, asset?.currency)}`}
+                                      aria-label={`Harga pasar ${item.symbol}`}
+                                    />
+                                    {isPriceCustom && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onUpdateHolding(item.assetId, {
+                                            currentPrice: asset?.defaultPrice ?? 1,
+                                          })
+                                        }
+                                        className="ui-text-muted hover:text-emerald-500 p-0.5 rounded transition"
+                                        title={`Reset ke harga pasar normal (${formatPriceDisplay(asset?.defaultPrice ?? 1, asset?.currency)})`}
+                                      >
+                                        <RotateCcw className="h-2.5 w-2.5" />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Quick Drop Chips: [-10%] [-20%] [-35%] [-50%] */}
+                                  <div className="flex items-center gap-1 pt-0.5">
+                                    <span className="ui-text-muted text-[9px] select-none">Drop:</span>
+                                    {[10, 20, 35, 50].map((dropPct) => {
+                                      const defaultP = asset?.defaultPrice ?? 1;
+                                      const discountedPrice = Number(
+                                        (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
+                                      );
+                                      const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
+                                      return (
+                                        <button
+                                          key={dropPct}
+                                          type="button"
+                                          onClick={() =>
+                                            onUpdateHolding(item.assetId, {
+                                              currentPrice: discountedPrice,
+                                            })
+                                          }
+                                          className={`rounded px-1 py-0.2 font-mono text-[9px] transition ${
+                                            isActive
+                                              ? 'bg-rose-500 text-white font-bold'
+                                              : 'ui-subtle ui-text-muted hover:text-rose-500'
+                                          }`}
+                                          title={`Simulasi harga anjlok -${dropPct}% menjadi ${formatPriceDisplay(discountedPrice, asset?.currency)}`}
+                                        >
+                                          -{dropPct}%
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="ui-text-muted text-[10px]">
-                                {asset?.currency === 'USD'
-                                  ? `$${h.currentPrice.toLocaleString()}`
-                                  : `Rp ${h.currentPrice.toLocaleString('id-ID')}`}
-                              </div>
-                            </div>
-                          </div>
+                            );
+                          })()}
                         </th>
 
                         <td className="ui-border border-b px-3 py-2.5 text-right">
@@ -1418,12 +1532,92 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               • {item.name}
                             </span>
                           </div>
-                          <div className="ui-text-muted font-mono text-[10px]">
-                            Harga:{' '}
-                            {asset?.currency === 'USD'
-                              ? `$${h.currentPrice.toLocaleString()}`
-                              : `Rp ${h.currentPrice.toLocaleString('id-ID')}`}
-                          </div>
+                          {(() => {
+                            const priceDiffPct = asset?.defaultPrice
+                              ? ((h.currentPrice - asset.defaultPrice) / asset.defaultPrice) * 100
+                              : 0;
+                            const isPriceCustom = Math.abs(priceDiffPct) >= 0.1;
+
+                            return (
+                              <div className="space-y-1 pt-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="ui-text-muted text-[10px]">Harga:</span>
+                                  <span className="ui-text-muted font-mono text-[10px]">
+                                    {asset?.currency === 'USD' ? '$' : 'Rp'}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                    min={0.0001}
+                                    value={h.currentPrice}
+                                    onChange={(e) =>
+                                      onUpdateHolding(item.assetId, {
+                                        currentPrice: Math.max(0.000001, Number(e.target.value)),
+                                      })
+                                    }
+                                    className={`ui-input w-24 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold text-right ${
+                                      isPriceCustom ? 'border-amber-500 text-amber-600 dark:text-amber-400' : ''
+                                    }`}
+                                  />
+                                  {isPriceCustom && (
+                                    <span
+                                      className={`rounded px-1 py-0.2 font-mono text-[9px] font-bold ${
+                                        priceDiffPct < 0
+                                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                          : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                      }`}
+                                    >
+                                      {priceDiffPct < 0 ? '▼' : '▲'} {Math.abs(priceDiffPct).toFixed(1)}%
+                                    </span>
+                                  )}
+                                  {isPriceCustom && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onUpdateHolding(item.assetId, {
+                                          currentPrice: asset?.defaultPrice ?? 1,
+                                        })
+                                      }
+                                      className="ui-text-muted hover:text-emerald-500 p-0.5 rounded transition"
+                                      title="Reset ke harga pasar normal"
+                                    >
+                                      <RotateCcw className="h-2.5 w-2.5" />
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Quick Drop Chips */}
+                                <div className="flex items-center gap-1">
+                                  <span className="ui-text-muted text-[9px]">Drop:</span>
+                                  {[10, 20, 35, 50].map((dropPct) => {
+                                    const defaultP = asset?.defaultPrice ?? 1;
+                                    const discountedPrice = Number(
+                                      (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
+                                    );
+                                    const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
+                                    return (
+                                      <button
+                                        key={dropPct}
+                                        type="button"
+                                        onClick={() =>
+                                          onUpdateHolding(item.assetId, {
+                                            currentPrice: discountedPrice,
+                                          })
+                                        }
+                                        className={`rounded px-1.5 py-0.2 font-mono text-[9px] transition ${
+                                          isActive
+                                            ? 'bg-rose-500 text-white font-bold'
+                                            : 'ui-subtle ui-text-muted hover:text-rose-500'
+                                        }`}
+                                      >
+                                        -{dropPct}%
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
