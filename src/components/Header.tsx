@@ -392,28 +392,39 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     {/* Live Market Price Sync */}
-                    <button
-                      type="button"
-                      onClick={onRefreshLivePrices}
-                      disabled={isFetchingPrices}
-                      className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 disabled:opacity-50"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <RefreshCw
-                          className={`h-3.5 w-3.5 ${
-                            isFetchingPrices
-                              ? 'animate-spin text-emerald-600'
-                              : ''
-                          }`}
-                        />
-                        <span>Sync Harga Pasar Live</span>
-                      </div>
-                      <span className="ui-text-muted text-[10px]">
-                        {isFetchingPrices
-                          ? 'Fetching...'
-                          : lastUpdatedText || '5Y Baseline'}
-                      </span>
-                    </button>
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={onRefreshLivePrices}
+                        disabled={isFetchingPrices}
+                        className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 disabled:opacity-50"
+                        title={priceSourceText ? `Sumber data: ${priceSourceText}` : 'Ambil harga live saham, ETF & crypto'}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <RefreshCw
+                            className={`h-3.5 w-3.5 ${
+                              isFetchingPrices
+                                ? 'animate-spin text-emerald-600'
+                                : ''
+                            }`}
+                          />
+                          <span>Sync Harga Pasar Live</span>
+                        </div>
+                        <span className="ui-text-muted text-[10px]">
+                          {isFetchingPrices
+                            ? 'Fetching...'
+                            : lastUpdatedText || '5Y Baseline'}
+                        </span>
+                      </button>
+                      {priceSourceText && (
+                        <div
+                          className="px-2 text-[10px] ui-text-muted truncate"
+                          title={priceSourceText}
+                        >
+                          Sumber: {priceSourceText}
+                        </div>
+                      )}
+                    </div>
 
                     <div className="ui-border space-y-1.5 border-t pt-2">
                       {/* Saved Portfolios */}
@@ -631,11 +642,18 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={onRefreshLivePrices}
                   disabled={isFetchingPrices}
                   className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
+                  title={priceSourceText || undefined}
                 >
                   <RefreshCw
                     className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin' : ''}`}
                   />
-                  <span>Sync Harga Live</span>
+                  <span>
+                    {isFetchingPrices
+                      ? 'Syncing...'
+                      : lastUpdatedText
+                        ? `Sync (${lastUpdatedText})`
+                        : 'Sync Harga Live'}
+                  </span>
                 </button>
 
                 {/* Saved Portfolios */}

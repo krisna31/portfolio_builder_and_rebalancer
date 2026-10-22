@@ -710,20 +710,40 @@ export function App() {
   // Handler: Live Price Sync
   const handleRefreshLivePrices = async () => {
     setIsFetchingPrices(true);
-    const res = await fetchLiveMarketPrices(allAssets, usdIdrRate);
-    setUsdIdrRate(res.usdIdrRate);
-    setPriceSourceText(res.sourceSummary);
-    setLastUpdatedText(res.updatedAt);
-    setHoldings((prev) => {
-      const next = { ...prev };
-      for (const [assetId, price] of Object.entries(res.pricesByAssetId)) {
-        if (next[assetId]) {
-          next[assetId] = { ...next[assetId], currentPrice: price };
+    try {
+      const res = await fetchLiveMarketPrices(allAssets, usdIdrRate);
+      setUsdIdrRate(res.usdIdrRate);
+      setPriceSourceText(res.sourceSummary);
+      setLastUpdatedText(res.updatedAt);
+      setHoldings((prev) => {
+        const next = { ...prev };
+        for (const a of allAssets) {
+          const livePrice =
+            res.pricesByAssetId[a.id] ??
+            res.pricesByAssetId[a.symbol] ??
+            res.pricesByAssetId[a.yahooSymbol ?? ''];
+          if (livePrice && next[a.id]) {
+            next[a.id] = { ...next[a.id], currentPrice: livePrice };
+          }
         }
-      }
-      return next;
-    });
-    setIsFetchingPrices(false);
+        return next;
+      });
+
+      // Synchronize defaultPrice in allAssets so anywhere in the app (factsheet, tooltips, builder) uses the latest price
+      setAllAssets((prev) =>
+        prev.map((a) => {
+          const livePrice =
+            res.pricesByAssetId[a.id] ??
+            res.pricesByAssetId[a.symbol] ??
+            res.pricesByAssetId[a.yahooSymbol ?? ''];
+          return livePrice ? { ...a, defaultPrice: livePrice } : a;
+        })
+      );
+    } catch (err) {
+      console.error('Error syncing live market prices:', err);
+    } finally {
+      setIsFetchingPrices(false);
+    }
   };
 
   // Smart Auto-Sync: Keep Rebalancer baseline holdings synchronized with Menu 1's initialCapitalIdr & activeWeights

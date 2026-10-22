@@ -48,7 +48,7 @@ export const POPULAR_TICKER_ESTIMATES: Record<
     symbol: 'AADI.JK',
     name: 'PT Adaro Andalan Indonesia Tbk (Coal Spin-off IPO Des 2024)',
     currency: 'IDR',
-    price: 8650,
+    price: 11225,
     cagr: 19.5,
     maxDrawdown: 32.0,
     volatility: 34.0,
@@ -57,11 +57,48 @@ export const POPULAR_TICKER_ESTIMATES: Record<
     assumptionNote:
       'IPO Des 2024 (<5 tahun histori). Menggunakan asumsi ekuivalen bisnis batubara termal induk (ADRO) + dividend yield tinggi: Estimasi CAGR ~19.5%/thn & Max Drawdown ~32% (siklus komoditas).',
   },
+  AADI: {
+    symbol: 'AADI.JK',
+    name: 'PT Adaro Andalan Indonesia Tbk (Coal Spin-off IPO Des 2024)',
+    currency: 'IDR',
+    price: 11225,
+    cagr: 19.5,
+    maxDrawdown: 32.0,
+    volatility: 34.0,
+    riskScale: 3.85,
+    dataYears: 1.8,
+    assumptionNote:
+      'IPO Des 2024 (<5 tahun histori). Menggunakan asumsi ekuivalen bisnis batubara termal induk (ADRO) + dividend yield tinggi: Estimasi CAGR ~19.5%/thn & Max Drawdown ~32% (siklus komoditas).',
+  },
+  'BBCA.JK': {
+    symbol: 'BBCA.JK',
+    name: 'PT Bank Central Asia Tbk',
+    currency: 'IDR',
+    price: 5175,
+    cagr: 14.2,
+    maxDrawdown: 21.5,
+    volatility: 18.4,
+    riskScale: 2.714,
+    dataYears: 5.0,
+    assumptionNote: 'Benchmark Big 4 Perbankan Indonesia.',
+  },
+  BBCA: {
+    symbol: 'BBCA.JK',
+    name: 'PT Bank Central Asia Tbk',
+    currency: 'IDR',
+    price: 5175,
+    cagr: 14.2,
+    maxDrawdown: 21.5,
+    volatility: 18.4,
+    riskScale: 2.714,
+    dataYears: 5.0,
+    assumptionNote: 'Benchmark Big 4 Perbankan Indonesia.',
+  },
   'ADRO.JK': {
     symbol: 'ADRO.JK',
     name: 'PT Alamtri Resources Indonesia Tbk (ex-Adaro Energy)',
     currency: 'IDR',
-    price: 2450,
+    price: 2430,
     cagr: 22.4,
     maxDrawdown: 36.5,
     volatility: 35.2,
@@ -74,7 +111,7 @@ export const POPULAR_TICKER_ESTIMATES: Record<
     symbol: 'PTBA.JK',
     name: 'PT Bukit Asam Tbk',
     currency: 'IDR',
-    price: 2780,
+    price: 3140,
     cagr: 14.8,
     maxDrawdown: 34.0,
     volatility: 31.0,
@@ -82,11 +119,47 @@ export const POPULAR_TICKER_ESTIMATES: Record<
     dataYears: 5.0,
     assumptionNote: 'Data 5 tahun saham batubara BUMN high-dividend yield.',
   },
+  PTBA: {
+    symbol: 'PTBA.JK',
+    name: 'PT Bukit Asam Tbk',
+    currency: 'IDR',
+    price: 3140,
+    cagr: 14.8,
+    maxDrawdown: 34.0,
+    volatility: 31.0,
+    riskScale: 3.6,
+    dataYears: 5.0,
+    assumptionNote: 'Data 5 tahun saham batubara BUMN high-dividend yield.',
+  },
+  'BMRI.JK': {
+    symbol: 'BMRI.JK',
+    name: 'PT Bank Mandiri (Persero) Tbk',
+    currency: 'IDR',
+    price: 3780,
+    cagr: 15.8,
+    maxDrawdown: 26.4,
+    volatility: 21.2,
+    riskScale: 2.9,
+    dataYears: 5.0,
+    assumptionNote: 'Data 5 tahun saham perbankan BUMN.',
+  },
+  'BBRI.JK': {
+    symbol: 'BBRI.JK',
+    name: 'PT Bank Rakyat Indonesia (Persero) Tbk',
+    currency: 'IDR',
+    price: 2850,
+    cagr: 11.5,
+    maxDrawdown: 28.0,
+    volatility: 22.0,
+    riskScale: 3.1,
+    dataYears: 5.0,
+    assumptionNote: 'Data 5 tahun perbankan mikro & UMKM terbesar.',
+  },
   'ITMG.JK': {
     symbol: 'ITMG.JK',
     name: 'PT Indo Tambangraya Megah Tbk',
     currency: 'IDR',
-    price: 25600,
+    price: 25275,
     cagr: 18.2,
     maxDrawdown: 35.5,
     volatility: 33.0,
@@ -305,7 +378,124 @@ export const POPULAR_TICKER_ESTIMATES: Record<
 };
 
 /**
+ * Resolves the appropriate ticker symbol for Yahoo Finance query
+ */
+export function resolveAssetYahooTicker(asset: AssetDefinition): string | null {
+  if (
+    asset.category === 'money-market' ||
+    asset.id === 'RDPU' ||
+    asset.id === 'RDPT'
+  ) {
+    return null; // Mutual funds / Money market (no Yahoo chart quote)
+  }
+  if (asset.category === 'crypto' && asset.coingeckoId && !asset.yahooSymbol) {
+    return null; // Handled directly by CoinGecko API
+  }
+  if (asset.yahooSymbol) {
+    return asset.yahooSymbol;
+  }
+  const clean = asset.symbol.trim().toUpperCase();
+  if (clean.endsWith('.JK')) {
+    return clean;
+  }
+  if (asset.category === 'idx-equity') {
+    return `${clean}.JK`;
+  }
+  if (asset.category === 'us-equity' || asset.category === 'gold') {
+    return clean;
+  }
+  // If 4 letters and not known US ticker, assume IDX (.JK)
+  if (
+    /^[A-Z]{4}$/.test(clean) &&
+    ![
+      'NVDA',
+      'AAPL',
+      'MSFT',
+      'AMZN',
+      'GOOG',
+      'META',
+      'TSLA',
+      'SCHD',
+      'QQQM',
+      'IBIT',
+      'SPY',
+      'GLD',
+      'QQQ',
+      'TLT',
+      'VNQ',
+    ].includes(clean)
+  ) {
+    return `${clean}.JK`;
+  }
+  return clean;
+}
+
+/**
+ * Fetches the latest live market price or previous close for a single Yahoo symbol
+ */
+export async function fetchSingleYahooPrice(symbol: string): Promise<number | null> {
+  const cleanSym = symbol.trim().toUpperCase();
+  const yahooPath = `/v8/finance/chart/${encodeURIComponent(cleanSym)}?range=5d&interval=1d`;
+  const targetUrl = `https://query1.finance.yahoo.com${yahooPath}`;
+
+  const urls = import.meta.env.DEV
+    ? [`/api/yahoo${yahooPath}`]
+    : [
+        `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
+        targetUrl,
+      ];
+
+  for (const url of urls) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+      clearTimeout(timeout);
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      if (!result) continue;
+
+      const meta = result.meta;
+      const closes =
+        result.indicators?.quote?.[0]?.close?.filter(
+          (v: number | null) => typeof v === 'number' && v > 0
+        ) ?? [];
+      const lastClose = closes.length > 0 ? closes[closes.length - 1] : null;
+
+      const price =
+        meta.regularMarketPrice ??
+        meta.chartPreviousClose ??
+        lastClose;
+
+      if (typeof price === 'number' && price > 0) {
+        return Number(price.toFixed(2));
+      }
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  // Fallback to Curated Estimates Dictionary if network/proxy failed
+  if (POPULAR_TICKER_ESTIMATES[cleanSym]?.price) {
+    return POPULAR_TICKER_ESTIMATES[cleanSym].price;
+  }
+  const alt = cleanSym.replace('.JK', '');
+  if (POPULAR_TICKER_ESTIMATES[alt]?.price) {
+    return POPULAR_TICKER_ESTIMATES[alt].price;
+  }
+
+  return null;
+}
+
+/**
  * Fetches live spot prices & USD/IDR exchange rate in the browser
+ * Automatically syncs live prices for all equities (BBCA, AADI, PTBA, SPY, GLD, QQQ, etc.)
+ * via Yahoo Finance, crypto via CoinGecko, and static 5Y metrics snapshot.
  */
 export async function fetchLiveMarketPrices(
   assets: AssetDefinition[],
@@ -315,8 +505,10 @@ export async function fetchLiveMarketPrices(
   let usdIdrRate = currentUsdIdr;
   const sources: string[] = [];
 
+  // Base initialization from current defaultPrice
   for (const a of assets) {
     pricesByAssetId[a.id] = a.defaultPrice;
+    pricesByAssetId[a.symbol] = a.defaultPrice;
   }
 
   // 1. Load static GitHub Actions snapshot (`./data/market-data.json`)
@@ -331,9 +523,10 @@ export async function fetchLiveMarketPrices(
         for (const [id, data] of Object.entries(snapshot.assets)) {
           if (data.price && data.price > 0) {
             pricesByAssetId[id] = data.price;
+            pricesByAssetId[`${id}.JK`] = data.price;
           }
         }
-        sources.push('GitHub Action Snapshot');
+        sources.push('Snapshot 5Y');
       }
     }
   } catch {
@@ -365,8 +558,10 @@ export async function fetchLiveMarketPrices(
               pricesByAssetId[asset.id] = Number((entry.usd * 0.0925).toFixed(2));
             } else if (asset.currency === 'USD' && entry.usd) {
               pricesByAssetId[asset.id] = Number(entry.usd);
+              pricesByAssetId[asset.symbol] = Number(entry.usd);
             } else if (asset.currency === 'IDR' && entry.idr) {
               pricesByAssetId[asset.id] = Number(entry.idr);
+              pricesByAssetId[asset.symbol] = Number(entry.idr);
             }
           }
         }
@@ -375,6 +570,42 @@ export async function fetchLiveMarketPrices(
     } catch {
       // Keep snapshot prices
     }
+  }
+
+  // 3. Fetch live Equities, ETFs & Custom Stocks via Yahoo Finance (BBCA.JK, AADI.JK, PTBA.JK, SPY, QQQ, etc.)
+  const equityAssets = assets.filter((a) => {
+    const sym = resolveAssetYahooTicker(a);
+    return Boolean(sym);
+  });
+
+  const yahooTasks = equityAssets.map(async (asset) => {
+    const sym = resolveAssetYahooTicker(asset);
+    if (!sym) return null;
+    const price = await fetchSingleYahooPrice(sym);
+    if (typeof price === 'number' && price > 0) {
+      pricesByAssetId[asset.id] = price;
+      pricesByAssetId[asset.symbol] = price;
+      if (asset.yahooSymbol) pricesByAssetId[asset.yahooSymbol] = price;
+      return sym;
+    }
+    return null;
+  });
+
+  const yahooResults = await Promise.allSettled(yahooTasks);
+  const updatedSymbols: string[] = [];
+  for (const r of yahooResults) {
+    if (r.status === 'fulfilled' && r.value) {
+      updatedSymbols.push(r.value);
+    }
+  }
+
+  if (updatedSymbols.length > 0) {
+    const displayList = Array.from(new Set(updatedSymbols));
+    const summaryList =
+      displayList.length <= 4
+        ? displayList.join(', ')
+        : `${displayList.slice(0, 3).join(', ')} (+${displayList.length - 3})`;
+    sources.push(`Yahoo Finance (${summaryList})`);
   }
 
   return {
