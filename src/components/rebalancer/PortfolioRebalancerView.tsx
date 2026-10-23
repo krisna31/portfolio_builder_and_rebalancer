@@ -2314,18 +2314,40 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             <span className="ui-text-muted font-mono">%</span>
                           </div>
                         ) : (
-                          <input
-                            type="number"
-                            step="any"
-                            value={h.units}
-                            onChange={(e) =>
-                              onUpdateHolding(item.assetId, {
-                                units: Math.max(0, Number(e.target.value)),
-                              })
-                            }
-                            className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-bold"
-                            aria-label={`Units held for ${item.symbol}`}
-                          />
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              step="any"
+                              value={h.units}
+                              onChange={(e) =>
+                                onUpdateHolding(item.assetId, {
+                                  units: Math.max(0, Number(e.target.value)),
+                                })
+                              }
+                              className="ui-input w-24 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                              aria-label={`Units held for ${item.symbol}`}
+                              title="Jumlah unit/lembar"
+                            />
+                            {!h.isNominalOnly && (
+                              <div className="flex items-center gap-0.5">
+                                <span className="ui-text-muted text-[10px]">@</span>
+                                <input
+                                  type="number"
+                                  step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                  min={0.0001}
+                                  value={h.currentPrice}
+                                  onChange={(e) =>
+                                    onUpdateHolding(item.assetId, {
+                                      currentPrice: Math.max(0.000001, Number(e.target.value)),
+                                    })
+                                  }
+                                  className="ui-input w-20 rounded px-1.5 py-1 text-right font-mono text-[11px]"
+                                  aria-label={`Harga satuan ${item.symbol}`}
+                                  title={`Harga satuan pasar (${asset?.currency === 'USD' ? '$' : 'Rp'})`}
+                                />
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px]">

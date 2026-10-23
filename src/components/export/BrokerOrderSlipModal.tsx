@@ -256,22 +256,18 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     ].filter(Boolean);
 
     for (const g of groupsToCopy) {
+      const actionableItems = g.items.filter((item) => item.action !== 'HOLD');
+      if (actionableItems.length === 0) continue;
+
       lines.push(`📱 ${g.name.toUpperCase()} (${g.apps})`);
-      for (const item of g.items) {
+      for (const item of actionableItems) {
         const def = assetDefMap.get(item.assetId);
         const isDone = executedMap[item.assetId] ? '[x]' : '[ ]';
-        const actionStr =
-          item.action === 'BUY'
-            ? 'BELI'
-            : item.action === 'SELL'
-            ? 'JUAL'
-            : 'HOLD';
+        const actionStr = item.action === 'BUY' ? 'BELI' : 'JUAL';
 
         if (g.id === 'idx_stocks') {
           const lots = item.tradeLotsInteger ?? Math.abs(Math.round(item.tradeLots ?? 0));
-          const unitPrice = item.initialValueIdr > 0 && holdings?.[item.assetId]
-            ? holdings[item.assetId].currentPrice
-            : def?.defaultPrice ?? 0;
+          const unitPrice = holdings?.[item.assetId]?.currentPrice ?? def?.defaultPrice ?? 0;
           lines.push(
             `${isDone} ${actionStr} ${item.symbol} - ${lots} Lot (${(lots * 100).toLocaleString('id-ID')} lembar) @ Rp ${unitPrice.toLocaleString('id-ID')} = ${formatIdr(Math.abs(item.tradeAmountIdr))}`
           );

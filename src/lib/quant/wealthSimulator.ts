@@ -142,8 +142,12 @@ export function simulateWealthToGoal(params: {
   const monthsToGoal = finalMonth % 12;
   const exactYearsFloat = Number((finalMonth / 12).toFixed(1));
 
+  const wealthAtGoal = reachedMonth !== null
+    ? principalAtGoal + gainAtGoal
+    : currentWealth;
+
   const realPurchasingPowerAtGoalIdr = Math.round(
-    currentWealth / Math.pow(1 + monthlyInflationRate, finalMonth)
+    wealthAtGoal / Math.pow(1 + monthlyInflationRate, finalMonth)
   );
 
   return {
@@ -346,8 +350,10 @@ export function simulateMonteCarloPaths(params: {
   const sigmaAnnual = Math.max(0.04, annualVolatilityPercent / 100);
 
   // Geometric Brownian motion monthly drift and volatility
+  // Since annualCagrPercent is already the geometric return (CAGR), we use direct log-return drift
+  // so the stochastic median path correctly aligns with the expected CAGR without double volatility drag.
   const dt = 1 / 12;
-  const driftMonthly = (muAnnual - 0.5 * sigmaAnnual * sigmaAnnual) * dt;
+  const driftMonthly = Math.log(1 + muAnnual) * dt;
   const volMonthly = sigmaAnnual * Math.sqrt(dt);
 
   // Pseudo-random Normal standard distribution N(0, 1) using Box-Muller transform

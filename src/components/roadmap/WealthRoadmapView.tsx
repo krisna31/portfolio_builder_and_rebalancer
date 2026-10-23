@@ -222,7 +222,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   const monteCarloResult = useMemo(
     () =>
       simulateMonteCarloPaths({
-        initialCapitalIdr: initialCapitalIdr > 0 ? initialCapitalIdr : 100_000_000,
+        initialCapitalIdr: initialCapitalIdr >= 0 ? initialCapitalIdr : 100_000_000,
         monthlyContributionIdr: monthlySavingsIdr,
         annualCagrPercent: effectiveCompoundingCagr,
         annualVolatilityPercent: solvedMetrics.volatility || 18,
@@ -437,8 +437,16 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="ui-text-main mt-1 font-mono text-2xl font-bold">
-              {sim.yearsToGoal} Tahun{' '}
-              {sim.monthsToGoal > 0 ? `${sim.monthsToGoal} Bulan` : ''}
+              {sim.reachedGoal ? (
+                <>
+                  {sim.yearsToGoal} Tahun{' '}
+                  {sim.monthsToGoal > 0 ? `${sim.monthsToGoal} Bulan` : ''}
+                </>
+              ) : (
+                <span className="text-base text-amber-600 dark:text-amber-400 font-sans font-semibold">
+                  Belum Tercapai (&gt; 30 Thn)
+                </span>
+              )}
             </div>
 
             {annualInflationPercent > 0 && (
@@ -456,7 +464,13 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   </span>
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[10px]">
-                  Waktu capai target riil penuh: <strong>{sim.realYearsToGoalFloat} Tahun</strong> (efek inflasi {annualInflationPercent}%/thn)
+                  {sim.realYearsToGoalFloat !== undefined ? (
+                    <>
+                      Waktu capai target riil penuh: <strong>{sim.realYearsToGoalFloat} Tahun</strong> (efek inflasi {annualInflationPercent}%/thn)
+                    </>
+                  ) : (
+                    <>Target riil belum tercapai dalam horizon 30 tahun (efek inflasi {annualInflationPercent}%/thn)</>
+                  )}
                 </div>
               </div>
             )}

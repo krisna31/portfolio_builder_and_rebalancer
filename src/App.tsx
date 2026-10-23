@@ -34,7 +34,7 @@ import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetM
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { ResetConfirmationModal } from './components/ResetConfirmationModal';
 import { DataTransferModal } from './components/export/DataTransferModal';
-import { ParsedHoldingItem } from './lib/quant/textDataParser';
+import { ParsedHoldingItem, utf8ToBase64, base64ToUtf8 } from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
 import { MissingEnvScreen } from './components/auth/MissingEnvScreen';
@@ -494,7 +494,7 @@ export function App() {
       if (window.location.hash.startsWith('#porto=')) {
         try {
           const encoded = decodeURIComponent(window.location.hash.slice(7));
-          const hashParsed = JSON.parse(atob(encoded));
+          const hashParsed = JSON.parse(base64ToUtf8(encoded));
           if (hashParsed?.weights) {
             setActiveWeights(hashParsed.weights);
             setActivePresetId(hashParsed.presetId ?? null);
@@ -915,7 +915,17 @@ export function App() {
             res.pricesByAssetId[a.symbol] ??
             res.pricesByAssetId[a.yahooSymbol ?? ''];
           if (livePrice && next[a.id]) {
-            next[a.id] = { ...next[a.id], currentPrice: livePrice };
+            const h = next[a.id];
+            const pIdr = a.currency === 'USD' ? livePrice * res.usdIdrRate : livePrice;
+            if (h.isNominalOnly) {
+              next[a.id] = { ...h, currentPrice: 1 };
+            } else if (inputMode === 'units') {
+              const newValIdr = Math.round(h.units * pIdr);
+              next[a.id] = { ...h, currentPrice: livePrice, currentValueIdr: newValIdr };
+            } else {
+              const newUnits = Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+              next[a.id] = { ...h, currentPrice: livePrice, units: newUnits };
+            }
           }
         }
         return next;
@@ -1462,17 +1472,24 @@ export function App() {
     items: ParsedHoldingItem[],
     strategy: 'merge' | 'replace'
   ) => {
+    // Lock manual holdings so Menu 1 changes don't overwrite user's imported holdings!
+    setIsHoldingsSyncedWithMenu1(false);
     const updatedCount = items.filter((i) => i.isRecognized && i.isValid).length;
     setHoldings((prev) => {
       const next = strategy === 'replace' ? {} : { ...prev };
       for (const item of items) {
         if (!item.assetId || !item.isRecognized) continue;
+        const asset = allAssets.find((a) => a.id === item.assetId);
+        const isCatNominal = asset?.category === 'bonds' || asset?.category === 'money-market';
+        const isNominalOnly = prev[item.assetId]?.isNominalOnly ?? isCatNominal;
+
         next[item.assetId] = {
           assetId: item.assetId,
           currentValueIdr: item.nominalIdr,
           units: item.units,
           currentPrice: item.priceNative,
           shockPercent: 0,
+          isNominalOnly,
         };
       }
       return next;
@@ -1595,7 +1612,7 @@ export function App() {
       // 3. Menu 3: Simulator & Goals
       if (
         typeof d3.initialCapitalIdr === 'number' &&
-        d3.initialCapitalIdr > 0
+        d3.initialCapitalIdr >= 0
       ) {
         setInitialCapitalIdr(d3.initialCapitalIdr);
       }
@@ -1708,7 +1725,7 @@ export function App() {
     const customAssets = allAssets.filter(
       (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
     );
-    const shareData = btoa(
+    const shareData = utf8ToBase64(
       JSON.stringify({
         weights: activeWeights,
         presetId: activePresetId,

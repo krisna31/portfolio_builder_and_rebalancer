@@ -163,9 +163,11 @@ export function calculateRebalancePlan(params: {
       } else {
         const buyAdd =
           totalDeficit > 0
-            ? cashInjectionIdr * (deficits[item.asset.id] / totalDeficit)
-            : cashInjectionIdr *
-              ((targetWeights[item.asset.id] ?? 0) / Math.max(1, rawWeightSum));
+            ? Math.floor(cashInjectionIdr * (deficits[item.asset.id] / totalDeficit))
+            : Math.floor(
+                cashInjectionIdr *
+                ((effectiveTargetWeights[item.asset.id] ?? 0) / Math.max(1, rawWeightSum))
+              );
         targetValuesByAsset[item.asset.id] = item.postShockValIdr + buyAdd;
       }
     }
@@ -180,7 +182,7 @@ export function calculateRebalancePlan(params: {
 
     const candidateSellers = computedHoldings.filter((item) => {
       const curW = postShockTotalIdr > 0 ? (item.postShockValIdr / postShockTotalIdr) * 100 : 0;
-      const tgtW = rawWeightSum > 0 ? ((targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100 : 0;
+      const tgtW = rawWeightSum > 0 ? ((effectiveTargetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100 : 0;
       const drift = curW - tgtW;
       const surplus = surpluses[item.asset.id] ?? 0;
       return drift >= minDriftCutoff && surplus >= 25_000;
@@ -223,8 +225,6 @@ export function calculateRebalancePlan(params: {
     // Mode 4: Prioritas Jual RDPT / RDPU / Kas Dulu (Defensive Buffer First)
     // Sesuai prinsip Risk Parity: gunakan cadangan defensif untuk membeli aset diskon.
     // Lindungi aset pertumbuhan (saham AS/IDX, crypto, emas) dari aksi jual.
-    const netFundingNeeded = Math.max(0, totalDeficit - cashInjectionIdr);
-
     const defensiveHoldings = computedHoldings.filter(
       (item) =>
         item.asset.category === 'money-market' ||
@@ -232,36 +232,59 @@ export function calculateRebalancePlan(params: {
         item.asset.id === 'RDPT' ||
         item.asset.id === 'RDPU'
     );
+    const growthHoldings = computedHoldings.filter(
+      (item) => !defensiveHoldings.some((d) => d.asset.id === item.asset.id)
+    );
 
-    const defensiveCapitalTotal = defensiveHoldings.reduce(
-      (sum, item) => sum + item.postShockValIdr,
+    // Only defensive assets with surplus can be trimmed to fund growth!
+    // Underweight defensive assets must NOT be trimmed.
+    const defensiveSurplusesTotal = defensiveHoldings.reduce(
+      (sum, item) => sum + Math.max(0, surpluses[item.asset.id] ?? 0),
       0
     );
 
-    if (defensiveCapitalTotal > 0 && netFundingNeeded > 0) {
-      const actualDefensiveTrim = Math.min(defensiveCapitalTotal, netFundingNeeded);
+    // Deficit of growth assets that need funding
+    const growthDeficitTotal = growthHoldings.reduce(
+      (sum, item) => sum + Math.max(0, deficits[item.asset.id] ?? 0),
+      0
+    );
+
+    const netFundingNeeded = Math.max(0, growthDeficitTotal - cashInjectionIdr);
+
+    if (defensiveSurplusesTotal > 0 && netFundingNeeded > 0) {
+      const actualDefensiveTrim = Math.min(defensiveSurplusesTotal, netFundingNeeded);
       const availableBuyBudget = cashInjectionIdr + actualDefensiveTrim;
 
       for (const item of computedHoldings) {
         const isDefensive = defensiveHoldings.some((d) => d.asset.id === item.asset.id);
-        if (isDefensive && defensiveCapitalTotal > 0 && actualDefensiveTrim > 0) {
-          const drawShare = (item.postShockValIdr / defensiveCapitalTotal) * actualDefensiveTrim;
-          targetValuesByAsset[item.asset.id] = Math.round(
-            Math.max(0, item.postShockValIdr - drawShare)
-          );
+        const itemSurplus = Math.max(0, surpluses[item.asset.id] ?? 0);
+
+        if (isDefensive && itemSurplus > 0 && defensiveSurplusesTotal > 0 && actualDefensiveTrim > 0) {
+          // Trim proportionally from defensive surplus
+          const drawShare = (itemSurplus / defensiveSurplusesTotal) * actualDefensiveTrim;
+          targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr - drawShare);
         } else if (deficits[item.asset.id] > 0 && totalDeficit > 0) {
+          // Fund deficit assets (both growth and underweight defensive) using available buy budget
           const buyShare =
             (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
           targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr + buyShare);
         } else {
-          // Growth assets are protected (HOLD)
+          // Protected assets stay at post-shock value
           targetValuesByAsset[item.asset.id] = item.postShockValIdr;
         }
       }
     } else {
-      // Fallback to selective trim if no defensive assets are held
+      // If no defensive surplus available or cash injection is sufficient:
+      // Protect all assets from selling, allocate available cash injection to deficits
+      const availableBuyBudget = cashInjectionIdr;
       for (const item of computedHoldings) {
-        targetValuesByAsset[item.asset.id] = idealTargets[item.asset.id];
+        if (deficits[item.asset.id] > 0 && totalDeficit > 0 && availableBuyBudget > 0) {
+          const buyShare =
+            (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
+          targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr + buyShare);
+        } else {
+          targetValuesByAsset[item.asset.id] = item.postShockValIdr;
+        }
       }
     }
   }
@@ -338,9 +361,10 @@ export function calculateRebalancePlan(params: {
 
       if (enableIdxLotRounding) {
         // Integer lot rounding: 1 Lot = 100 lembar
+        // Use Math.floor for BUY orders to prevent exceeding allocated cash (overdraft)
         const intLots =
           tradeAmountIdr >= 0
-            ? Math.round(Math.max(0, rawLots))
+            ? Math.floor(Math.max(0, rawLots))
             : -Math.round(Math.max(0, Math.abs(rawLots)));
 
         tradeLotsInteger = intLots;
@@ -434,23 +458,40 @@ export function calculateRebalancePlan(params: {
       items.find((i) => i.assetId === 'RDPU' && (effectiveTargetWeights.RDPU ?? 0) > 0);
 
     if (defensiveItem) {
-      defensiveItem.tradeAmountIdr += totalUnallocatedRemainderIdr;
-      const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
-      const defHold = holdings[defensiveItem.assetId];
-      const defPriceIdr =
-        defAsset?.currency === 'USD'
-          ? (defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1) * usdIdrRate
-          : defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1;
+      const prevTradeAmount = defensiveItem.tradeAmountIdr;
+      const proposedTradeAmount = prevTradeAmount + totalUnallocatedRemainderIdr;
 
-      defensiveItem.tradeUnits = Number(
-        (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
-      );
-      if (defensiveItem.tradeAmountIdr > 10_000) {
-        defensiveItem.action = 'BUY';
-      } else if (defensiveItem.tradeAmountIdr < -10_000) {
-        defensiveItem.action = 'SELL';
+      // In buy-only-dca, NEVER allow remainder sweep to turn defensive into a SELL order!
+      if (rebalanceMode === 'buy-only-dca' && proposedTradeAmount < 0) {
+        // Do not sweep negative remainder into defensive in DCA mode
       } else {
-        defensiveItem.action = 'HOLD';
+        defensiveItem.tradeAmountIdr = proposedTradeAmount;
+        const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
+        const defHold = holdings[defensiveItem.assetId];
+        const defPriceIdr =
+          defAsset?.currency === 'USD'
+            ? (defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1) * usdIdrRate
+            : defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1;
+
+        defensiveItem.tradeUnits = Number(
+          (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
+        );
+        if (defensiveItem.tradeAmountIdr > 10_000) {
+          defensiveItem.action = 'BUY';
+        } else if (defensiveItem.tradeAmountIdr < -10_000 && rebalanceMode !== 'buy-only-dca') {
+          defensiveItem.action = 'SELL';
+        } else {
+          defensiveItem.action = 'HOLD';
+        }
+
+        // Adjust totals for the delta
+        if (prevTradeAmount > 1000) totalBuyIdr -= prevTradeAmount;
+        else if (prevTradeAmount < -1000) totalSellIdr -= Math.abs(prevTradeAmount);
+
+        if (defensiveItem.tradeAmountIdr > 1000) totalBuyIdr += defensiveItem.tradeAmountIdr;
+        else if (defensiveItem.tradeAmountIdr < -1000 && rebalanceMode !== 'buy-only-dca') {
+          totalSellIdr += Math.abs(defensiveItem.tradeAmountIdr);
+        }
       }
     }
   }
@@ -472,6 +513,10 @@ export function calculateRebalancePlan(params: {
           totalBuyIdr -= item.tradeAmountIdr;
         } else if (item.action === 'SELL') {
           totalSellIdr -= Math.abs(item.tradeAmountIdr);
+        }
+        const suppressedFee = item.estimatedFeeIdr ?? 0;
+        if (suppressedFee > 0) {
+          totalEstimatedFeeIdr = Math.max(0, totalEstimatedFeeIdr - suppressedFee);
         }
         item.action = 'HOLD';
         item.isDustFiltered = true;
