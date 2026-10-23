@@ -277,6 +277,8 @@ export interface QuantPortoBackupPayload {
       enableIdxLotRounding?: boolean;
       enableBrokerFees?: boolean;
       filterDustTrades?: boolean;
+      isFixedBudgetMode?: boolean;
+      fixedTotalBudgetIdr?: number;
     };
     menu3_simulator: {
       initialCapitalIdr?: number;

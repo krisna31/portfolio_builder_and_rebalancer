@@ -196,6 +196,8 @@ export function App() {
   const [rebalanceMode, setRebalanceMode] =
     useState<RebalanceMode>('sell-and-buy');
   const [cashInjectionIdr, setCashInjectionIdr] = useState<number>(0);
+  const [isFixedBudgetMode, setIsFixedBudgetMode] = useState<boolean>(false);
+  const [fixedTotalBudgetIdr, setFixedTotalBudgetIdr] = useState<number>(100_000_000);
   const [driftThresholdPercent, setDriftThresholdPercent] = useState<number>(3);
   const [isHoldingsSyncedWithMenu1, setIsHoldingsSyncedWithMenu1] =
     useState<boolean>(true);
@@ -222,6 +224,17 @@ export function App() {
     }
     return init;
   });
+
+  // Auto-Subtract Effect for Fixed Total Budget Mode (Staged Initial Buying)
+  useEffect(() => {
+    if (!isFixedBudgetMode) return;
+    const currentTotalHoldings = allAssets.reduce((sum, a) => {
+      const h = holdings[a.id];
+      return sum + (h?.currentValueIdr ?? 0);
+    }, 0);
+    const autoSubtractedCash = Math.max(0, fixedTotalBudgetIdr - currentTotalHoldings);
+    setCashInjectionIdr(autoSubtractedCash);
+  }, [isFixedBudgetMode, fixedTotalBudgetIdr, holdings, allAssets]);
 
   // Live Price Feed status
   const [priceSourceText, setPriceSourceText] = useState<string>(
@@ -418,6 +431,10 @@ export function App() {
           setEnableIdxLotRounding(Boolean(saved.enableIdxLotRounding));
         if (saved.enableBrokerFees !== undefined)
           setEnableBrokerFees(Boolean(saved.enableBrokerFees));
+        if (saved.isFixedBudgetMode !== undefined)
+          setIsFixedBudgetMode(Boolean(saved.isFixedBudgetMode));
+        if (saved.fixedTotalBudgetIdr !== undefined)
+          setFixedTotalBudgetIdr(Number(saved.fixedTotalBudgetIdr));
 
         if (saved.usdIdrRate) {
           const migratedUsd18k = localStorage.getItem(
@@ -489,6 +506,8 @@ export function App() {
           allAssets,
           pinnedPresetIds,
           lockedAssetIds,
+          isFixedBudgetMode,
+          fixedTotalBudgetIdr,
         })
       );
     } catch {
@@ -511,6 +530,8 @@ export function App() {
     enableIdxLotRounding,
     enableBrokerFees,
     allAssets,
+    isFixedBudgetMode,
+    fixedTotalBudgetIdr,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -1038,6 +1059,8 @@ export function App() {
   const handleSetupInitialBuyFromMenu1 = () => {
     setIsHoldingsSyncedWithMenu1(false);
     setRebalanceMode('buy-only-dca');
+    setIsFixedBudgetMode(true);
+    setFixedTotalBudgetIdr(initialCapitalIdr);
     setCashInjectionIdr(initialCapitalIdr);
     setHoldings((prev) => {
       const next = { ...prev };
@@ -1308,6 +1331,8 @@ export function App() {
           enableIdxLotRounding,
           enableBrokerFees,
           filterDustTrades,
+          isFixedBudgetMode,
+          fixedTotalBudgetIdr,
         },
         menu3_simulator: {
           initialCapitalIdr,
@@ -1482,6 +1507,10 @@ export function App() {
         setEnableBrokerFees(Boolean(d2.enableBrokerFees));
       if (d2.filterDustTrades !== undefined)
         setFilterDustTrades(Boolean(d2.filterDustTrades));
+      if (d2.isFixedBudgetMode !== undefined)
+        setIsFixedBudgetMode(Boolean(d2.isFixedBudgetMode));
+      if (typeof d2.fixedTotalBudgetIdr === 'number')
+        setFixedTotalBudgetIdr(d2.fixedTotalBudgetIdr);
 
       // 3. Menu 3: Simulator & Goals
       if (
@@ -1848,6 +1877,10 @@ export function App() {
             setEnableBrokerFees={setEnableBrokerFees}
             filterDustTrades={filterDustTrades}
             setFilterDustTrades={setFilterDustTrades}
+            isFixedBudgetMode={isFixedBudgetMode}
+            setIsFixedBudgetMode={setIsFixedBudgetMode}
+            fixedTotalBudgetIdr={fixedTotalBudgetIdr}
+            setFixedTotalBudgetIdr={setFixedTotalBudgetIdr}
             onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
             onResetAllAssetPrices={handleResetAllAssetPrices}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}

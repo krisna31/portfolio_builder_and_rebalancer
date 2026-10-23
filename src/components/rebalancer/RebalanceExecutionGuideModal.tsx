@@ -16,6 +16,7 @@ import {
   Calendar,
   Sparkles,
   Layers,
+  Lock,
 } from 'lucide-react';
 import { formatIdr } from '../../lib/formatters';
 
@@ -232,6 +233,24 @@ export const RebalanceExecutionGuideModal: React.FC<
                       (Ajaib, Stockbit, Pluang, Indodax, dll) yang siap dicentang saat order.
                     </p>
                   </div>
+                </div>
+
+                {/* Pro Tip: Staged Buying & Auto-Subtract */}
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 space-y-1.5 mt-3">
+                  <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    <span>💡 Tips Beli Bertahap &amp; Auto-Subtract Sisa Kas:</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Jika Anda membeli aset secara bertahap (misal hari ini baru mengeksekusi{' '}
+                    <strong className="text-white">RDPT Rp 9 Juta</strong> dari total anggaran{' '}
+                    <strong className="text-white">Rp 25 Juta</strong>), sistem QuantPorto otomatis mengaktifkan fitur{' '}
+                    <strong className="text-emerald-400">🔒 Kunci Total Anggaran</strong>.
+                  </p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Begitu saldo RDPT Anda isi, sisa Kas Baru akan <strong>otomatis terpotong menjadi Rp 16 Juta</strong>,
+                    sehingga rekomendasi pembelian untuk aset lain (BBCA, Emas, Saham AS, Kripto) dihitung pas dari sisa uang Anda tanpa risiko <em>overbudget</em>!
+                  </p>
                 </div>
               </div>
 

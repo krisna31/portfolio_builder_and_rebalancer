@@ -39,6 +39,7 @@ import {
   Sparkles,
   HelpCircle,
   X,
+  Lock,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -86,6 +87,10 @@ interface PortfolioRebalancerViewProps {
   setEnableBrokerFees?: (val: boolean) => void;
   filterDustTrades?: boolean;
   setFilterDustTrades?: (val: boolean) => void;
+  isFixedBudgetMode?: boolean;
+  setIsFixedBudgetMode?: (val: boolean) => void;
+  fixedTotalBudgetIdr?: number;
+  setFixedTotalBudgetIdr?: (val: number) => void;
   onClearHoldingsForManualInput: () => void;
   onResetAllAssetPrices?: () => void;
   onSetupInitialBuyFromMenu1: () => void;
@@ -129,6 +134,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   setEnableBrokerFees,
   filterDustTrades = true,
   setFilterDustTrades,
+  isFixedBudgetMode = false,
+  setIsFixedBudgetMode,
+  fixedTotalBudgetIdr,
+  setFixedTotalBudgetIdr,
   onClearHoldingsForManualInput,
   onResetAllAssetPrices,
   onSetupInitialBuyFromMenu1,
@@ -791,50 +800,134 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </div>
         </div>
 
-        <div className="ui-card rounded-xl p-4">
-          <div className="flex items-center justify-between">
+        <div
+          className={`ui-card rounded-xl p-4 transition ${
+            isFixedBudgetMode
+              ? 'border border-emerald-500/40 bg-emerald-500/[0.02]'
+              : ''
+          }`}
+        >
+          <div className="flex items-center justify-between gap-1">
             <span className="ui-text-muted text-xs font-medium">
               Top-Up Kas Baru (DCA Injection)
             </span>
-            <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-              {formatIdr(cashInjectionIdr, true)}
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
-            <FormattedNumberInput
-              step={1_000_000}
-              min={0}
-              value={cashInjectionIdr}
-              onChange={(val) => setCashInjectionIdr(val)}
-              className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
-              ariaLabel="Top-up Cash Injection in IDR"
-            />
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
             <button
               type="button"
-              onClick={() => setCashInjectionIdr(monthlySavingsMenu1Idr)}
-              title="Ambil nilai Custom DCA Bulanan dari Menu 1"
-              className={`rounded px-1.5 py-0.5 font-mono font-semibold ${
-                cashInjectionIdr === monthlySavingsMenu1Idr
-                  ? 'bg-emerald-600 text-white'
-                  : 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              onClick={() => setIsFixedBudgetMode?.(!isFixedBudgetMode)}
+              title={
+                isFixedBudgetMode
+                  ? 'Mode Kunci Anggaran AKTIF: Kas Baru otomatis terpotong saat Anda mengisi saldo aset yang sudah dibeli'
+                  : 'Aktifkan untuk mengunci total modal (misal Rp 25 Juta) agar kas baru otomatis terpotong saat beli bertahap'
+              }
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
+                isFixedBudgetMode
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 shadow-xs'
+                  : 'ui-subtle ui-text-muted hover:ui-text-main'
               }`}
             >
-              +DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
+              <Lock className="h-2.5 w-2.5" />
+              <span>{isFixedBudgetMode ? 'Auto-Subtract ON' : 'Kunci Anggaran'}</span>
             </button>
-            {[0, 5_000_000, 10_000_000, 50_000_000].map((presetCash) => (
-              <button
-                key={presetCash}
-                type="button"
-                onClick={() => setCashInjectionIdr(presetCash)}
-                className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
-              >
-                {presetCash === 0 ? 'Reset 0' : `+${presetCash / 1_000_000}Jt`}
-              </button>
-            ))}
           </div>
+
+          {isFixedBudgetMode ? (
+            <div className="mt-2 space-y-2">
+              <div>
+                <div className="flex items-center justify-between text-[11px] mb-1">
+                  <span className="ui-text-muted">Target Total Modal:</span>
+                  <button
+                    type="button"
+                    onClick={() => setFixedTotalBudgetIdr?.(initialCapitalMenu1Idr)}
+                    className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                    title="Ambil nilai Modal Awal dari Menu 1"
+                  >
+                    Sync M1 ({formatIdr(initialCapitalMenu1Idr, true)})
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
+                  <FormattedNumberInput
+                    step={1_000_000}
+                    min={0}
+                    value={fixedTotalBudgetIdr ?? initialCapitalMenu1Idr}
+                    onChange={(val) => setFixedTotalBudgetIdr?.(val)}
+                    className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
+                    ariaLabel="Target Total Budget in IDR"
+                  />
+                </div>
+              </div>
+
+              {/* Breakdown: Terisi vs Sisa Kas Otomatis */}
+              <div className="rounded-lg bg-black/10 dark:bg-black/25 p-2 text-[11px] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="ui-text-muted">Aset Terisi Saat Ini:</span>
+                  <span className="font-mono font-medium text-slate-300">
+                    {formatIdr(rebalanceResult.initialTotalIdr)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-slate-700/40 pt-1">
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span>Sisa Kas Belanja:</span>
+                    <span className="text-[9px] px-1 rounded bg-emerald-500/20 font-mono font-bold">
+                      Auto
+                    </span>
+                  </span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatIdr(cashInjectionIdr)}
+                  </span>
+                </div>
+                {rebalanceResult.initialTotalIdr >
+                  (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr) && (
+                  <div className="text-[10px] text-amber-500 pt-0.5">
+                    ⚠️ Terisi melebihi target (+
+                    {formatIdr(
+                      rebalanceResult.initialTotalIdr -
+                        (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr)
+                    )}
+                    )
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
+                <FormattedNumberInput
+                  step={1_000_000}
+                  min={0}
+                  value={cashInjectionIdr}
+                  onChange={(val) => setCashInjectionIdr(val)}
+                  className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
+                  ariaLabel="Top-up Cash Injection in IDR"
+                />
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setCashInjectionIdr(monthlySavingsMenu1Idr)}
+                  title="Ambil nilai Custom DCA Bulanan dari Menu 1"
+                  className={`rounded px-1.5 py-0.5 font-mono font-semibold ${
+                    cashInjectionIdr === monthlySavingsMenu1Idr
+                      ? 'bg-emerald-600 text-white'
+                      : 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  +DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
+                </button>
+                {[0, 5_000_000, 10_000_000, 50_000_000].map((presetCash) => (
+                  <button
+                    key={presetCash}
+                    type="button"
+                    onClick={() => setCashInjectionIdr(presetCash)}
+                    className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
+                  >
+                    {presetCash === 0 ? 'Reset 0' : `+${presetCash / 1_000_000}Jt`}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="ui-card rounded-xl p-4">
