@@ -35,6 +35,9 @@ import { ResetConfirmationModal } from './components/ResetConfirmationModal';
 import { DataTransferModal } from './components/export/DataTransferModal';
 import { ParsedHoldingItem } from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
+import { AuthLockScreen } from './components/auth/AuthLockScreen';
+import { MissingEnvScreen } from './components/auth/MissingEnvScreen';
+import { isSessionAuthenticated, revokeSession } from './lib/auth/authUtils';
 
 const STORAGE_KEY = 'quantporto_state_v2';
 const SAVED_PORTFOLIOS_KEY = 'quantporto_saved_portfolios_v1';
@@ -51,7 +54,22 @@ const DEFAULT_SLOT_MAP: Record<string, string> = {
   ETH: 'ETH',
 };
 
+const CONFIGURED_PASSWORD_HASH = (
+  (import.meta.env.VITE_APP_PASSWORD_HASH as string | undefined) || ''
+).trim();
+
 export function App() {
+  // Session Authentication State (Strict requirement: locked unless authenticated in current tab)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (!CONFIGURED_PASSWORD_HASH) return false;
+    return isSessionAuthenticated();
+  });
+
+  const handleLockApp = () => {
+    revokeSession();
+    setIsAuthenticated(false);
+  };
+
   const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(
     'builder'
   );
@@ -1681,6 +1699,21 @@ export function App() {
     }
   };
 
+  // 1. Strict Security Policy: If VITE_APP_PASSWORD_HASH is missing from .env, block app completely
+  if (!CONFIGURED_PASSWORD_HASH) {
+    return <MissingEnvScreen />;
+  }
+
+  // 2. Tab Session Gate: If not authenticated in current browser tab session, show Lock Screen
+  if (!isAuthenticated) {
+    return (
+      <AuthLockScreen
+        expectedHash={CONFIGURED_PASSWORD_HASH}
+        onAuthenticated={() => setIsAuthenticated(true)}
+      />
+    );
+  }
+
   return (
     <div className="ui-page min-h-screen">
       <Header
@@ -1710,6 +1743,7 @@ export function App() {
         onOpenDataTransfer={() => setIsDataTransferModalOpen(true)}
         onQuickCopyConfig={handleQuickCopyConfig}
         quickCopyFeedback={quickCopyFeedback}
+        onLockApp={handleLockApp}
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name

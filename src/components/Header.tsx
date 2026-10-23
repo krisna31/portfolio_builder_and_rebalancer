@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Database,
   ClipboardPaste,
+  Lock,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -68,6 +69,7 @@ interface HeaderProps {
   activePortfolioName?: string;
   activeCagr?: number;
   activeMaxDrawdown?: number;
+  onLockApp?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -100,6 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
   activePortfolioName = 'Portfolio Aktif',
   activeCagr = 0,
   activeMaxDrawdown = 0,
+  onLockApp,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -647,6 +650,20 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </button>
 
+              {/* Lock Session Button */}
+              {onLockApp && (
+                <button
+                  type="button"
+                  onClick={onLockApp}
+                  title="Kunci Layar (Keluar dari Sesi)"
+                  aria-label="Kunci Layar"
+                  className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition hover:text-amber-500 hover:border-amber-500/30"
+                >
+                  <Lock className="h-3.5 w-3.5 text-amber-500/80" />
+                  <span className="hidden xl:inline">Kunci</span>
+                </button>
+              )}
+
               {/* Mobile Tools Drawer Trigger (< lg) */}
               <button
                 id="tour-mobile-menu-btn"
@@ -793,6 +810,21 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Building2 className="h-3.5 w-3.5" />
                     <span>Slip Broker</span>
+                  </button>
+                )}
+
+                {/* Lock App Mobile */}
+                {onLockApp && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onLockApp();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    <span>Kunci Sesi</span>
                   </button>
                 )}
 

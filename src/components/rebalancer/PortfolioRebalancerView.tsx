@@ -9,6 +9,7 @@ import {
 import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { HoldingsTextImportModal } from './HoldingsTextImportModal';
+import { RebalanceExecutionGuideModal } from './RebalanceExecutionGuideModal';
 import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
@@ -34,6 +35,10 @@ import {
   Building2,
   Tag,
   FileSpreadsheet,
+  Lightbulb,
+  Sparkles,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -133,6 +138,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(true);
   const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
@@ -434,6 +441,65 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
   return (
     <div className="space-y-6">
+      {/* SMART WELCOME BANNER (For New Users with Rp 0 Portfolio) */}
+      {rebalanceResult.initialTotalIdr === 0 && !isWelcomeBannerDismissed && (
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-sky-950/70 p-4 sm:p-5 shadow-lg backdrop-blur animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-inner">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white">
+                    Baru Pertama Kali Masuk ke Rebalancer?
+                  </h3>
+                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/40">
+                    Mulai Belanja Perdana
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Saldo portofolio Anda saat ini masih <strong className="text-white">Rp 0</strong>.
+                  Apakah Anda ingin merinci order belanja perdana dari Modal Awal Menu 1 (
+                  <strong className="text-emerald-400">{formatIdr(initialCapitalMenu1Idr, true)}</strong>)
+                  sesuai racikan <strong className="text-white">{activePortfolioName}</strong>, atau membaca panduan cara kerjanya?
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={onSetupInitialBuyFromMenu1}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3.5 py-2.5 shadow-md shadow-emerald-950/50 transition active:scale-[0.98]"
+              >
+                <ArrowUpRight className="h-4 w-4" />
+                <span>Siapkan Beli Perdana</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsGuideModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-medium text-xs px-3 py-2.5 transition"
+              >
+                <HelpCircle className="h-4 w-4 text-emerald-400" />
+                <span>Buka Panduan</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsWelcomeBannerDismissed(true)}
+                className="rounded-lg p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition"
+                title="Tutup banner ini"
+                aria-label="Tutup banner sambutan"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOP CONTROL BAR & MENU 1 SYNC / MANUAL ENTRY HUB */}
       <section className="ui-card rounded-xl p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -463,6 +529,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsGuideModalOpen(true)}
+              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
+              title="Buka buku panduan lengkap cara belanja perdana vs rebalancing portofolio"
+            >
+              <Lightbulb className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
+              <span>Panduan & SOP Eksekusi</span>
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -2393,6 +2468,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         currentHoldings={holdings}
         usdIdrRate={usdIdrRate}
         onApplyHoldings={handleApplyHoldingsFromText}
+      />
+
+      {/* Rebalancer Onboarding & Execution Guide Modal */}
+      <RebalanceExecutionGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
+        initialCapitalMenu1Idr={initialCapitalMenu1Idr}
+        activePortfolioName={activePortfolioName}
+        onSetupInitialBuy={onSetupInitialBuyFromMenu1}
+        onOpenOrderSlip={onOpenOrderSlip}
+        onOpenTextImport={() => setIsHoldingsTextModalOpen(true)}
       />
     </div>
   );
