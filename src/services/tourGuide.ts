@@ -7,7 +7,21 @@ export interface TourGuideOptions {
   startStepIndex?: number;
 }
 
+let activeDriverInstance: ReturnType<typeof driver> | null = null;
+
+export function stopInteractiveTour() {
+  if (activeDriverInstance) {
+    try {
+      activeDriverInstance.destroy();
+    } catch {
+      // Ignore
+    }
+    activeDriverInstance = null;
+  }
+}
+
 export function startInteractiveTour(options?: TourGuideOptions) {
+  stopInteractiveTour();
   let activeTourTab: 'builder' | 'rebalancer' | 'roadmap' = 'builder';
 
   // Ensure we start on the Builder tab initially
@@ -212,6 +226,14 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         side: 'bottom',
         align: 'center',
       },
+      onDeselected: () => {
+        // Automatically close rebalance options dropdown when moving away from step 12
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('quantporto:set-rebalance-options', { detail: { open: false } })
+          );
+        }
+      },
     },
     {
       element: '#tour-crash-ladder',
@@ -390,6 +412,25 @@ export function startInteractiveTour(options?: TourGuideOptions) {
             if (toolsMenuBtn) return toolsMenuBtn;
           }
 
+          // Special handling for Step 12 Rebalancer Stress Scenarios (inside Options menu):
+          if (rawElement === '#tour-stress-scenarios') {
+            const directEl = document.querySelector(rawElement) as HTMLElement | null;
+            if (directEl && directEl.offsetParent !== null) return directEl;
+
+            // Signal Rebalancer to expand options menu
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('quantporto:set-rebalance-options', { detail: { open: true } })
+              );
+            }
+
+            const recheckEl = document.querySelector(rawElement) as HTMLElement | null;
+            if (recheckEl && recheckEl.offsetParent !== null) return recheckEl;
+
+            const optionsBtn = document.querySelector('#tour-rebalance-options-btn') as HTMLElement | null;
+            if (optionsBtn) return optionsBtn;
+          }
+
           const directEl = document.querySelector(rawElement) as HTMLElement | null;
           if (directEl) return directEl;
 
@@ -453,10 +494,12 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         // Ignore storage errors
       }
       driverObj.destroy();
+      activeDriverInstance = null;
       if (options?.onComplete) options.onComplete();
     },
   });
 
+  activeDriverInstance = driverObj;
   const startIndex = options?.startStepIndex ?? 0;
   driverObj.drive(startIndex);
 }

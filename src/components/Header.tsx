@@ -848,10 +848,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
-        <div className="ui-border bg-emerald-500/[0.04] border-t px-3 py-1 sm:px-6">
+        <div className="ui-border bg-slate-900/40 backdrop-blur-xs border-t px-3 py-1 sm:px-6">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
               <span className="ui-text-main truncate font-semibold">
                 {activePortfolioName}
               </span>

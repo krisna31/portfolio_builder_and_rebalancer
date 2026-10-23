@@ -40,6 +40,8 @@ import {
   HelpCircle,
   X,
   Lock,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -145,10 +147,40 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onOpenOrderSlip,
   onBatchUpdateHoldings,
 }) => {
-  const [showShockSliders, setShowShockSliders] = useState(true);
+  const [showShockSliders, setShowShockSliders] = useState(false);
   const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
+  const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const optionsMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close options menu on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        optionsMenuRef.current &&
+        !optionsMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsOptionsMenuOpen(false);
+      }
+    };
+    if (isOptionsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOptionsMenuOpen]);
+
+  // Listen for programmatic event to open options menu (e.g. from Tour Guide Step 12)
+  React.useEffect(() => {
+    const handleSetOptions = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open?: boolean }>;
+      setIsOptionsMenuOpen(Boolean(customEvent.detail?.open));
+    };
+    window.addEventListener('quantporto:set-rebalance-options', handleSetOptions);
+    return () => {
+      window.removeEventListener('quantporto:set-rebalance-options', handleSetOptions);
+    };
+  }, []);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
@@ -450,28 +482,30 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
   return (
     <div className="space-y-6">
-      {/* SMART WELCOME BANNER (For New Users with Rp 0 Portfolio) */}
-      {rebalanceResult.initialTotalIdr === 0 && !isWelcomeBannerDismissed && (
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-sky-950/70 p-4 sm:p-5 shadow-lg backdrop-blur animate-in fade-in duration-200">
+      {/* SMART WELCOME BANNER (For New Users with Rp 0 Portfolio and no Cash Injected yet) */}
+      {rebalanceResult.initialTotalIdr === 0 &&
+        cashInjectionIdr === 0 &&
+        !isFixedBudgetMode &&
+        !isWelcomeBannerDismissed && (
+        <div className="relative overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/90 p-4 sm:p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-inner">
-                <Sparkles className="h-5 w-5" />
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Sparkles className="h-4 w-4" />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">
-                    Baru Pertama Kali Masuk ke Rebalancer?
+                  <h3 className="text-sm font-semibold text-slate-100">
+                    Mulai Belanja Perdana Portofolio
                   </h3>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/40">
-                    Mulai Belanja Perdana
+                  <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
+                    Saldo Rp 0
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                  Saldo portofolio Anda saat ini masih <strong className="text-white">Rp 0</strong>.
-                  Apakah Anda ingin merinci order belanja perdana dari Modal Awal Menu 1 (
+                <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                  Portofolio Anda saat ini masih kosong. Siapkan daftar belanja perdana dari Modal Awal Menu 1 (
                   <strong className="text-emerald-400">{formatIdr(initialCapitalMenu1Idr, true)}</strong>)
-                  sesuai racikan <strong className="text-white">{activePortfolioName}</strong>, atau membaca panduan cara kerjanya?
+                  sesuai racikan <strong className="text-slate-200">{activePortfolioName}</strong>, atau baca panduan SOP eksekusi.
                 </p>
               </div>
             </div>
@@ -480,25 +514,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <button
                 type="button"
                 onClick={onSetupInitialBuyFromMenu1}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3.5 py-2.5 shadow-md shadow-emerald-950/50 transition active:scale-[0.98]"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-3.5 py-2 shadow-xs transition"
               >
-                <ArrowUpRight className="h-4 w-4" />
+                <ArrowUpRight className="h-3.5 w-3.5" />
                 <span>Siapkan Beli Perdana</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsGuideModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-medium text-xs px-3 py-2.5 transition"
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs px-2.5 py-2 transition"
               >
-                <HelpCircle className="h-4 w-4 text-emerald-400" />
-                <span>Buka Panduan</span>
+                <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
+                <span>Panduan</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsWelcomeBannerDismissed(true)}
-                className="rounded-lg p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition"
+                className="rounded-lg p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
                 title="Tutup banner ini"
                 aria-label="Tutup banner sambutan"
               >
@@ -509,231 +543,373 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         </div>
       )}
 
-      {/* TOP CONTROL BAR & MENU 1 SYNC / MANUAL ENTRY HUB */}
-      <section className="ui-card rounded-xl p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* TOP CONTROL BAR: HERO ACTIONS & TECHNICAL SETTINGS HUB */}
+      <section className="ui-card rounded-xl p-4 sm:p-5">
+        <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h2 className="ui-text-main text-sm font-bold sm:text-base">
-                Portfolio Rebalancer &amp; Market Crash Simulator
+                Portfolio Rebalancer &amp; Simulator
               </h2>
               <span
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${
                   isHoldingsSyncedWithMenu1
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                    : 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {isHoldingsSyncedWithMenu1
-                  ? `🟢 Auto-Sync Menu 1 (${formatIdr(initialCapitalMenu1Idr, true)})`
-                  : '🔒 Mode Posisi Manual (Terkunci)'}
+                  ? `🟢 Auto-Sync M1 (${formatIdr(initialCapitalMenu1Idr, true)})`
+                  : 'Mode Posisi Manual'}
               </span>
             </div>
             <p className="ui-text-muted mt-0.5 text-xs">
-              Target Aktif: <strong className="ui-text-main">{activePortfolioName}</strong>{' '}
-              — Pilih ambil nilai default dari Menu 1, simulasi beli perdana dari Rp 0,
-              atau ketik saldo nyata Anda saat ini per aset.
+              Target: <strong className="ui-text-main">{activePortfolioName}</strong>{' '}
+              — Hitung order jual &amp; beli seimbang atau rencanakan belanja perdana bertahap.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Guide SOP Modal Trigger */}
             <button
               type="button"
               onClick={() => setIsGuideModalOpen(true)}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition"
-              title="Buka buku panduan lengkap cara belanja perdana vs rebalancing portofolio"
+              className="ui-subtle ui-text-secondary flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium hover:ui-text-main hover:border-emerald-500/40 transition"
+              title="Buka panduan eksekusi rebalancing vs belanja perdana"
             >
-              <Lightbulb className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
-              <span>Panduan & SOP Eksekusi</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setQuickTotalIdr(initialCapitalMenu1Idr);
-                onPopulateCapital(initialCapitalMenu1Idr);
-              }}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                isHoldingsSyncedWithMenu1
-                  ? 'border-emerald-500 bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-main hover:opacity-80'
-              }`}
-            >
-              <Coins className="h-3.5 w-3.5" />
-              <span>
-                Ambil Default Menu 1 ({formatIdr(initialCapitalMenu1Idr, true)})
-              </span>
+              <Lightbulb className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Panduan SOP</span>
             </button>
 
-            <button
-              type="button"
-              onClick={onSetupInitialBuyFromMenu1}
-              title="Set posisi aset saat ini ke Rp 0 dan masukkan Modal Awal Menu 1 sebagai Kas Baru untuk merinci daftar order BELI perdana"
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:border-emerald-500/50"
-            >
-              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>
-                Beli Perdana dari Rp 0 ({formatIdr(initialCapitalMenu1Idr, true)})
-              </span>
-            </button>
+            {/* Core Action Cluster: Ambil Default M1 vs Beli Perdana */}
+            <div className="ui-subtle inline-flex rounded-lg p-0.5 border">
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickTotalIdr(initialCapitalMenu1Idr);
+                  onPopulateCapital(initialCapitalMenu1Idr);
+                }}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  isHoldingsSyncedWithMenu1
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Isi saldo aset sesuai proporsi Modal Awal Menu 1"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                <span>Ambil Default M1 ({formatIdr(initialCapitalMenu1Idr, true)})</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setIsHoldingsTextModalOpen(true)}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold hover:opacity-80 transition"
-              title="Import atau Export saldo holding melalui teks (Excel / TSV / CSV / format bebas)"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Import / Export Teks (Excel)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onClearHoldingsForManualInput}
-              title="Kosongkan seluruh posisi aset ke Rp 0 untuk mengetik nilai saldo nyata Anda satu per satu"
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-80"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
-              <span>Isi Manual (Reset Rp 0)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onLoadVideo1BExample}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
-            >
-              <Coins className="h-3.5 w-3.5" />
-              <span>Contoh Video Rp 1M</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onApplyPeerDiversification}
-              className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80"
-            >
-              <Split className="h-3.5 w-3.5" />
-              <span>Split Sub-Bank</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Quick What-If Total Portfolio Value Allocator */}
-        <div className="ui-subtle mt-3 flex flex-col gap-2.5 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="ui-text-main font-semibold">
-              Kalkulator Cepat Total Posisi Saat Ini:
-            </span>
-            <div className="ui-card flex items-center gap-1 rounded-md border px-2 py-1">
-              <span className="ui-text-muted font-mono text-[11px]">Rp</span>
-              <FormattedNumberInput
-                step={10_000_000}
-                min={0}
-                value={quickTotalIdr}
-                onChange={(val) => setQuickTotalIdr(val)}
-                className="ui-text-main w-32 bg-transparent font-mono text-xs font-bold focus:outline-none"
-                ariaLabel="Quick Total Portfolio Value in IDR"
-              />
+              <button
+                type="button"
+                onClick={onSetupInitialBuyFromMenu1}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  cashInjectionIdr > 0 && rebalanceResult.initialTotalIdr === 0
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Kosongkan aset ke Rp 0 dan jadikan modal M1 sebagai Kas Baru untuk belanja perdana"
+              >
+                <ArrowUpRight className="h-3.5 w-3.5" />
+                <span>Beli Perdana (Rp 0)</span>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1 text-[10px]">
-              {[50_000_000, 100_000_000, 250_000_000, 500_000_000, 1_000_000_000].map(
-                (presetTotal) => (
-                  <button
-                    key={presetTotal}
-                    type="button"
-                    onClick={() => {
-                      setQuickTotalIdr(presetTotal);
-                      onScaleTotalHoldingsIdr(presetTotal, 'target');
-                    }}
-                    className="ui-card ui-text-secondary rounded px-1.5 py-0.5 font-mono hover:opacity-80"
-                  >
-                    {formatIdr(presetTotal, true)}
-                  </button>
-                )
+
+            {/* Consolidated Technical Settings Popover Menu */}
+            <div ref={optionsMenuRef} className="relative">
+              <button
+                id="tour-rebalance-options-btn"
+                type="button"
+                onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                  isOptionsMenuOpen || anyPriceModified || !enableIdxLotRounding || enableBrokerFees
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'ui-subtle ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Pengaturan Lanjutan: Skenario Krisis, Split Bank, Filter Receh, Fee Broker, Import Teks"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Opsi &amp; Simulasi</span>
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform ${
+                    isOptionsMenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {isOptionsMenuOpen && (
+                <div className="ui-card absolute right-0 z-50 mt-1.5 w-80 max-w-[90vw] space-y-3 rounded-xl p-3.5 text-xs shadow-2xl border">
+                  <div className="ui-border flex items-center justify-between border-b pb-2">
+                    <span className="ui-text-main font-bold">
+                      Opsi &amp; Simulasi Lanjutan
+                    </span>
+                    <span className="ui-text-muted font-mono text-[10px]">
+                      Rebalancer
+                    </span>
+                  </div>
+
+                  {/* Section 1: Simulasi Krisis & Crash Stress-Test (Preserves #tour-stress-scenarios!) */}
+                  <div id="tour-stress-scenarios" className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-[11px] font-semibold ui-text-main">
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        <span>Simulasi Krisis &amp; Crash Pasar:</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowShockSliders(!showShockSliders)}
+                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        {showShockSliders ? 'Tutup Sliders' : 'Slider Custom'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => onApplyShockScenario('video-bull-3x')}
+                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                      >
+                        <TrendingUp className="h-3 w-3 text-emerald-500" />
+                        <span>Bull 3x (+200%)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onApplyShockScenario('video-crash-50')}
+                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                      >
+                        <TrendingDown className="h-3 w-3 text-rose-500" />
+                        <span>Crash -50% (Dip)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onApplyShockScenario('global-crisis')}
+                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                      >
+                        <span>Krisis Global (-35%)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onApplyShockScenario('reset')}
+                        className="ui-subtle ui-text-muted flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        <span>Reset (0%)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Data Input & Penyesuaian Saldo */}
+                  <div className="ui-border border-t pt-2 space-y-1">
+                    <span className="text-[11px] font-semibold ui-text-main block mb-1">
+                      Manipulasi Saldo &amp; Portofolio:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOptionsMenuOpen(false);
+                        setIsHoldingsTextModalOpen(true);
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>Import / Export Teks (Excel)</span>
+                      </div>
+                      <span className="ui-text-muted font-mono text-[10px]">TSV/CSV</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOptionsMenuOpen(false);
+                        onClearHoldingsForManualInput();
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+                        <span>Isi Manual (Kosongkan ke Rp 0)</span>
+                      </div>
+                      <span className="ui-text-muted font-mono text-[10px]">Reset</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOptionsMenuOpen(false);
+                        onLoadVideo1BExample();
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Coins className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Muat Contoh Video Rp 1 Miliar</span>
+                      </div>
+                      <span className="ui-text-muted font-mono text-[10px]">Demo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOptionsMenuOpen(false);
+                        onApplyPeerDiversification();
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Split className="h-3.5 w-3.5 text-indigo-400" />
+                        <span>Split Diversifikasi Sub-Bank</span>
+                      </div>
+                      <span className="ui-text-muted font-mono text-[10px]">Rekening</span>
+                    </button>
+                  </div>
+
+                  {/* Section 3: Pengaturan Eksekusi & Filter */}
+                  <div className="ui-border border-t pt-2 space-y-1.5">
+                    <span className="text-[11px] font-semibold ui-text-main block">
+                      Aturan Eksekusi Broker:
+                    </span>
+                    {setEnableIdxLotRounding && (
+                      <button
+                        type="button"
+                        onClick={() => setEnableIdxLotRounding(!enableIdxLotRounding)}
+                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                          enableIdxLotRounding
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                            : 'ui-subtle ui-text-secondary'
+                        }`}
+                      >
+                        <span>Bulatkan Lot BEI (100 lbr)</span>
+                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                          {enableIdxLotRounding ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                    )}
+
+                    {setEnableBrokerFees && (
+                      <button
+                        type="button"
+                        onClick={() => setEnableBrokerFees(!enableBrokerFees)}
+                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                          enableBrokerFees
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
+                            : 'ui-subtle ui-text-secondary'
+                        }`}
+                      >
+                        <span>Estimasi Fee Broker &amp; Pajak</span>
+                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                          {enableBrokerFees ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                    )}
+
+                    {setFilterDustTrades && (
+                      <button
+                        type="button"
+                        onClick={() => setFilterDustTrades(!filterDustTrades)}
+                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                          filterDustTrades
+                            ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold'
+                            : 'ui-subtle ui-text-secondary'
+                        }`}
+                      >
+                        <span>Saring Order Receh (&lt; Rp 25rb)</span>
+                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                          {filterDustTrades ? 'ON' : 'OFF'}
+                        </span>
+                      </button>
+                    )}
+
+                    {anyPriceModified && onResetAllAssetPrices && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOptionsMenuOpen(false);
+                          onResetAllAssetPrices();
+                        }}
+                        className="flex w-full items-center justify-between rounded-lg p-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition mt-1"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>Reset Semua Harga Spot Pasar</span>
+                        </div>
+                        <span className="text-[10px] uppercase font-mono">Reset</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Section 4: Kalkulator Skala Cepat */}
+                  <div className="ui-border border-t pt-2 space-y-1.5">
+                    <span className="text-[11px] font-semibold ui-text-main block">
+                      Skalakan Total Portofolio:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="ui-subtle flex flex-1 items-center gap-1 rounded-md border px-2 py-1">
+                        <span className="ui-text-muted font-mono text-[10px]">Rp</span>
+                        <FormattedNumberInput
+                          step={10_000_000}
+                          min={0}
+                          value={quickTotalIdr}
+                          onChange={(val) => setQuickTotalIdr(val)}
+                          className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
+                          ariaLabel="Quick Scale Total Value"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onScaleTotalHoldingsIdr(quickTotalIdr, 'target');
+                          setIsOptionsMenuOpen(false);
+                        }}
+                        className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-500 shrink-0"
+                      >
+                        Bagi Target
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1 text-[10px]">
+                      {[50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map(
+                        (presetTotal) => (
+                          <button
+                            key={presetTotal}
+                            type="button"
+                            onClick={() => setQuickTotalIdr(presetTotal)}
+                            className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
+                          >
+                            {formatIdr(presetTotal, true)}
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onScaleTotalHoldingsIdr(quickTotalIdr, 'target')}
-              className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
-            >
-              Bagi Sesuai Target Menu 1
-            </button>
-            <button
-              type="button"
-              onClick={() => onScaleTotalHoldingsIdr(quickTotalIdr, 'current')}
-              title="Ubah total nilai portofolio dengan mempertahankan proporsi persentase posisi saat ini"
-              className="ui-card ui-text-main rounded-md border px-2.5 py-1 text-xs font-medium hover:opacity-80"
-            >
-              Skalakan Proporsi Saat Ini
-            </button>
-          </div>
         </div>
 
-        {/* Market Crash / Bull Run Stress-Test Bar */}
-        <div id="tour-stress-scenarios" className="ui-subtle mt-4 rounded-lg p-3.5">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-amber-500" />
-              <span className="ui-text-main text-xs font-semibold">
-                Simulasi Market Crash &amp; Bull Run (15:18 – 16:05):
+        {/* Custom Shock Sliders (Collapsible when opened from Opsi & Simulasi) */}
+        {showShockSliders && (
+          <div className="ui-subtle mt-3 rounded-lg p-3 border">
+            <div className="flex items-center justify-between mb-2 text-xs">
+              <span className="ui-text-main font-semibold flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <span>Slider Shock Harga Per Aset:</span>
               </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => onApplyShockScenario('video-bull-3x')}
-                className="ui-card ui-text-main flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium hover:opacity-80"
+                onClick={() => setShowShockSliders(false)}
+                className="text-[11px] text-slate-400 hover:text-slate-200"
               >
-                <TrendingUp className="h-3 w-3 text-emerald-600" />
-                <span>Skenario 1: BTC &amp; ETH 3x (+200%), BBCA -10%</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onApplyShockScenario('video-crash-50')}
-                className="ui-card ui-text-main flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium hover:opacity-80"
-              >
-                <TrendingDown className="h-3 w-3 text-rose-600" />
-                <span>Skenario 2: Crypto Crash -50% (Buy Dip)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onApplyShockScenario('global-crisis')}
-                className="ui-card ui-text-main rounded px-2.5 py-1 text-xs font-medium hover:opacity-80"
-              >
-                Krisis Global (Saham -35%, Crypto -60%)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onApplyShockScenario('reset')}
-                className="ui-card ui-text-muted flex items-center gap-1 rounded px-2 py-1 text-xs font-medium hover:opacity-80"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Reset (0%)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowShockSliders(!showShockSliders)}
-                className="ui-text-secondary ml-1 text-xs underline"
-              >
-                {showShockSliders ? 'Tutup Slider' : 'Custom Shock'}
+                ✕ Tutup
               </button>
             </div>
-          </div>
-
-          {showShockSliders && (
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
               {rebalanceResult.items.map((item) => {
                 const shock = holdings[item.assetId]?.shockPercent ?? 0;
                 return (
-                  <div key={item.assetId} className="ui-card rounded p-2">
+                  <div key={item.assetId} className="ui-card rounded p-2 border">
                     <div className="flex items-center justify-between text-xs">
                       <span className="ui-text-main font-semibold">
                         {item.assetId}
@@ -761,15 +937,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           shockPercent: Number(e.target.value),
                         })
                       }
-                      className="mt-1.5 h-1 w-full cursor-pointer"
+                      className="mt-1.5 h-1 w-full cursor-pointer accent-emerald-500"
                       aria-label={`Price shock percent for ${item.assetId}`}
                     />
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* KPI SUMMARY CARDS */}
@@ -1074,24 +1250,30 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       {/* MAIN REBALANCING TABLE & DRIFT CHART */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div id="tour-rebalance-table-container" className="ui-card rounded-xl p-5 lg:col-span-8">
-          <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+          <div className="ui-border flex flex-wrap items-center justify-between gap-3 border-b pb-3">
             <div>
               <h3 className="ui-text-main text-sm font-bold">
                 Tabel Instruksi Jual / Beli Rebalancing
               </h3>
-              <p className="ui-text-muted text-xs">
-                Ubah nilai Rupiah saat ini atau jumlah Unit/Lot untuk menghitung order:
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-400">
+                <span>Ubah nilai saldo atau unit untuk menghitung order eksekusi:</span>
+                {rebalanceResult.unallocatedCashRemainderIdr &&
+                Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
+                  <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    • Sisa Pecahan Lot: {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)} (ke RDPT)
+                  </span>
+                ) : null}
+              </div>
             </div>
 
-            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-1.5">
-              {/* Unified Broker Slip & Quick Copy Button Group */}
+            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-2">
+              {/* Primary Emerald Broker Slip Button Group */}
               {onOpenOrderSlip ? (
-                <div className="inline-flex rounded-md shadow-xs">
+                <div className="inline-flex rounded-lg shadow-2xs">
                   <button
                     type="button"
                     onClick={onOpenOrderSlip}
-                    className="inline-flex items-center gap-1.5 rounded-l-md bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 text-xs font-semibold transition"
+                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-semibold transition shadow-xs"
                     title="Buka Slip Order Broker Interaktif (Stockbit / Pluang / Reku / Makmur)"
                   >
                     <Building2 className="h-3.5 w-3.5" />
@@ -1100,18 +1282,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <button
                     type="button"
                     onClick={copyWhatsAppOrderSlip}
-                    title="Salin Cepat Format WhatsApp / Catatan ke Clipboard"
-                    className="inline-flex items-center gap-1 rounded-r-md bg-indigo-700 hover:bg-indigo-600 text-white px-2 py-1 text-xs border-l border-indigo-500/40 transition"
+                    title="Salin Cepat Format Catatan ke Clipboard"
+                    className="inline-flex items-center gap-1 rounded-r-lg bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-1.5 text-xs border-l border-emerald-500/40 transition"
                   >
                     {slipCopied ? (
                       <>
-                        <Check className="h-3.5 w-3.5 text-emerald-300" />
-                        <span className="hidden sm:inline">Tersalin!</span>
+                        <Check className="h-3.5 w-3.5 text-white" />
+                        <span className="hidden sm:inline">Tersalin</span>
                       </>
                     ) : (
                       <>
                         <Copy className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Salin Cepat</span>
+                        <span className="hidden sm:inline">Salin</span>
                       </>
                     )}
                   </button>
@@ -1120,8 +1302,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <button
                   type="button"
                   onClick={copyWhatsAppOrderSlip}
-                  title="Salin daftar order Jual/Beli & Limit Order Crash untuk ditempel ke WhatsApp atau aplikasi Catatan"
-                  className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                  title="Salin daftar order Jual/Beli untuk ditempel ke aplikasi Catatan"
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
                 >
                   {slipCopied ? (
                     <>
@@ -1131,23 +1313,24 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ) : (
                     <>
                       <Copy className="h-3.5 w-3.5" />
-                      <span>Salin Slip Order (WA/Notes)</span>
+                      <span>Salin Slip Order</span>
                     </>
                   )}
                 </button>
               )}
 
-              <div className="ui-subtle flex rounded-md p-0.5 text-xs">
+              {/* Segmented Control: Nominal vs % vs Unit/Lot */}
+              <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
                 <button
                   type="button"
                   onClick={() => {
                     setHoldingEntryMode('nominal');
                     setInputMode('nominal');
                   }}
-                  className={`rounded px-2 py-1 font-medium ${
+                  className={`rounded-md px-2 py-1 font-medium transition ${
                     holdingEntryMode === 'nominal'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
                   Nominal (Rp)
@@ -1158,10 +1341,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     setHoldingEntryMode('percent');
                     setInputMode('nominal');
                   }}
-                  className={`rounded px-2 py-1 font-medium ${
+                  className={`rounded-md px-2 py-1 font-medium transition ${
                     holdingEntryMode === 'percent'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
                   % Saat Ini
@@ -1172,26 +1355,27 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     setHoldingEntryMode('units');
                     setInputMode('units');
                   }}
-                  className={`rounded px-2 py-1 font-medium ${
+                  className={`rounded-md px-2 py-1 font-medium transition ${
                     holdingEntryMode === 'units'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
                   Unit / Lot
                 </button>
               </div>
 
-              {/* Hybrid Table vs Mobile Card View Toggle */}
-              <div className="ui-subtle flex items-center gap-0.5 rounded-md p-0.5 text-xs">
+              {/* Segmented Control: Table vs Mobile Card View */}
+              <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
                 <button
                   type="button"
                   onClick={() => setRebalanceViewMode('table')}
-                  className={`flex items-center gap-1 rounded px-2 py-1 font-medium ${
+                  className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
                     rebalanceViewMode === 'table'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
+                  title="Tampilan Tabel Lengkap"
                 >
                   <Table2 className="h-3 w-3" />
                   <span>Tabel</span>
@@ -1199,119 +1383,29 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <button
                   type="button"
                   onClick={() => setRebalanceViewMode('cards')}
-                  className={`flex items-center gap-1 rounded px-2 py-1 font-medium ${
+                  className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
                     rebalanceViewMode === 'cards'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted'
+                      : 'ui-text-muted hover:ui-text-main'
                   }`}
+                  title="Tampilan Kartu Kompak"
                 >
                   <LayoutGrid className="h-3 w-3" />
                   <span>Kartu</span>
                 </button>
               </div>
 
+              {/* Clean Minimal CSV Export Button */}
               <button
                 type="button"
                 onClick={exportCsvTrades}
-                className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium"
+                className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium hover:ui-text-main transition"
+                title="Unduh Instruksi Order sebagai file CSV"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span>CSV</span>
+                <span className="hidden sm:inline">CSV</span>
               </button>
             </div>
-          </div>
-
-          {/* Practical Execution Settings: Lot Rounding & Broker Fee Toggles */}
-          <div className="ui-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="ui-text-muted font-medium">Pengaturan Eksekusi:</span>
-
-              {setEnableIdxLotRounding && (
-                <button
-                  type="button"
-                  onClick={() => setEnableIdxLotRounding(!enableIdxLotRounding)}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
-                    enableIdxLotRounding
-                      ? 'bg-emerald-600 font-semibold text-white'
-                      : 'ui-card ui-text-secondary hover:opacity-80'
-                  }`}
-                  title="Bulatkan order saham Indonesia ke kelipatan 100 lembar (1 Lot BEI). Sisa receh otomatis dialihkan ke RDPT/RDPU."
-                >
-                  <span>📦 Bulatkan Lot BEI (1 Lot = 100 lbr)</span>
-                  <span className="rounded bg-black/20 px-1 text-[10px]">
-                    {enableIdxLotRounding ? 'ON' : 'OFF'}
-                  </span>
-                </button>
-              )}
-
-              {setEnableBrokerFees && (
-                <button
-                  type="button"
-                  onClick={() => setEnableBrokerFees(!enableBrokerFees)}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
-                    enableBrokerFees
-                      ? 'bg-amber-600 font-semibold text-white'
-                      : 'ui-card ui-text-secondary hover:opacity-80'
-                  }`}
-                  title="Hitung estimasi fee broker & pajak final (IDX beli 0.15%, jual 0.25%, US 0.1%, Crypto 0.15%, Reksadana 0%)"
-                >
-                  <span>💸 Fee Broker &amp; Pajak</span>
-                  <span className="rounded bg-black/20 px-1 text-[10px]">
-                    {enableBrokerFees ? 'ON' : 'OFF'}
-                  </span>
-                </button>
-              )}
-
-              {setFilterDustTrades && (
-                <button
-                  type="button"
-                  onClick={() => setFilterDustTrades(!filterDustTrades)}
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition ${
-                    filterDustTrades
-                      ? 'bg-indigo-600 font-semibold text-white'
-                      : 'ui-card ui-text-secondary hover:opacity-80'
-                  }`}
-                  title="Saring otomatis transaksi mikro di bawah Rp 25.000 (~$1.5) menjadi HOLD agar slip order bersih dan bebas biaya transaksi receh."
-                >
-                  <span>🧹 Saring Receh (&lt; 25rb)</span>
-                  <span className="rounded bg-black/20 px-1 text-[10px]">
-                    {filterDustTrades ? 'ON' : 'OFF'}
-                  </span>
-                </button>
-              )}
-
-              {rebalanceResult.suppressedDustTradesCount !== undefined &&
-                rebalanceResult.suppressedDustTradesCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
-                    ✨ {rebalanceResult.suppressedDustTradesCount} order receh disaring
-                  </span>
-                )}
-
-              {anyPriceModified && onResetAllAssetPrices && (
-                <button
-                  type="button"
-                  onClick={onResetAllAssetPrices}
-                  className="flex items-center gap-1.5 rounded-md bg-rose-500/15 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/25 transition"
-                  title="Kembalikan semua harga spot aset ke harga pasar default"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reset Semua Harga Pasar</span>
-                </button>
-              )}
-            </div>
-
-            {rebalanceResult.unallocatedCashRemainderIdr &&
-            Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
-              <div className="flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
-                <span>Sisa Pecahan Lot:</span>
-                <strong className="font-bold">
-                  {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
-                </strong>
-                <span className="ui-text-muted font-sans text-[10px]">
-                  (dialihkan ke RDPT)
-                </span>
-              </div>
-            ) : null}
           </div>
 
           {rebalanceViewMode === 'table' ? (

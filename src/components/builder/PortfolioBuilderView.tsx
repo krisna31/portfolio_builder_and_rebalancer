@@ -1169,58 +1169,61 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => setArchetypeFilter('all')}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                archetypeFilter === 'all'
-                  ? 'bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-secondary'
-              }`}
-            >
-              Semua ({showDominated25 ? 25 : 15})
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchetypeFilter('business-owner')}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                archetypeFilter === 'business-owner'
-                  ? 'bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-secondary'
-              }`}
-            >
-              <Briefcase className="h-3 w-3" />
-              <span>&lt;10% DD</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchetypeFilter('hybrid-conviction')}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                archetypeFilter === 'hybrid-conviction'
-                  ? 'bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-secondary'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              <span>Risk Budgeting</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchetypeFilter('full-time-investor')}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                archetypeFilter === 'full-time-investor'
-                  ? 'bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-secondary'
-              }`}
-            >
-              <Flame className="h-3 w-3" />
-              <span>&gt;18% CAGR</span>
-            </button>
+            {/* Archetype Filter Segmented Control */}
+            <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+              <button
+                type="button"
+                onClick={() => setArchetypeFilter('all')}
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                  archetypeFilter === 'all'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Semua ({showDominated25 ? 25 : 15})
+              </button>
+              <button
+                type="button"
+                onClick={() => setArchetypeFilter('business-owner')}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                  archetypeFilter === 'business-owner'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Briefcase className="h-3 w-3" />
+                <span>&lt;10% DD</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setArchetypeFilter('hybrid-conviction')}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                  archetypeFilter === 'hybrid-conviction'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Sparkles className="h-3 w-3" />
+                <span>Risk Budgeting</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setArchetypeFilter('full-time-investor')}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                  archetypeFilter === 'full-time-investor'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Flame className="h-3 w-3" />
+                <span>&gt;18% CAGR</span>
+              </button>
+            </div>
 
             <button
               type="button"
               onClick={() => setShowDominated25(!showDominated25)}
-              className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium"
+              className="ui-subtle ui-text-muted flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition"
             >
               {showDominated25 ? (
                 <EyeOff className="h-3 w-3" />
@@ -1231,7 +1234,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </button>
 
             {/* 3-Mode Cell Value Display Selector (% + Rp | % Bobot | Rp Nominal) */}
-            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
+            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
               {(
                 [
                   { id: 'both', label: '% + Rp' },
@@ -1247,9 +1250,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     initialCapitalIdr,
                     true
                   )}`}
-                  className={`rounded-md px-2 py-1 text-xs font-medium transition ${
+                  className={`rounded-md px-2 py-1 font-medium transition ${
                     cellDisplayMode === mode.id
-                      ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
@@ -1259,16 +1262,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {/* Quick Sorting Selector */}
-            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5 text-xs">
+            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
               <span className="ui-text-muted px-1.5 text-[10px] font-medium hidden sm:inline">
                 Sort:
               </span>
               <button
                 type="button"
                 onClick={() => handleToggleTableSort('rank')}
-                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                className={`rounded px-2 py-1 font-medium transition ${
                   tableSortKey === 'rank'
-                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -1277,9 +1280,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleTableSort('cagr')}
-                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                className={`rounded px-2 py-1 font-medium transition ${
                   tableSortKey === 'cagr'
-                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -1288,9 +1291,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleTableSort('maxDrawdown')}
-                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                className={`rounded px-2 py-1 font-medium transition ${
                   tableSortKey === 'maxDrawdown'
-                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -1299,9 +1302,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleTableSort('calmar')}
-                className={`rounded px-2 py-1 text-xs font-medium transition ${
+                className={`rounded px-2 py-1 font-medium transition ${
                   tableSortKey === 'calmar'
-                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -1310,11 +1313,11 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {/* Hybrid Table vs Mobile Card View Toggle */}
-            <div className="ui-subtle flex items-center gap-0.5 rounded-lg p-0.5">
+            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
               <button
                 type="button"
                 onClick={() => setTableViewMode('table')}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
                   tableViewMode === 'table'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
@@ -1326,7 +1329,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <button
                 type="button"
                 onClick={() => setTableViewMode('cards')}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition ${
+                className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
                   tableViewMode === 'cards'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'

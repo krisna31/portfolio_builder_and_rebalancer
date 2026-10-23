@@ -23,7 +23,7 @@ import {
 } from './lib/quant/riskParitySolver';
 import { calculateRebalancePlan } from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
-import { startInteractiveTour } from './services/tourGuide';
+import { startInteractiveTour, stopInteractiveTour } from './services/tourGuide';
 import { Header, SavedPortfolioSnapshot } from './components/Header';
 import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView';
 import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
@@ -66,6 +66,7 @@ export function App() {
   });
 
   const handleLockApp = () => {
+    stopInteractiveTour();
     revokeSession();
     setIsAuthenticated(false);
   };
@@ -282,6 +283,7 @@ export function App() {
   }, [backupToast]);
 
   const handleStartTour = () => {
+    if (!isAuthenticated) return;
     startInteractiveTour({ onTabSwitch: setActiveTab });
   };
 
@@ -303,8 +305,9 @@ export function App() {
     window.location.reload();
   };
 
-  // Auto-launch interactive tour on first load (if not yet seen)
+  // Auto-launch interactive tour on first load ONLY AFTER authenticated (if not yet seen)
   useEffect(() => {
+    if (!isAuthenticated) return;
     try {
       const tourSeen = localStorage.getItem(TOUR_SEEN_KEY) === 'true';
       if (!tourSeen) {
@@ -316,10 +319,11 @@ export function App() {
     } catch {
       // Ignore storage errors
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  // Global Keyboard Shortcut: Press '?' anywhere to immediately trigger the interactive guide
+  // Global Keyboard Shortcut: Press '?' anywhere to immediately trigger the interactive guide (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (
@@ -339,7 +343,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isAuthenticated]);
 
   // Restore state from URL Hash (if shared link) or LocalStorage on first mount
   useEffect(() => {

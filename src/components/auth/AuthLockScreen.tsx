@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { BrandLogo } from '../BrandLogo';
+import { stopInteractiveTour } from '../../services/tourGuide';
 import {
   sha256Hash,
   authenticateSession,
@@ -26,6 +27,11 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   const [lockoutSec, setLockoutSec] = useState(() => getRemainingLockoutSeconds());
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Ensure no lingering tour overlays are present while locked
+  useEffect(() => {
+    stopInteractiveTour();
+  }, []);
 
   // Auto-focus input on mount
   useEffect(() => {
