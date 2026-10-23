@@ -181,6 +181,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       }));
       setFngSyncMessage(`Live: ${data.score} (${data.classification})`);
       setTimeout(() => setFngSyncMessage(null), 3500);
+    } else if (!data) {
+      setFngSyncMessage('Gagal mengambil data live API Crypto Fear & Greed');
+      setTimeout(() => setFngSyncMessage(null), 3500);
     }
   };
 

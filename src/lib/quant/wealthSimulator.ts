@@ -334,6 +334,7 @@ export function simulateMonteCarloPaths(params: {
   targetGoalIdr?: number;
   maxYears?: number;
   numSimulations?: number;
+  annualStepUpPercent?: number;
 }): MonteCarloSimulationResult {
   const {
     initialCapitalIdr,
@@ -343,6 +344,7 @@ export function simulateMonteCarloPaths(params: {
     targetGoalIdr = 1_000_000_000,
     maxYears = 25,
     numSimulations = 500,
+    annualStepUpPercent = 0,
   } = params;
 
   const muAnnual = Math.max(0, annualCagrPercent) / 100;
@@ -377,6 +379,7 @@ export function simulateMonteCarloPaths(params: {
 
   for (let s = 0; s < numSimulations; s++) {
     let wealth = Math.max(0, initialCapitalIdr);
+    let currentMonthlyPmt = Math.max(0, monthlyContributionIdr);
     yearlyWealthDistribution[0][s] = wealth;
 
     if (wealth >= targetGoalIdr) {
@@ -384,9 +387,13 @@ export function simulateMonteCarloPaths(params: {
     }
 
     for (let m = 1; m <= totalMonths; m++) {
+      if (m > 1 && (m - 1) % 12 === 0 && annualStepUpPercent > 0) {
+        currentMonthlyPmt *= 1 + annualStepUpPercent / 100;
+      }
+
       const z = getStandardNormal();
       const monthlyReturnMultiplier = Math.exp(driftMonthly + volMonthly * z);
-      wealth = wealth * monthlyReturnMultiplier + Math.max(0, monthlyContributionIdr);
+      wealth = wealth * monthlyReturnMultiplier + currentMonthlyPmt;
 
       if (wealth >= targetGoalIdr && goalReachedMonths[s] === null) {
         goalReachedMonths[s] = m;
@@ -407,11 +414,15 @@ export function simulateMonteCarloPaths(params: {
 
   // Build percentile series
   let runningPrincipal = initialCapitalIdr;
+  let runningMonthlyPmt = Math.max(0, monthlyContributionIdr);
   const series: MonteCarloYearPoint[] = [];
 
   for (let yr = 0; yr <= maxYears; yr++) {
     if (yr > 0) {
-      runningPrincipal += monthlyContributionIdr * 12;
+      if (yr > 1 && annualStepUpPercent > 0) {
+        runningMonthlyPmt *= 1 + annualStepUpPercent / 100;
+      }
+      runningPrincipal += runningMonthlyPmt * 12;
     }
 
     const sortedVals = [...yearlyWealthDistribution[yr]].sort((a, b) => a - b);

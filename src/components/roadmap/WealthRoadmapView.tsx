@@ -229,6 +229,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         targetGoalIdr,
         maxYears: displayYears,
         numSimulations: 500,
+        annualStepUpPercent: annualStepUpPct,
       }),
     [
       initialCapitalIdr,
@@ -237,6 +238,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       solvedMetrics.volatility,
       targetGoalIdr,
       displayYears,
+      annualStepUpPct,
     ]
   );
 
@@ -453,7 +455,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <div className="mt-2 rounded-lg bg-purple-500/10 p-2 text-xs">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-purple-700 dark:text-purple-300">
-                    Daya Beli Riil saat Rp {formatIdr(targetGoalIdr, true)} tercapai:
+                    Daya Beli Riil saat {formatIdr(targetGoalIdr, true)} tercapai:
                   </span>
                   <span className="font-mono font-bold text-purple-700 dark:text-purple-300">
                     ≈{' '}
@@ -717,7 +719,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   <div className="mt-0.5 text-base font-bold font-mono text-indigo-400">
                     {monteCarloResult.medianYearsToGoal !== null
                       ? `${monteCarloResult.medianYearsToGoal} Tahun`
-                      : '> 25 Tahun'}
+                      : `> ${displayYears} Tahun`}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">
                     50% jalur simulasi

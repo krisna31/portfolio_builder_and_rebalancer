@@ -57,15 +57,21 @@ export function parseFinancialNumber(rawStr: string): {
   isLot: boolean;
   isUnit: boolean;
   isUsd: boolean;
+  hasCurrencyMarker: boolean;
 } {
   let s = rawStr.trim();
   let isUsd = false;
   let isLot = false;
   let isUnit = false;
+  let hasCurrencyMarker = false;
 
   // Check currency cues
   if (/^(\$|usd)/i.test(s) || /usd$/i.test(s)) {
     isUsd = true;
+    hasCurrencyMarker = true;
+  }
+  if (/^(rp\.?|idr)/i.test(s) || /(idr|rp)$/i.test(s)) {
+    hasCurrencyMarker = true;
   }
   s = s.replace(/^(rp\.?|idr|\$|usd)\s*/i, '').replace(/\s*(idr|usd)$/i, '');
 
@@ -103,8 +109,10 @@ export function parseFinancialNumber(rawStr: string): {
     if (['miliar', 'milyar', 'billion', 'bil', 'b', 'm'].includes(unitPart)) {
       // In Indonesian context "M" is Miliar (1 Billion IDR = 1,000,000,000)
       multiplier = 1_000_000_000;
+      hasCurrencyMarker = true;
     } else if (['jt', 'juta', 'million', 'mil'].includes(unitPart)) {
       multiplier = 1_000_000;
+      hasCurrencyMarker = true;
     } else if (['rb', 'ribu', 'k'].includes(unitPart)) {
       multiplier = 1_000;
     }
@@ -116,10 +124,10 @@ export function parseFinancialNumber(rawStr: string): {
 
   // Detect thousand & decimal separators
   let numericVal = 0;
-  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+  if (/^[1-9]\d{0,2}(\.\d{3})+(,\d+)?$/.test(s)) {
     // Indonesian format: 15.000.000,50
     s = s.replace(/\./g, '').replace(',', '.');
-  } else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) {
+  } else if (/^[1-9]\d{0,2}(,\d{3})+(\.\d+)?$/.test(s)) {
     // US format: 15,000,000.50
     s = s.replace(/,/g, '');
   } else if (s.includes(',') && !s.includes('.')) {
@@ -129,7 +137,7 @@ export function parseFinancialNumber(rawStr: string): {
 
   numericVal = parseFloat(s);
   if (isNaN(numericVal)) {
-    return { value: 0, isLot, isUnit, isUsd };
+    return { value: 0, isLot, isUnit, isUsd, hasCurrencyMarker };
   }
 
   return {
@@ -137,6 +145,7 @@ export function parseFinancialNumber(rawStr: string): {
     isLot,
     isUnit,
     isUsd,
+    hasCurrencyMarker,
   };
 }
 
@@ -159,7 +168,9 @@ export function parseHoldingsText(
   for (const asset of allAssets) {
     assetLookup.set(asset.id.toUpperCase(), asset);
     assetLookup.set(asset.symbol.toUpperCase(), asset);
-    assetLookup.set(asset.shortName.toUpperCase(), asset);
+    if (asset.shortName) {
+      assetLookup.set(asset.shortName.toUpperCase(), asset);
+    }
     if (asset.yahooSymbol) {
       assetLookup.set(asset.yahooSymbol.toUpperCase(), asset);
       const stripped = asset.yahooSymbol.replace(/\.[A-Z]+$/i, '').toUpperCase();
@@ -211,7 +222,9 @@ export function parseHoldingsText(
 
     // Remaining tokens contain quantity / value / units / price
     const remainingTokens = tokens.slice(1);
-    const digitTokenIdx = remainingTokens.findIndex((t) => /\d/.test(t));
+    const digitTokenIdx = remainingTokens.findIndex(
+      (t) => /^(rp\.?|idr|\$|usd)/i.test(t) || /\d/.test(t)
+    );
     const valueTokens =
       digitTokenIdx !== -1
         ? remainingTokens.slice(digitTokenIdx).join(' ')
@@ -251,12 +264,12 @@ export function parseHoldingsText(
       const priceInIdr = isAssetUsd ? assetPrice * usdIdrRate : assetPrice;
       nominalIdr = Math.round(units * priceInIdr);
       mode = 'units';
-    } else if (defaultMode === 'units' || parsedNum.value < 1000) {
-      // If defaultMode is units or value is small (likely share count or crypto units like 0.05 BTC)
-      // Exception: If parsedNum had 'jt' or 'm', parseFinancialNumber will already make it >= 1000000
-      if (parsedNum.value >= 1_000_000) {
-        // High value: certainly nominal IDR
-        nominalIdr = Math.round(parsedNum.value);
+    } else if (defaultMode === 'units') {
+      // In Unit mode, preserve units unless currency markers (rp, idr, jt, m, $) are explicitly present
+      if (parsedNum.hasCurrencyMarker) {
+        nominalIdr = Math.round(
+          parsedNum.isUsd ? parsedNum.value * usdIdrRate : parsedNum.value
+        );
         const priceInIdr = isAssetUsd ? assetPrice * usdIdrRate : assetPrice;
         units = +(nominalIdr / (priceInIdr || 1)).toFixed(4);
         if (lotSize > 1) lots = +(units / lotSize).toFixed(2);
@@ -268,6 +281,13 @@ export function parseHoldingsText(
         nominalIdr = Math.round(units * priceInIdr);
         mode = 'units';
       }
+    } else if (parsedNum.value < 1000 && !parsedNum.hasCurrencyMarker) {
+      // In nominal mode, values < 1000 without currency cues are likely small unit counts (e.g. 0.05 BTC)
+      units = parsedNum.value;
+      if (lotSize > 1) lots = +(units / lotSize).toFixed(2);
+      const priceInIdr = isAssetUsd ? assetPrice * usdIdrRate : assetPrice;
+      nominalIdr = Math.round(units * priceInIdr);
+      mode = 'units';
     } else {
       // Nominal IDR
       nominalIdr = Math.round(

@@ -129,6 +129,8 @@ export interface HoldingEntry {
   subSplits?: SubAssetSplit[];
   /** Optional flag: treat asset as pure nominal value without market price / unit volatility (e.g. bonds, deposits, cash) */
   isNominalOnly?: boolean;
+  /** Optional custom notes / allocation memo for this holding */
+  notes?: string;
 }
 
 export type RebalanceMode =
@@ -311,6 +313,7 @@ export interface QuantPortoBackupPayload {
       filterDustTrades?: boolean;
       isFixedBudgetMode?: boolean;
       fixedTotalBudgetIdr?: number;
+      tacticalConfig?: ValuationSentimentConfig;
     };
     menu3_simulator: {
       initialCapitalIdr?: number;

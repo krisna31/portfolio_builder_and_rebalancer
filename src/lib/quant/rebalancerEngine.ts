@@ -302,7 +302,7 @@ export function calculateRebalancePlan(params: {
       rawWeightSum > 0
         ? Number(
             (
-              (Math.max(0, targetWeights[item.asset.id] ?? 0) / rawWeightSum) *
+              (Math.max(0, effectiveTargetWeights[item.asset.id] ?? 0) / rawWeightSum) *
               100
             ).toFixed(2)
           )
@@ -362,10 +362,16 @@ export function calculateRebalancePlan(params: {
       if (enableIdxLotRounding) {
         // Integer lot rounding: 1 Lot = 100 lembar
         // Use Math.floor for BUY orders to prevent exceeding allocated cash (overdraft)
+        // Clamp SELL lots to owned regular lots to prevent retail naked shorting on IDX
+        const currentTotalUnits =
+          inputMode === 'nominal'
+            ? item.postShockValIdr / Math.max(1e-6, item.postShockUnitPriceIdr)
+            : (item.holding.units ?? 0);
+        const maxSellLots = Math.floor(Math.max(0, currentTotalUnits) / 100);
         const intLots =
           tradeAmountIdr >= 0
             ? Math.floor(Math.max(0, rawLots))
-            : -Math.round(Math.max(0, Math.abs(rawLots)));
+            : -Math.min(Math.round(Math.max(0, Math.abs(rawLots))), maxSellLots) || 0;
 
         tradeLotsInteger = intLots;
         tradeUnits = intLots * 100;
@@ -455,7 +461,14 @@ export function calculateRebalancePlan(params: {
   ) {
     const defensiveItem =
       items.find((i) => i.assetId === 'RDPT' && (effectiveTargetWeights.RDPT ?? 0) > 0) ??
-      items.find((i) => i.assetId === 'RDPU' && (effectiveTargetWeights.RDPU ?? 0) > 0);
+      items.find((i) => i.assetId === 'RDPU' && (effectiveTargetWeights.RDPU ?? 0) > 0) ??
+      items.find((i) => {
+        const a = assets.find((asset) => asset.id === i.assetId);
+        return (
+          (a?.category === 'bonds' || a?.category === 'money-market') &&
+          (effectiveTargetWeights[i.assetId] ?? 0) > 0
+        );
+      });
 
     if (defensiveItem) {
       const prevTradeAmount = defensiveItem.tradeAmountIdr;
@@ -466,6 +479,10 @@ export function calculateRebalancePlan(params: {
         // Do not sweep negative remainder into defensive in DCA mode
       } else {
         defensiveItem.tradeAmountIdr = proposedTradeAmount;
+        defensiveItem.tradeAmountUsd = Number(
+          (proposedTradeAmount / Math.max(1, usdIdrRate)).toFixed(2)
+        );
+        defensiveItem.targetValueIdr += totalUnallocatedRemainderIdr;
         const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
         const defHold = holdings[defensiveItem.assetId];
         const defPriceIdr =
@@ -473,9 +490,14 @@ export function calculateRebalancePlan(params: {
             ? (defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1) * usdIdrRate
             : defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1;
 
-        defensiveItem.tradeUnits = Number(
-          (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
-        );
+        if (defensiveItem.isNominalOnly) {
+          // For nominal-only defensive assets (RDPT / RDPU / Kas), trade units are direct IDR nominal amounts
+          defensiveItem.tradeUnits = defensiveItem.tradeAmountIdr;
+        } else {
+          defensiveItem.tradeUnits = Number(
+            (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
+          );
+        }
         if (defensiveItem.tradeAmountIdr > 10_000) {
           defensiveItem.action = 'BUY';
         } else if (defensiveItem.tradeAmountIdr < -10_000 && rebalanceMode !== 'buy-only-dca') {
@@ -520,6 +542,7 @@ export function calculateRebalancePlan(params: {
         }
         item.action = 'HOLD';
         item.isDustFiltered = true;
+        item.targetValueIdr = item.postShockValueIdr;
         item.tradeAmountIdr = 0;
         item.tradeAmountUsd = 0;
         item.tradeUnits = 0;
@@ -637,13 +660,20 @@ export function generateCrashBuyingLadder(params: {
     const targetItem = plan.items.find((i) => i.assetId === targetAsset.id);
     const buyIdr = Math.max(0, targetItem?.tradeAmountIdr ?? 0);
     const rawUnits = buyIdr / Math.max(1, limitPriceIdr);
-    const buyUnits = targetAsset.allowFractional
-      ? Number(rawUnits.toFixed(4))
-      : Math.round(rawUnits);
     const buyLots =
       targetAsset.lotSize === 100
-        ? Number((rawUnits / 100).toFixed(1))
+        ? Math.floor(rawUnits / 100)
         : undefined;
+    const buyUnits =
+      targetAsset.lotSize === 100
+        ? (buyLots ?? 0) * 100
+        : targetAsset.allowFractional
+          ? Number(rawUnits.toFixed(4))
+          : Math.round(rawUnits);
+    const executedBuyIdr =
+      targetAsset.lotSize === 100
+        ? Math.round(buyUnits * limitPriceIdr)
+        : buyIdr;
 
     // How much defensive assets (RDPT / RDPU / GLD) were sold to fund this dip buy
     const fundingFromDefensiveIdr = plan.items
@@ -660,7 +690,7 @@ export function generateCrashBuyingLadder(params: {
       dropPercent,
       limitPriceNative,
       limitPriceIdr,
-      rebalanceBuyAmountIdr: buyIdr,
+      rebalanceBuyAmountIdr: executedBuyIdr,
       rebalanceBuyUnits: buyUnits,
       rebalanceBuyLots: buyLots,
       fundingFromDefensiveIdr: Math.round(fundingFromDefensiveIdr),

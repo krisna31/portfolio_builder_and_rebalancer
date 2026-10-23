@@ -266,7 +266,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         const actionStr = item.action === 'BUY' ? 'BELI' : 'JUAL';
 
         if (g.id === 'idx_stocks') {
-          const lots = item.tradeLotsInteger ?? Math.abs(Math.round(item.tradeLots ?? 0));
+          const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
           const unitPrice = holdings?.[item.assetId]?.currentPrice ?? def?.defaultPrice ?? 0;
           lines.push(
             `${isDone} ${actionStr} ${item.symbol} - ${lots} Lot (${(lots * 100).toLocaleString('id-ID')} lembar) @ Rp ${unitPrice.toLocaleString('id-ID')} = ${formatIdr(Math.abs(item.tradeAmountIdr))}`
@@ -468,7 +468,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
                     // LOTS computation for IDX Stocks
                     const isIdx = group.id === 'idx_stocks';
-                    const lots = item.tradeLotsInteger ?? Math.abs(Math.round(item.tradeLots ?? 0));
+                    const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
                     const shares = lots * 100;
                     const spotPrice = item.initialValueIdr > 0 && holdings?.[item.assetId]
                       ? holdings[item.assetId].currentPrice

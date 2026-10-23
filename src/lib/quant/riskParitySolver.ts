@@ -786,10 +786,18 @@ export function buildDynamicPresetsForSlotMap(
       ? slotMap[preset.convictionAssetId] ?? preset.convictionAssetId
       : undefined;
 
+    const customWeightsMapped: Record<string, number> = {};
+    if (preset.method === 'custom') {
+      for (const [k, v] of Object.entries(preset.weights)) {
+        const mappedKey = slotMap[k] ?? k;
+        customWeightsMapped[mappedKey] = v;
+      }
+    }
+
     // Solve new weights for the mapped assets
     const solvedByAssetId =
       preset.method === 'custom'
-        ? { ...preset.weights }
+        ? customWeightsMapped
         : solveRiskBudgetingWeights(
             mappedAssets,
             preset.method,
@@ -803,6 +811,11 @@ export function buildDynamicPresetsForSlotMap(
     for (const slot of core8) {
       const actualId = slotMap[slot] ?? slot;
       newWeights[actualId] = solvedByAssetId[actualId] ?? 0;
+    }
+    for (const [k, v] of Object.entries(solvedByAssetId)) {
+      if (newWeights[k] === undefined) {
+        newWeights[k] = v;
+      }
     }
 
     // Dynamic preset name (e.g., replace "BBCA" with "PTBA" in the title)
