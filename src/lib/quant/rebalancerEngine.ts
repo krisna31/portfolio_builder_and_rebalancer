@@ -5,7 +5,9 @@ import {
   RebalanceItemResult,
   RebalanceMode,
   RebalanceSummaryResult,
+  ValuationSentimentConfig,
 } from './types';
+import { calculateTacticalWeights } from './tacticalValuationEngine';
 
 /**
  * Calculates exact portfolio rebalancing instructions (Buy / Sell / Hold), supporting:
@@ -31,6 +33,7 @@ export function calculateRebalancePlan(params: {
   enableBrokerFees?: boolean;
   filterDustTrades?: boolean;
   dustTradeThresholdIdr?: number;
+  tacticalConfig?: ValuationSentimentConfig;
 }): RebalanceSummaryResult {
   const {
     assets,
@@ -46,11 +49,20 @@ export function calculateRebalancePlan(params: {
     enableBrokerFees = false,
     filterDustTrades = true,
     dustTradeThresholdIdr = 25_000,
+    tacticalConfig,
   } = params;
+
+  // Apply tactical valuation band multiplier if enabled
+  const { tacticalWeights, tacticalSignals, isAnyTiltApplied } = calculateTacticalWeights(
+    targetWeights,
+    assets,
+    tacticalConfig
+  );
+  const effectiveTargetWeights = isAnyTiltApplied ? tacticalWeights : targetWeights;
 
   // Consider all assets that either have a target weight > 0 or current holding > 0
   const relevantAssets = assets.filter((asset) => {
-    const targetW = targetWeights[asset.id] ?? 0;
+    const targetW = effectiveTargetWeights[asset.id] ?? 0;
     const h = holdings[asset.id];
     const hasHolding =
       h && (inputMode === 'nominal' ? h.currentValueIdr > 0 : h.units > 0);
@@ -98,7 +110,7 @@ export function calculateRebalancePlan(params: {
 
   // Normalize target weights among relevant assets so they sum to 100%
   const rawWeightSum = relevantAssets.reduce(
-    (acc, a) => acc + Math.max(0, targetWeights[a.id] ?? 0),
+    (acc, a) => acc + Math.max(0, effectiveTargetWeights[a.id] ?? 0),
     0
   );
 
@@ -118,7 +130,7 @@ export function calculateRebalancePlan(params: {
   for (const item of computedHoldings) {
     const normW =
       rawWeightSum > 0
-        ? (Math.max(0, targetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100
+        ? (Math.max(0, effectiveTargetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100
         : 0;
     const idealVal = finalTargetTotalIdr * (normW / 100);
     idealTargets[item.asset.id] = idealVal;
@@ -407,6 +419,7 @@ export function calculateRebalancePlan(params: {
       tradeLotsRemainderIdr,
       estimatedFeeIdr,
       action,
+      tacticalSignal: tacticalSignals[item.asset.id],
     };
   });
 
@@ -417,8 +430,8 @@ export function calculateRebalancePlan(params: {
     Math.abs(totalUnallocatedRemainderIdr) >= 10_000
   ) {
     const defensiveItem =
-      items.find((i) => i.assetId === 'RDPT' && (targetWeights.RDPT ?? 0) > 0) ??
-      items.find((i) => i.assetId === 'RDPU' && (targetWeights.RDPU ?? 0) > 0);
+      items.find((i) => i.assetId === 'RDPT' && (effectiveTargetWeights.RDPT ?? 0) > 0) ??
+      items.find((i) => i.assetId === 'RDPU' && (effectiveTargetWeights.RDPU ?? 0) > 0);
 
     if (defensiveItem) {
       defensiveItem.tradeAmountIdr += totalUnallocatedRemainderIdr;
@@ -487,6 +500,8 @@ export function calculateRebalancePlan(params: {
     totalEstimatedFeeIdr: Math.round(totalEstimatedFeeIdr),
     suppressedDustTradesCount,
     rebalanceMode,
+    tacticalBandActive: isAnyTiltApplied,
+    tacticalAggressiveness: tacticalConfig?.aggressiveness,
     items,
   };
 }

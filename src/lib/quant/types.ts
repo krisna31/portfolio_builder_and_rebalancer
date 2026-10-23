@@ -170,6 +170,35 @@ export interface RebalanceItemResult {
   action: 'BUY' | 'SELL' | 'HOLD';
   /** Whether this item was suppressed to HOLD by the anti-dust trade filter */
   isDustFiltered?: boolean;
+  /** Optional tactical valuation signal information when Dynamic Valuation Band is enabled */
+  tacticalSignal?: TacticalSignalInfo;
+}
+
+export type SentimentZone =
+  | 'extreme-fear'
+  | 'fear'
+  | 'neutral'
+  | 'greed'
+  | 'extreme-greed';
+
+export interface TacticalSignalInfo {
+  sentimentZone: SentimentZone;
+  sentimentScore: number;
+  sentimentLabel: string;
+  badgeLabel: string;
+  tiltMultiplierPercent: number;
+  baseTargetWeightPercent: number;
+  tacticalTargetWeightPercent: number;
+  reason?: string;
+}
+
+export interface ValuationSentimentConfig {
+  enabled: boolean;
+  aggressiveness: number;
+  cryptoScore: number;
+  usEquityScore: number;
+  idxEquityScore: number;
+  goldScore?: number;
 }
 
 export interface RebalanceSummaryResult {
@@ -188,6 +217,9 @@ export interface RebalanceSummaryResult {
   suppressedDustTradesCount?: number;
   /** Human-readable strategy name */
   rebalanceMode?: RebalanceMode;
+  /** Whether Dynamic Valuation Band (Fear & Greed Tactical Allocation) is active */
+  tacticalBandActive?: boolean;
+  tacticalAggressiveness?: number;
   items: RebalanceItemResult[];
 }
 

@@ -12,6 +12,7 @@ import {
   RebalanceHistoryEntry,
   RebalanceMode,
   QuantPortoBackupPayload,
+  ValuationSentimentConfig,
 } from './lib/quant/types';
 import { formatIdr } from './lib/formatters';
 import { Check, X } from 'lucide-react';
@@ -205,6 +206,14 @@ export function App() {
   const [enableIdxLotRounding, setEnableIdxLotRounding] = useState<boolean>(true);
   const [enableBrokerFees, setEnableBrokerFees] = useState<boolean>(false);
   const [filterDustTrades, setFilterDustTrades] = useState<boolean>(true);
+  const [tacticalConfig, setTacticalConfig] = useState<ValuationSentimentConfig>({
+    enabled: false,
+    aggressiveness: 0.2,
+    cryptoScore: 50,
+    usEquityScore: 50,
+    idxEquityScore: 50,
+    goldScore: 50,
+  });
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     const init: Record<string, HoldingEntry> = {};
@@ -439,6 +448,7 @@ export function App() {
           setIsFixedBudgetMode(Boolean(saved.isFixedBudgetMode));
         if (saved.fixedTotalBudgetIdr !== undefined)
           setFixedTotalBudgetIdr(Number(saved.fixedTotalBudgetIdr));
+        if (saved.tacticalConfig) setTacticalConfig(saved.tacticalConfig);
 
         if (saved.usdIdrRate) {
           const migratedUsd18k = localStorage.getItem(
@@ -512,6 +522,7 @@ export function App() {
           lockedAssetIds,
           isFixedBudgetMode,
           fixedTotalBudgetIdr,
+          tacticalConfig,
         })
       );
     } catch {
@@ -536,6 +547,7 @@ export function App() {
     allAssets,
     isFixedBudgetMode,
     fixedTotalBudgetIdr,
+    tacticalConfig,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -663,6 +675,7 @@ export function App() {
         sweepRemainderToDefensive: true,
         enableBrokerFees,
         filterDustTrades,
+        tacticalConfig,
       }),
     [
       allAssets,
@@ -676,6 +689,7 @@ export function App() {
       enableIdxLotRounding,
       enableBrokerFees,
       filterDustTrades,
+      tacticalConfig,
     ]
   );
 
@@ -1891,6 +1905,8 @@ export function App() {
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
             onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
             onBatchUpdateHoldings={handleBatchUpdateHoldings}
+            tacticalConfig={tacticalConfig}
+            setTacticalConfig={setTacticalConfig}
           />
         )}
 

@@ -5,7 +5,13 @@ import {
   RebalanceHistoryEntry,
   RebalanceMode,
   RebalanceSummaryResult,
+  ValuationSentimentConfig,
 } from '../../lib/quant/types';
+import {
+  getSentimentZone,
+  getSentimentDescription,
+  fetchLiveCryptoFearAndGreed,
+} from '../../lib/quant/tacticalValuationEngine';
 import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { HoldingsTextImportModal } from './HoldingsTextImportModal';
@@ -42,6 +48,9 @@ import {
   Lock,
   SlidersHorizontal,
   ChevronDown,
+  Compass,
+  RefreshCw,
+  Target,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -102,6 +111,8 @@ interface PortfolioRebalancerViewProps {
   ) => void;
   onOpenOrderSlip?: () => void;
   onBatchUpdateHoldings?: (items: ParsedHoldingItem[], strategy: 'merge' | 'replace') => void;
+  tacticalConfig?: ValuationSentimentConfig;
+  setTacticalConfig?: React.Dispatch<React.SetStateAction<ValuationSentimentConfig>>;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -146,13 +157,32 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onScaleTotalHoldingsIdr,
   onOpenOrderSlip,
   onBatchUpdateHoldings,
+  tacticalConfig,
+  setTacticalConfig,
 }) => {
   const [showShockSliders, setShowShockSliders] = useState(false);
   const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const [isSyncingFng, setIsSyncingFng] = useState(false);
+  const [fngSyncMessage, setFngSyncMessage] = useState<string | null>(null);
   const optionsMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSyncCryptoFearAndGreed = async () => {
+    setIsSyncingFng(true);
+    setFngSyncMessage(null);
+    const data = await fetchLiveCryptoFearAndGreed();
+    setIsSyncingFng(false);
+    if (data && setTacticalConfig) {
+      setTacticalConfig((prev) => ({
+        ...prev,
+        cryptoScore: data.score,
+      }));
+      setFngSyncMessage(`Live: ${data.score} (${data.classification})`);
+      setTimeout(() => setFngSyncMessage(null), 3500);
+    }
+  };
 
   // Close options menu on click outside
   React.useEffect(() => {
@@ -393,6 +423,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               : 'Buy-Only DCA 💰'
       }`,
       enableIdxLotRounding ? `📦 Pembulatan: Lot Bulat BEI (1 Lot = 100 lbr)` : '',
+      rebalanceResult.tacticalBandActive
+        ? `🎯 Mode Taktis: Dynamic Valuation Band Aktif (Agresivitas: ±${((rebalanceResult.tacticalAggressiveness || 0.15) * 100).toFixed(0)}%)`
+        : '',
       filterDustTrades &&
       rebalanceResult.suppressedDustTradesCount !== undefined &&
       rebalanceResult.suppressedDustTradesCount > 0
@@ -412,8 +445,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     if (sells.length > 0) {
       lines.push(`🔴 *INSTRUKSI JUAL (TAKE PROFIT):*`);
       for (const s of sells) {
+        const tacticalTag = s.tacticalSignal ? ` [${s.tacticalSignal.badgeLabel}]` : '';
         lines.push(
-          `• *${s.symbol}*: JUAL *${formatIdr(Math.abs(s.tradeAmountIdr))}* (${formatOrderUnit(
+          `• *${s.symbol}*${tacticalTag}: JUAL *${formatIdr(Math.abs(s.tradeAmountIdr))}* (${formatOrderUnit(
             s
           )}) ➔ Target ${s.targetWeightPercent.toFixed(1)}%`
         );
@@ -424,8 +458,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     if (buys.length > 0) {
       lines.push(`🟢 *INSTRUKSI BELI (TOP UP / REBALANCE):*`);
       for (const b of buys) {
+        const tacticalTag = b.tacticalSignal ? ` [${b.tacticalSignal.badgeLabel}]` : '';
         lines.push(
-          `• *${b.symbol}*: BELI *${formatIdr(b.tradeAmountIdr)}* (${formatOrderUnit(
+          `• *${b.symbol}*${tacticalTag}: BELI *${formatIdr(b.tradeAmountIdr)}* (${formatOrderUnit(
             b
           )}) ➔ Target ${b.targetWeightPercent.toFixed(1)}%`
         );
@@ -883,6 +918,165 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       )}
                     </div>
                   </div>
+
+                  {/* Section 5: Dynamic Valuation Band & Tactical Asset Allocation */}
+                  {tacticalConfig && setTacticalConfig && (
+                    <div className="ui-border border-t pt-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Target className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="text-[11px] font-semibold ui-text-main">
+                            Valuation Band (TAA):
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTacticalConfig({
+                              ...tacticalConfig,
+                              enabled: !tacticalConfig.enabled,
+                            })
+                          }
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold transition ${
+                            tacticalConfig.enabled
+                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              : 'ui-subtle ui-text-muted'
+                          }`}
+                        >
+                          {tacticalConfig.enabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+
+                      {tacticalConfig.enabled && (
+                        <div className="space-y-2 pt-1 text-[11px]">
+                          {/* Aggressiveness pills */}
+                          <div className="flex items-center justify-between">
+                            <span className="ui-text-muted text-[10px]">Agresivitas Tilt:</span>
+                            <div className="flex gap-1">
+                              {[0.1, 0.15, 0.25].map((val) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() =>
+                                    setTacticalConfig({
+                                      ...tacticalConfig,
+                                      aggressiveness: val,
+                                    })
+                                  }
+                                  className={`rounded px-1.5 py-0.5 text-[10px] font-mono transition ${
+                                    tacticalConfig.aggressiveness === val
+                                      ? 'bg-emerald-600 text-white font-bold'
+                                      : 'ui-subtle ui-text-muted hover:ui-text-main'
+                                  }`}
+                                >
+                                  ±{(val * 100).toFixed(0)}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Crypto slider & sync */}
+                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="font-semibold ui-text-main">Crypto Sentiment:</span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono font-bold">{tacticalConfig.cryptoScore}/100</span>
+                                <button
+                                  type="button"
+                                  onClick={handleSyncCryptoFearAndGreed}
+                                  disabled={isSyncingFng}
+                                  className="text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                                  title="Tarik data live dari alternative.me API"
+                                >
+                                  <RefreshCw className={`h-2.5 w-2.5 ${isSyncingFng ? 'animate-spin' : ''}`} />
+                                  {isSyncingFng ? 'Sync...' : 'Live'}
+                                </button>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={tacticalConfig.cryptoScore}
+                              onChange={(e) =>
+                                setTacticalConfig({
+                                  ...tacticalConfig,
+                                  cryptoScore: parseInt(e.target.value, 10),
+                                })
+                              }
+                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] ui-text-muted">
+                              <span>0 Fear (+tilt)</span>
+                              <span>50 Netral</span>
+                              <span>100 Greed (-trim)</span>
+                            </div>
+                            {fngSyncMessage && (
+                              <div className="text-[9px] text-emerald-600 dark:text-emerald-400 italic">
+                                {fngSyncMessage}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* US Equity slider */}
+                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="font-semibold ui-text-main">US Equity (S&amp;P 500 / Tech):</span>
+                              <span className="font-mono font-bold">{tacticalConfig.usEquityScore}/100</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={tacticalConfig.usEquityScore}
+                              onChange={(e) =>
+                                setTacticalConfig({
+                                  ...tacticalConfig,
+                                  usEquityScore: parseInt(e.target.value, 10),
+                                })
+                              }
+                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] ui-text-muted">
+                              <span>Diskon Valuasi</span>
+                              <span>Wajar</span>
+                              <span>Overbought</span>
+                            </div>
+                          </div>
+
+                          {/* IDX Equity slider */}
+                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="font-semibold ui-text-main">IHSG / Saham Domestik:</span>
+                              <span className="font-mono font-bold">{tacticalConfig.idxEquityScore}/100</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={tacticalConfig.idxEquityScore}
+                              onChange={(e) =>
+                                setTacticalConfig({
+                                  ...tacticalConfig,
+                                  idxEquityScore: parseInt(e.target.value, 10),
+                                })
+                              }
+                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[9px] ui-text-muted">
+                              <span>Diskon Valuasi</span>
+                              <span>Wajar</span>
+                              <span>Overbought</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[9px] ui-text-muted italic">
+                            💡 Tilt bobot otomatis didanai dari aset defensif (Kas/RDPT) secara zero-sum tanpa mengubah total 100%.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1768,6 +1962,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               / {item.targetWeightPercent.toFixed(1)}%
                             </span>
                           </div>
+                          {item.tacticalSignal && (
+                            <div className="pt-0.5">
+                              <span
+                                className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9px] font-sans font-medium border ${
+                                  item.tacticalSignal.tiltMultiplierPercent > 0
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                                    : item.tacticalSignal.tiltMultiplierPercent < 0
+                                      ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20'
+                                      : 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
+                                }`}
+                                title={item.tacticalSignal.reason}
+                              >
+                                {item.tacticalSignal.badgeLabel}
+                              </span>
+                            </div>
+                          )}
                           <div
                             className={`text-[10px] font-medium ${
                               item.isDriftBreached
@@ -2173,6 +2383,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         <div className="font-bold text-emerald-600 dark:text-emerald-400">
                           {item.targetWeightPercent.toFixed(1)}%
                         </div>
+                        {item.tacticalSignal && (
+                          <div className="mt-0.5 text-[8px] font-sans">
+                            <span
+                              className={`rounded px-1 py-0.2 ${
+                                item.tacticalSignal.tiltMultiplierPercent > 0
+                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                  : item.tacticalSignal.tiltMultiplierPercent < 0
+                                    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                    : 'ui-subtle ui-text-muted'
+                              }`}
+                            >
+                              {item.tacticalSignal.badgeLabel}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="ui-card rounded p-1.5">
                         <div className="ui-text-muted text-[9px] uppercase">
