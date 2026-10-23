@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CORE_AND_EXPANDED_ASSETS,
   VIDEO_PORTFOLIO_PRESETS,
@@ -59,7 +59,53 @@ const CONFIGURED_PASSWORD_HASH = (
   (import.meta.env.VITE_APP_PASSWORD_HASH as string | undefined) || ''
 ).trim();
 
+interface PersistedAppState {
+  activeTab?: 'builder' | 'rebalancer' | 'roadmap';
+  activeWeights?: Record<string, number>;
+  activePresetId?: string | null;
+  allocationMethod?: AllocationMethod;
+  convictionAssetId?: string;
+  convictionRiskPercent?: number;
+  solverMode?: 'calibrated-video' | 'euler-covariance';
+  selectedUniverseIds?: string[];
+  pinnedPresetIds?: string[];
+  lockedAssetIds?: string[];
+  rdptPromoActive?: boolean;
+  initialCapitalIdr?: number;
+  targetGoalIdr?: number;
+  monthlySavingsIdr?: number;
+  usdIdrRate?: number;
+  inputMode?: 'nominal' | 'units';
+  rebalanceMode?: RebalanceMode;
+  cashInjectionIdr?: number;
+  isFixedBudgetMode?: boolean;
+  fixedTotalBudgetIdr?: number;
+  driftThresholdPercent?: number;
+  isHoldingsSyncedWithMenu1?: boolean;
+  enableIdxLotRounding?: boolean;
+  enableBrokerFees?: boolean;
+  filterDustTrades?: boolean;
+  tacticalConfig?: ValuationSentimentConfig;
+  holdings?: Record<string, HoldingEntry>;
+  slotMap?: Record<string, string>;
+  customTableRows?: PortfolioPreset[];
+  rebalanceHistory?: RebalanceHistoryEntry[];
+  allAssets?: AssetDefinition[];
+}
+
+function getInitialSavedState(): PersistedAppState | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function App() {
+  const [initialSaved] = useState<PersistedAppState | null>(() => getInitialSavedState());
+
   // Session Authentication State (Strict requirement: locked unless authenticated in current tab)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     if (!CONFIGURED_PASSWORD_HASH) return false;
@@ -72,21 +118,43 @@ export function App() {
     setIsAuthenticated(false);
   };
 
-  const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(
-    'builder'
-  );
+  const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(() => {
+    if (initialSaved?.activeTab && ['builder', 'rebalancer', 'roadmap'].includes(initialSaved.activeTab)) {
+      return initialSaved.activeTab;
+    }
+    return 'builder';
+  });
 
   // Asset Universe (8 Core Video Benchmarks + Expanded IDX/US/Crypto + User Custom Assets)
-  const [allAssets, setAllAssets] = useState<AssetDefinition[]>(
-    CORE_AND_EXPANDED_ASSETS
-  );
+  const [allAssets, setAllAssets] = useState<AssetDefinition[]>(() => {
+    if (Array.isArray(initialSaved?.allAssets) && initialSaved.allAssets.length > 0) {
+      const savedMap = new Map<string, AssetDefinition>(
+        initialSaved.allAssets.map((a: AssetDefinition) => [a.id, a])
+      );
+      const merged = CORE_AND_EXPANDED_ASSETS.map((curr) => {
+        const s = savedMap.get(curr.id);
+        return s ? { ...curr, cagr: s.cagr, maxDrawdown: s.maxDrawdown } : curr;
+      });
+      const currIds = new Set(CORE_AND_EXPANDED_ASSETS.map((a) => a.id));
+      const additions = initialSaved.allAssets.filter(
+        (a: AssetDefinition) => !currIds.has(a.id)
+      );
+      return [...merged, ...additions];
+    }
+    return CORE_AND_EXPANDED_ASSETS;
+  });
 
   // Dynamic Slot Map for the 8 Table Columns (allows replacing e.g. BBCA -> PTBA across all 15 rows!)
-  const [slotMap, setSlotMap] = useState<Record<string, string>>(DEFAULT_SLOT_MAP);
+  const [slotMap, setSlotMap] = useState<Record<string, string>>(
+    () => initialSaved?.slotMap ?? DEFAULT_SLOT_MAP
+  );
 
   // User-Pinned Custom Rows in the main comparison table
   // Pre-seeded with 1 default custom example row ("Custom Risk Parity: PTBA ganti BBCA") so user immediately sees it in the table!
   const [customTableRows, setCustomTableRows] = useState<PortfolioPreset[]>(() => {
+    if (Array.isArray(initialSaved?.customTableRows) && initialSaved.customTableRows.length > 0) {
+      return initialSaved.customTableRows;
+    }
     const ptbaAssets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
       ['RDPT', 'PTBA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'].includes(a.id)
     );
@@ -114,26 +182,31 @@ export function App() {
   });
 
   // Selected Universe for Quant Solver
-  const [selectedUniverseIds, setSelectedUniverseIds] = useState<string[]>([
-    'RDPT',
-    'BBCA',
-    'GLD',
-    'SPY',
-    'QQQ',
-    'BTC',
-    'ETH',
-  ]);
+  const [selectedUniverseIds, setSelectedUniverseIds] = useState<string[]>(() => {
+    if (Array.isArray(initialSaved?.selectedUniverseIds) && initialSaved.selectedUniverseIds.length > 0) {
+      return initialSaved.selectedUniverseIds;
+    }
+    return ['RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
+  });
 
   // Active Preset / Method / Weights
   const defaultPreset = VIDEO_PORTFOLIO_PRESETS.find(
     (p) => p.id === 'opt-4-rb-btc-90'
   )!;
-  const [activePresetId, setActivePresetId] = useState<string | null>(
-    defaultPreset.id
-  );
+  const [activePresetId, setActivePresetId] = useState<string | null>(() => {
+    if (initialSaved?.activePresetId !== undefined) {
+      return initialSaved.activePresetId;
+    }
+    return defaultPreset.id;
+  });
 
   // User-Pinned Preset IDs in the main comparison table (pinned to top)
-  const [pinnedPresetIds, setPinnedPresetIds] = useState<string[]>(['opt-4-rb-btc-90']);
+  const [pinnedPresetIds, setPinnedPresetIds] = useState<string[]>(() => {
+    if (Array.isArray(initialSaved?.pinnedPresetIds)) {
+      return initialSaved.pinnedPresetIds;
+    }
+    return ['opt-4-rb-btc-90'];
+  });
 
   const handleTogglePinPreset = (presetId: string) => {
     setPinnedPresetIds((prev) =>
@@ -142,27 +215,40 @@ export function App() {
         : [presetId, ...prev]
     );
   };
-  const [allocationMethod, setAllocationMethod] =
-    useState<AllocationMethod>('preset');
-  const [convictionAssetId, setConvictionAssetId] = useState<string>('BTC');
-  const [convictionRiskPercent, setConvictionRiskPercent] = useState<number>(90);
+  const [allocationMethod, setAllocationMethod] = useState<AllocationMethod>(
+    () => initialSaved?.allocationMethod ?? 'preset'
+  );
+  const [convictionAssetId, setConvictionAssetId] = useState<string>(
+    () => initialSaved?.convictionAssetId ?? 'BTC'
+  );
+  const [convictionRiskPercent, setConvictionRiskPercent] = useState<number>(
+    () => initialSaved?.convictionRiskPercent ?? 90
+  );
   const [solverMode, setSolverMode] = useState<
     'calibrated-video' | 'euler-covariance'
-  >('calibrated-video');
-  const [activeWeights, setActiveWeights] = useState<Record<string, number>>(
-    defaultPreset.weights
-  );
+  >(() => initialSaved?.solverMode ?? 'calibrated-video');
+  const [activeWeights, setActiveWeights] = useState<Record<string, number>>(() => {
+    if (initialSaved?.activeWeights) {
+      const matchedPreset = initialSaved.activePresetId
+        ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === initialSaved.activePresetId)
+        : null;
+      const sumW = Object.values(initialSaved.activeWeights).reduce((a, b) => a + b, 0);
+      if (
+        matchedPreset &&
+        (!initialSaved.allocationMethod || initialSaved.allocationMethod === 'preset') &&
+        Math.abs(sumW - 100) >= 0.5
+      ) {
+        return { ...matchedPreset.weights };
+      }
+      return initialSaved.activeWeights;
+    }
+    return defaultPreset.weights;
+  });
 
   // User-Locked Asset IDs in manual weight customizer
   const [lockedAssetIds, setLockedAssetIds] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.lockedAssetIds)) return parsed.lockedAssetIds;
-      }
-    } catch {
-      // Ignore
+    if (Array.isArray(initialSaved?.lockedAssetIds)) {
+      return initialSaved.lockedAssetIds;
     }
     return [];
   });
@@ -180,42 +266,90 @@ export function App() {
   };
 
   // Makmur +3% RDPT Alpha Promo toggle mentioned at 05:04
-  const [rdptPromoActive, setRdptPromoActive] = useState<boolean>(false);
+  const [rdptPromoActive, setRdptPromoActive] = useState<boolean>(
+    () => Boolean(initialSaved?.rdptPromoActive ?? false)
+  );
 
   // Synchronized Wealth Simulator Defaults:
   // Default Initial Capital = Rp 100 Juta (100,000,000)
   // Default Target Wealth = Rp 1 Miliar (1,000,000,000), with quick toggle to Rp 10 Miliar
   // Default Custom Monthly DCA = Rp 3 Juta (3,000,000)
-  const [initialCapitalIdr, setInitialCapitalIdr] =
-    useState<number>(100_000_000);
-  const [targetGoalIdr, setTargetGoalIdr] = useState<number>(1_000_000_000);
-  const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(3_000_000);
+  const [initialCapitalIdr, setInitialCapitalIdr] = useState<number>(
+    () => initialSaved?.initialCapitalIdr ?? 100_000_000
+  );
+  const [targetGoalIdr, setTargetGoalIdr] = useState<number>(
+    () => initialSaved?.targetGoalIdr ?? 1_000_000_000
+  );
+  const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(() => {
+    if (initialSaved?.monthlySavingsIdr !== undefined) {
+      const migratedDca3M = localStorage.getItem('quantporto_dca_3m_default_v1');
+      if (!migratedDca3M && initialSaved.monthlySavingsIdr === 10_000_000) {
+        localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
+        return 3_000_000;
+      }
+      return initialSaved.monthlySavingsIdr;
+    }
+    return 3_000_000;
+  });
 
   // Rebalancer State (Default starting holdings scaled to Rp 100 Juta Initial Capital!)
   // Default USD/IDR assumption set to Rp 18,000 per user request
-  const [usdIdrRate, setUsdIdrRate] = useState<number>(18000);
-  const [inputMode, setInputMode] = useState<'nominal' | 'units'>('nominal');
-  const [rebalanceMode, setRebalanceMode] =
-    useState<RebalanceMode>('sell-and-buy');
-  const [cashInjectionIdr, setCashInjectionIdr] = useState<number>(0);
-  const [isFixedBudgetMode, setIsFixedBudgetMode] = useState<boolean>(false);
-  const [fixedTotalBudgetIdr, setFixedTotalBudgetIdr] = useState<number>(100_000_000);
-  const [driftThresholdPercent, setDriftThresholdPercent] = useState<number>(3);
-  const [isHoldingsSyncedWithMenu1, setIsHoldingsSyncedWithMenu1] =
-    useState<boolean>(true);
-  const [enableIdxLotRounding, setEnableIdxLotRounding] = useState<boolean>(true);
-  const [enableBrokerFees, setEnableBrokerFees] = useState<boolean>(false);
-  const [filterDustTrades, setFilterDustTrades] = useState<boolean>(true);
-  const [tacticalConfig, setTacticalConfig] = useState<ValuationSentimentConfig>({
-    enabled: false,
-    aggressiveness: 0.2,
-    cryptoScore: 50,
-    usEquityScore: 50,
-    idxEquityScore: 50,
-    goldScore: 50,
+  const [usdIdrRate, setUsdIdrRate] = useState<number>(() => {
+    if (initialSaved?.usdIdrRate) {
+      const migratedUsd18k = localStorage.getItem('quantporto_usd_18k_default_v1');
+      if (!migratedUsd18k && (initialSaved.usdIdrRate === 15600 || initialSaved.usdIdrRate === 15500)) {
+        localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
+        return 18000;
+      }
+      return initialSaved.usdIdrRate;
+    }
+    return 18000;
   });
+  const [inputMode, setInputMode] = useState<'nominal' | 'units'>(
+    () => initialSaved?.inputMode ?? 'nominal'
+  );
+  const [rebalanceMode, setRebalanceMode] = useState<RebalanceMode>(
+    () => initialSaved?.rebalanceMode ?? 'sell-and-buy'
+  );
+  const [cashInjectionIdr, setCashInjectionIdr] = useState<number>(
+    () => initialSaved?.cashInjectionIdr ?? 0
+  );
+  const [isFixedBudgetMode, setIsFixedBudgetMode] = useState<boolean>(
+    () => Boolean(initialSaved?.isFixedBudgetMode ?? false)
+  );
+  const [fixedTotalBudgetIdr, setFixedTotalBudgetIdr] = useState<number>(
+    () => Number(initialSaved?.fixedTotalBudgetIdr ?? 100_000_000)
+  );
+  const [driftThresholdPercent, setDriftThresholdPercent] = useState<number>(
+    () => initialSaved?.driftThresholdPercent ?? 3
+  );
+  const [isHoldingsSyncedWithMenu1, setIsHoldingsSyncedWithMenu1] = useState<boolean>(
+    () => initialSaved?.isHoldingsSyncedWithMenu1 !== undefined ? Boolean(initialSaved.isHoldingsSyncedWithMenu1) : true
+  );
+  const [enableIdxLotRounding, setEnableIdxLotRounding] = useState<boolean>(
+    () => initialSaved?.enableIdxLotRounding !== undefined ? Boolean(initialSaved.enableIdxLotRounding) : true
+  );
+  const [enableBrokerFees, setEnableBrokerFees] = useState<boolean>(
+    () => Boolean(initialSaved?.enableBrokerFees ?? false)
+  );
+  const [filterDustTrades, setFilterDustTrades] = useState<boolean>(
+    () => initialSaved?.filterDustTrades !== undefined ? Boolean(initialSaved.filterDustTrades) : true
+  );
+  const [tacticalConfig, setTacticalConfig] = useState<ValuationSentimentConfig>(
+    () => initialSaved?.tacticalConfig ?? {
+      enabled: false,
+      aggressiveness: 0.2,
+      cryptoScore: 50,
+      usEquityScore: 50,
+      idxEquityScore: 50,
+      goldScore: 50,
+    }
+  );
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
+    if (initialSaved?.holdings && Object.keys(initialSaved.holdings).length > 0) {
+      return initialSaved.holdings;
+    }
     const init: Record<string, HoldingEntry> = {};
     for (const a of CORE_AND_EXPANDED_ASSETS) {
       const weightPct = defaultPreset.weights[a.id] ?? 0;
@@ -354,14 +488,13 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAuthenticated]);
 
-  // Restore state from URL Hash (if shared link) or LocalStorage on first mount
+  // Restore state from URL Hash (if user navigated to a shared link) on first mount
   useEffect(() => {
     try {
-      let hashParsed: Record<string, any> | null = null;
       if (window.location.hash.startsWith('#porto=')) {
         try {
           const encoded = decodeURIComponent(window.location.hash.slice(7));
-          hashParsed = JSON.parse(atob(encoded));
+          const hashParsed = JSON.parse(atob(encoded));
           if (hashParsed?.weights) {
             setActiveWeights(hashParsed.weights);
             setActivePresetId(hashParsed.presetId ?? null);
@@ -392,107 +525,8 @@ export function App() {
           // Ignore malformed URL hash
         }
       }
-
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (!hashParsed) {
-          if (saved.activeWeights) {
-            const matchedPreset = saved.activePresetId
-              ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === saved.activePresetId)
-              : null;
-            const sumW = Object.values(
-              saved.activeWeights as Record<string, number>
-            ).reduce((a, b) => a + b, 0);
-            if (
-              matchedPreset &&
-              (!saved.allocationMethod || saved.allocationMethod === 'preset') &&
-              Math.abs(sumW - 100) >= 0.5
-            ) {
-              setActiveWeights({ ...matchedPreset.weights });
-            } else {
-              setActiveWeights(saved.activeWeights);
-            }
-          }
-          if (saved.activePresetId !== undefined)
-            setActivePresetId(saved.activePresetId);
-          if (saved.allocationMethod) setAllocationMethod(saved.allocationMethod);
-          if (saved.initialCapitalIdr !== undefined)
-            setInitialCapitalIdr(saved.initialCapitalIdr);
-          if (saved.targetGoalIdr !== undefined)
-            setTargetGoalIdr(saved.targetGoalIdr);
-          if (saved.monthlySavingsIdr !== undefined) {
-            const migratedDca3M = localStorage.getItem(
-              'quantporto_dca_3m_default_v1'
-            );
-            if (!migratedDca3M && saved.monthlySavingsIdr === 10_000_000) {
-              setMonthlySavingsIdr(3_000_000);
-              localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
-            } else {
-              setMonthlySavingsIdr(saved.monthlySavingsIdr);
-            }
-          }
-          if (saved.slotMap) setSlotMap(saved.slotMap);
-          if (saved.rdptPromoActive !== undefined)
-            setRdptPromoActive(Boolean(saved.rdptPromoActive));
-        }
-
-        if (saved.holdings) setHoldings((prev) => ({ ...prev, ...saved.holdings }));
-        if (saved.isHoldingsSyncedWithMenu1 !== undefined)
-          setIsHoldingsSyncedWithMenu1(saved.isHoldingsSyncedWithMenu1);
-        if (saved.enableIdxLotRounding !== undefined)
-          setEnableIdxLotRounding(Boolean(saved.enableIdxLotRounding));
-        if (saved.enableBrokerFees !== undefined)
-          setEnableBrokerFees(Boolean(saved.enableBrokerFees));
-        if (saved.isFixedBudgetMode !== undefined)
-          setIsFixedBudgetMode(Boolean(saved.isFixedBudgetMode));
-        if (saved.fixedTotalBudgetIdr !== undefined)
-          setFixedTotalBudgetIdr(Number(saved.fixedTotalBudgetIdr));
-        if (saved.tacticalConfig) setTacticalConfig(saved.tacticalConfig);
-
-        if (saved.usdIdrRate) {
-          const migratedUsd18k = localStorage.getItem(
-            'quantporto_usd_18k_default_v1'
-          );
-          if (
-            !migratedUsd18k &&
-            (saved.usdIdrRate === 15600 || saved.usdIdrRate === 15500)
-          ) {
-            setUsdIdrRate(18000);
-            localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
-          } else {
-            setUsdIdrRate(saved.usdIdrRate);
-          }
-        }
-        if (saved.customTableRows) setCustomTableRows(saved.customTableRows);
-        if (saved.rebalanceHistory) setRebalanceHistory(saved.rebalanceHistory);
-        if (Array.isArray(saved.pinnedPresetIds))
-          setPinnedPresetIds(saved.pinnedPresetIds);
-        if (Array.isArray(saved.lockedAssetIds))
-          setLockedAssetIds(saved.lockedAssetIds);
-
-        // Restore custom tickers and modified CAGR/MaxDD return assumptions
-        if (Array.isArray(saved.allAssets) && saved.allAssets.length > 0) {
-          setAllAssets((prev) => {
-            const savedMap = new Map<string, AssetDefinition>(
-              saved.allAssets.map((a: AssetDefinition) => [a.id, a])
-            );
-            const merged = prev.map((curr) => {
-              const s = savedMap.get(curr.id);
-              return s
-                ? { ...curr, cagr: s.cagr, maxDrawdown: s.maxDrawdown }
-                : curr;
-            });
-            const currIds = new Set(prev.map((a) => a.id));
-            const additions = saved.allAssets.filter(
-              (a: AssetDefinition) => !currIds.has(a.id)
-            );
-            return [...merged, ...additions];
-          });
-        }
-      }
     } catch {
-      // Ignore malformed storage
+      // Ignore
     }
   }, []);
 
@@ -502,26 +536,36 @@ export function App() {
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
+          activeTab,
           activeWeights,
           activePresetId,
           allocationMethod,
+          convictionAssetId,
+          convictionRiskPercent,
+          solverMode,
+          selectedUniverseIds,
           holdings,
           initialCapitalIdr,
           targetGoalIdr,
           monthlySavingsIdr,
           isHoldingsSyncedWithMenu1,
           usdIdrRate,
+          inputMode,
+          rebalanceMode,
+          cashInjectionIdr,
+          isFixedBudgetMode,
+          fixedTotalBudgetIdr,
+          driftThresholdPercent,
           slotMap,
           customTableRows,
           rebalanceHistory,
           rdptPromoActive,
           enableIdxLotRounding,
           enableBrokerFees,
+          filterDustTrades,
           allAssets,
           pinnedPresetIds,
           lockedAssetIds,
-          isFixedBudgetMode,
-          fixedTotalBudgetIdr,
           tacticalConfig,
         })
       );
@@ -529,24 +573,36 @@ export function App() {
       // Ignore quota errors
     }
   }, [
+    activeTab,
     activeWeights,
     activePresetId,
     allocationMethod,
+    convictionAssetId,
+    convictionRiskPercent,
+    solverMode,
+    selectedUniverseIds,
     holdings,
     initialCapitalIdr,
     targetGoalIdr,
     monthlySavingsIdr,
     isHoldingsSyncedWithMenu1,
     usdIdrRate,
+    inputMode,
+    rebalanceMode,
+    cashInjectionIdr,
+    isFixedBudgetMode,
+    fixedTotalBudgetIdr,
+    driftThresholdPercent,
     slotMap,
     customTableRows,
     rebalanceHistory,
     rdptPromoActive,
     enableIdxLotRounding,
     enableBrokerFees,
+    filterDustTrades,
     allAssets,
-    isFixedBudgetMode,
-    fixedTotalBudgetIdr,
+    pinnedPresetIds,
+    lockedAssetIds,
     tacticalConfig,
   ]);
 
@@ -884,7 +940,13 @@ export function App() {
 
   // Smart Auto-Sync: Keep Rebalancer baseline holdings synchronized with Menu 1's initialCapitalIdr & activeWeights
   // whenever isHoldingsSyncedWithMenu1 is true (until user manually edits individual holdings in Rebalancer)
+  const isFirstMountRef = useRef(true);
   useEffect(() => {
+    // Crucial: Skip initial mount to prevent clobbering restored holdings!
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
     if (!isHoldingsSyncedWithMenu1) return;
     setHoldings((prev) => {
       const next = { ...prev };
