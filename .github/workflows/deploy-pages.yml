@@ -34,6 +34,8 @@ jobs:
 
       - name: Build static web app (includes public/CNAME -> dist/CNAME)
         run: npm run build
+        env:
+          VITE_APP_PASSWORD_HASH: ${{ secrets.VITE_APP_PASSWORD_HASH }}
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
