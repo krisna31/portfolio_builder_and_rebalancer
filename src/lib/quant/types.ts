@@ -57,6 +57,16 @@ export interface AssetDefinition {
   dividendYield?: number;
   /** Default dividend/coupon withholding tax (%) if not tax-exempt */
   dividendTaxPercent?: number;
+  /** If true, asset trades in pure IDR nominals without 100-share BEI lot rounding (e.g. Mutual Funds/Reksa Dana) */
+  isNominalOnly?: boolean;
+  /** Original base name before user customization */
+  originalName?: string;
+  /** Original ticker/shortName before user customization */
+  originalShortName?: string;
+  /** Original lot size before user customization */
+  originalLotSize?: number;
+  /** Whether this asset has been customized/renamed by user */
+  isRenamed?: boolean;
 }
 
 export interface PortfolioPreset {
@@ -297,6 +307,8 @@ export interface QuantPortoBackupPayload {
       customTableRows?: PortfolioPreset[];
       slotMap?: Record<string, string>;
       customAssets?: AssetDefinition[];
+      customizedCoreAssets?: AssetDefinition[];
+      allAssets?: AssetDefinition[];
       rdptPromoActive?: boolean;
       lockedAssetIds?: string[];
     };

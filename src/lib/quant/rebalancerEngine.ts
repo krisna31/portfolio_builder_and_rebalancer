@@ -348,6 +348,7 @@ export function calculateRebalancePlan(params: {
 
     const isNominalOnly =
       item.holding.isNominalOnly ??
+      item.asset.isNominalOnly ??
       (item.asset.category === 'bonds' || item.asset.category === 'money-market');
 
     const rawUnits = tradeAmountIdr / item.postShockUnitPriceIdr;
@@ -411,7 +412,8 @@ export function calculateRebalancePlan(params: {
     let estimatedFeeIdr = 0;
     if (enableBrokerFees && action !== 'HOLD') {
       const absTrade = Math.abs(tradeAmountIdr);
-      if (item.asset.category === 'idx-equity') {
+      // Reksa Dana / Nominal assets have 0% broker fee and 0% tax
+      if (!isNominalOnly && item.asset.category === 'idx-equity') {
         // IDX: Buy ~0.15%, Sell ~0.25% (0.15% fee + 0.10% final PPh tax)
         estimatedFeeIdr = Math.round(absTrade * (action === 'BUY' ? 0.0015 : 0.0025));
       } else if (item.asset.category === 'us-equity') {
@@ -429,7 +431,7 @@ export function calculateRebalancePlan(params: {
 
     return {
       assetId: item.asset.id,
-      symbol: item.asset.symbol,
+      symbol: item.asset.shortName || item.asset.symbol,
       name: item.asset.name,
       color: item.asset.color,
       isNominalOnly,
@@ -660,18 +662,25 @@ export function generateCrashBuyingLadder(params: {
     const targetItem = plan.items.find((i) => i.assetId === targetAsset.id);
     const buyIdr = Math.max(0, targetItem?.tradeAmountIdr ?? 0);
     const rawUnits = buyIdr / Math.max(1, limitPriceIdr);
+    const isNominalOnly = Boolean(
+      targetAsset.isNominalOnly ||
+      targetAsset.category === 'bonds' ||
+      targetAsset.category === 'money-market'
+    );
     const buyLots =
-      targetAsset.lotSize === 100
+      !isNominalOnly && targetAsset.lotSize === 100
         ? Math.floor(rawUnits / 100)
         : undefined;
     const buyUnits =
-      targetAsset.lotSize === 100
-        ? (buyLots ?? 0) * 100
-        : targetAsset.allowFractional
-          ? Number(rawUnits.toFixed(4))
-          : Math.round(rawUnits);
+      isNominalOnly
+        ? buyIdr
+        : targetAsset.lotSize === 100
+          ? (buyLots ?? 0) * 100
+          : targetAsset.allowFractional
+            ? Number(rawUnits.toFixed(4))
+            : Math.round(rawUnits);
     const executedBuyIdr =
-      targetAsset.lotSize === 100
+      !isNominalOnly && targetAsset.lotSize === 100
         ? Math.round(buyUnits * limitPriceIdr)
         : buyIdr;
 

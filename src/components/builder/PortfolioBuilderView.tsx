@@ -55,6 +55,9 @@ import {
   FileSpreadsheet,
   Lock,
   Unlock,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -102,6 +105,17 @@ interface PortfolioBuilderViewProps {
     patch: { cagr?: number; maxDrawdown?: number }
   ) => void;
   onResetAssetAssumptions: () => void;
+  onUpdateAssetMeta?: (
+    assetId: string,
+    patch: {
+      shortName?: string;
+      name?: string;
+      isNominalOnly?: boolean;
+      lotSize?: number;
+      allowFractional?: boolean;
+    }
+  ) => void;
+  onResetAssetMeta?: (assetId: string) => void;
   pinnedPresetIds?: string[];
   onTogglePinPreset?: (presetId: string) => void;
   onOpenFactsheet?: () => void;
@@ -149,10 +163,50 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   hasCustomAssetAssumptions,
   onUpdateAssetAssumption,
   onResetAssetAssumptions,
+  onUpdateAssetMeta,
+  onResetAssetMeta,
   pinnedPresetIds = [],
   onTogglePinPreset,
   onOpenFactsheet,
 }) => {
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [draftShortName, setDraftShortName] = useState('');
+  const [draftName, setDraftName] = useState('');
+  const [draftIsNominal, setDraftIsNominal] = useState(false);
+
+  const handleStartEditAsset = (asset: AssetDefinition) => {
+    setEditingAssetId(asset.id);
+    setDraftShortName(asset.shortName);
+    setDraftName(asset.name);
+    setDraftIsNominal(Boolean(asset.isNominalOnly));
+  };
+
+  const handleCancelEditAsset = () => {
+    setEditingAssetId(null);
+  };
+
+  const handleSaveEditAsset = (assetId: string) => {
+    if (onUpdateAssetMeta) {
+      const asset = allAssets.find((a) => a.id === assetId);
+      const origLot = asset?.originalLotSize ?? (draftIsNominal ? 1 : 100);
+      onUpdateAssetMeta(assetId, {
+        shortName: draftShortName.trim() || undefined,
+        name: draftName.trim() || undefined,
+        isNominalOnly: draftIsNominal,
+        lotSize: draftIsNominal ? 1 : origLot,
+        allowFractional: draftIsNominal ? true : false,
+      });
+    }
+    setEditingAssetId(null);
+  };
+
+  const handleResetDefaultAsset = (assetId: string) => {
+    if (onResetAssetMeta) {
+      onResetAssetMeta(assetId);
+    }
+    setEditingAssetId(null);
+  };
+
   const [archetypeFilter, setArchetypeFilter] = useState<InvestorArchetype>('all');
   const [showDominated25, setShowDominated25] = useState(false);
   const [customRowName, setCustomRowName] = useState('');
@@ -1360,7 +1414,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       : 'ui-card ui-border'
                   }`}
                 >
-                  <span className="ui-text-muted text-[10px]">{slotId}:</span>
+                  <span className="ui-text-muted text-[10px]">{allAssets.find((a) => a.id === slotId)?.shortName ?? slotId}:</span>
                   <select
                     value={currentAssetId}
                     onChange={(e) => onChangeSlotAsset(slotId, e.target.value)}
@@ -2156,19 +2210,139 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   const cagrContrib = (capWeight / 100) * effectiveCagr;
                   return (
                     <div key={asset.id} className="ui-subtle rounded-lg p-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: asset.color }}
-                          />
-                          <span className="ui-text-main font-semibold">
-                            {asset.shortName}
-                          </span>
-                          <span className="ui-text-muted hidden sm:inline">
-                            {asset.name}
-                          </span>
+                      {editingAssetId === asset.id ? (
+                        /* Unlocked Edit State */
+                        <div className="space-y-2 rounded-md bg-zinc-900/60 p-2.5 border border-emerald-500/30 mb-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className="h-2.5 w-2.5 rounded-full"
+                                style={{ backgroundColor: asset.color }}
+                              />
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] text-zinc-400">Kode:</span>
+                                <input
+                                  type="text"
+                                  value={draftShortName}
+                                  onChange={(e) => setDraftShortName(e.target.value.toUpperCase())}
+                                  placeholder="RDS"
+                                  maxLength={10}
+                                  className="ui-card ui-text-main w-20 rounded px-1.5 py-0.5 text-xs font-bold font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  aria-label={`Edit kode ticker ${asset.shortName}`}
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] text-zinc-400">Nama:</span>
+                                <input
+                                  type="text"
+                                  value={draftName}
+                                  onChange={(e) => setDraftName(e.target.value)}
+                                  placeholder="Reksa Dana Saham"
+                                  className="ui-card ui-text-main w-36 sm:w-48 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  aria-label={`Edit nama lengkap ${asset.shortName}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditAsset(asset.id)}
+                                className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                                title="Simpan Perubahan Ticker & Mode"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                <span>Simpan</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditAsset}
+                                className="flex items-center gap-1 rounded bg-zinc-700 px-2 py-0.5 text-xs font-medium text-zinc-200 hover:bg-zinc-600"
+                                title="Batal Edit"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                <span>Batal</span>
+                              </button>
+                              {(asset.isRenamed || asset.originalShortName) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleResetDefaultAsset(asset.id)}
+                                  className="flex items-center gap-1 rounded bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-400 hover:bg-rose-500/20 border border-rose-500/30"
+                                  title={`Kembalikan ke ${asset.originalShortName || asset.id} standar pabrikan`}
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  <span>Reset Default</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 border-t border-zinc-700/50">
+                            <label className="flex items-center gap-2 text-[11px] cursor-pointer text-zinc-300">
+                              <input
+                                type="checkbox"
+                                checked={draftIsNominal}
+                                onChange={(e) => setDraftIsNominal(e.target.checked)}
+                                className="rounded border-zinc-600 text-emerald-500 focus:ring-emerald-500"
+                              />
+                              <span className="font-medium">
+                                Mode Reksa Dana (Nominal Bebas Lot 100 BEI)
+                              </span>
+                            </label>
+                            {draftIsNominal && (
+                              <span className="text-[10px] text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-500/20">
+                                Eksekusi nominal Rupiah bebas tanpa sisa odd-lot
+                              </span>
+                            )}
+                          </div>
                         </div>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        {editingAssetId !== asset.id ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: asset.color }}
+                            />
+                            <span className="ui-text-main font-semibold">
+                              {asset.shortName}
+                            </span>
+                            <span className="ui-text-muted hidden sm:inline">
+                              {asset.name}
+                            </span>
+                            {asset.isNominalOnly && (
+                              <span
+                                className="rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-sky-500 dark:text-sky-400 border border-sky-500/30"
+                                title="Aset ini dieksekusi dalam nominal Rupiah murni bebas aturan pembulatan 100 lembar BEI"
+                              >
+                                Reksa Dana / Nominal
+                              </span>
+                            )}
+                            {asset.isRenamed && (
+                              <span
+                                className="rounded bg-purple-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                                title={`Aset ini telah dikustomisasi dari ${asset.originalShortName || asset.id}`}
+                              >
+                                Customized
+                              </span>
+                            )}
+                            {onUpdateAssetMeta && (
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditAsset(asset)}
+                                className="ui-text-muted hover:ui-text-main hover:bg-zinc-500/10 rounded p-1 transition"
+                                title={`Ubah Kode Ticker (${asset.shortName}), Nama, atau Mode Reksa Dana`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-500/80 font-medium italic">
+                            <span>✏️ Mode Edit Instrumen Aktif</span>
+                          </div>
+                        )}
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                             {formatNominalCell(capWeight)}

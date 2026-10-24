@@ -133,7 +133,23 @@ export function App() {
       );
       const merged = CORE_AND_EXPANDED_ASSETS.map((curr) => {
         const s = savedMap.get(curr.id);
-        return s ? { ...curr, cagr: s.cagr, maxDrawdown: s.maxDrawdown } : curr;
+        if (!s) return curr;
+        const shortName = s.shortName ?? curr.shortName;
+        return {
+          ...curr,
+          cagr: s.cagr ?? curr.cagr,
+          maxDrawdown: s.maxDrawdown ?? curr.maxDrawdown,
+          name: s.name ?? curr.name,
+          shortName,
+          symbol: s.symbol ?? shortName ?? curr.symbol,
+          isNominalOnly: s.isNominalOnly !== undefined ? s.isNominalOnly : curr.isNominalOnly,
+          lotSize: s.lotSize !== undefined ? s.lotSize : curr.lotSize,
+          allowFractional: s.allowFractional !== undefined ? s.allowFractional : curr.allowFractional,
+          originalName: s.originalName ?? curr.originalName ?? curr.name,
+          originalShortName: s.originalShortName ?? curr.originalShortName ?? curr.shortName,
+          originalLotSize: s.originalLotSize !== undefined ? s.originalLotSize : (curr.originalLotSize ?? curr.lotSize),
+          isRenamed: Boolean(s.isRenamed),
+        };
       });
       const currIds = new Set(CORE_AND_EXPANDED_ASSETS.map((a) => a.id));
       const additions = initialSaved.allAssets.filter(
@@ -557,6 +573,31 @@ export function App() {
               return additions.length > 0 ? [...prev, ...additions] : prev;
             });
           }
+          if (
+            Array.isArray(hashParsed?.renamedAssets) &&
+            hashParsed.renamedAssets.length > 0
+          ) {
+            setAllAssets((prev) => {
+              const renameMap = new Map<string, any>(
+                hashParsed!.renamedAssets.map((r: any) => [r.id, r])
+              );
+              return prev.map((a) => {
+                const r = renameMap.get(a.id);
+                if (!r) return a;
+                const nextShort = r.shortName ?? a.shortName;
+                return {
+                  ...a,
+                  shortName: nextShort,
+                  symbol: nextShort,
+                  name: r.name ?? a.name,
+                  isNominalOnly: r.isNominalOnly !== undefined ? r.isNominalOnly : a.isNominalOnly,
+                  lotSize: r.lotSize !== undefined ? r.lotSize : (r.isNominalOnly ? 1 : a.lotSize),
+                  allowFractional: r.allowFractional !== undefined ? r.allowFractional : (r.isNominalOnly ? true : a.allowFractional),
+                  isRenamed: true,
+                };
+              });
+            });
+          }
         } catch {
           // Ignore malformed URL hash
         }
@@ -674,6 +715,159 @@ export function App() {
           : a;
       })
     );
+  };
+
+  const handleUpdateAssetMeta = (
+    assetId: string,
+    patch: {
+      shortName?: string;
+      name?: string;
+      isNominalOnly?: boolean;
+      lotSize?: number;
+      allowFractional?: boolean;
+    }
+  ) => {
+    setAllAssets((prev) =>
+      prev.map((a) => {
+        if (a.id !== assetId) return a;
+        const origDef = CORE_AND_EXPANDED_ASSETS.find((c) => c.id === assetId);
+        const originalName = a.originalName ?? origDef?.name ?? a.name;
+        const originalShortName = a.originalShortName ?? origDef?.shortName ?? a.shortName;
+        const originalLotSize = a.originalLotSize ?? origDef?.lotSize ?? a.lotSize;
+
+        const nextShortName =
+          patch.shortName !== undefined ? patch.shortName.trim().toUpperCase() : a.shortName;
+        const nextName = patch.name !== undefined ? patch.name.trim() : a.name;
+        const nextIsNominal =
+          patch.isNominalOnly !== undefined ? patch.isNominalOnly : Boolean(a.isNominalOnly);
+        const nextLotSize =
+          patch.lotSize !== undefined
+            ? patch.lotSize
+            : nextIsNominal
+              ? 1
+              : (origDef?.lotSize ?? a.originalLotSize ?? 100);
+        const nextAllowFractional =
+          patch.allowFractional !== undefined
+            ? patch.allowFractional
+            : nextIsNominal
+              ? true
+              : (origDef?.allowFractional ?? false);
+
+        const isRenamed =
+          nextShortName !== originalShortName ||
+          nextName !== originalName ||
+          nextIsNominal !== Boolean(origDef ? (origDef.category === 'bonds' || origDef.category === 'money-market') : false);
+
+        return {
+          ...a,
+          shortName: nextShortName,
+          symbol: nextShortName,
+          name: nextName,
+          isNominalOnly: nextIsNominal,
+          lotSize: nextLotSize,
+          allowFractional: nextAllowFractional,
+          originalName,
+          originalShortName,
+          originalLotSize,
+          isRenamed,
+        };
+      })
+    );
+
+    // If isNominalOnly changes on an asset, update holdings[assetId] accordingly
+    if (patch.isNominalOnly !== undefined) {
+      setHoldings((prev) => {
+        const h = prev[assetId];
+        if (!h) return prev;
+        if (patch.isNominalOnly) {
+          return {
+            ...prev,
+            [assetId]: {
+              ...h,
+              isNominalOnly: true,
+              currentPrice: 1,
+              units: h.currentValueIdr,
+            },
+          };
+        } else {
+          const asset = allAssets.find((a) => a.id === assetId);
+          const origDef = CORE_AND_EXPANDED_ASSETS.find((c) => c.id === assetId);
+          const pNative = asset?.defaultPrice ?? origDef?.defaultPrice ?? 1;
+          const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+          return {
+            ...prev,
+            [assetId]: {
+              ...h,
+              isNominalOnly: false,
+              currentPrice: pNative,
+              units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(4)),
+            },
+          };
+        }
+      });
+    }
+  };
+
+  const handleResetAssetMeta = (assetId: string) => {
+    const origDef = CORE_AND_EXPANDED_ASSETS.find((c) => c.id === assetId);
+
+    setAllAssets((prev) =>
+      prev.map((a) => {
+        if (a.id !== assetId) return a;
+        const name = origDef?.name ?? a.originalName ?? a.name;
+        const shortName = origDef?.shortName ?? a.originalShortName ?? a.shortName;
+        const symbol = origDef?.symbol ?? origDef?.shortName ?? a.originalShortName ?? a.symbol;
+        const lotSize = origDef?.lotSize ?? a.originalLotSize ?? a.lotSize;
+        const allowFractional = origDef?.allowFractional ?? a.allowFractional ?? false;
+        const isNominal = origDef
+          ? (origDef.category === 'bonds' || origDef.category === 'money-market')
+          : false;
+        return {
+          ...a,
+          name,
+          shortName,
+          symbol,
+          lotSize,
+          allowFractional,
+          isNominalOnly: isNominal,
+          originalName: name,
+          originalShortName: shortName,
+          originalLotSize: lotSize,
+          isRenamed: false,
+        };
+      })
+    );
+
+    setHoldings((prev) => {
+      const h = prev[assetId];
+      if (!h) return prev;
+      const isNominal = origDef
+        ? (origDef.category === 'bonds' || origDef.category === 'money-market')
+        : false;
+      if (isNominal) {
+        return {
+          ...prev,
+          [assetId]: {
+            ...h,
+            isNominalOnly: true,
+            currentPrice: 1,
+            units: h.currentValueIdr,
+          },
+        };
+      } else {
+        const pNative = origDef?.defaultPrice ?? 1;
+        const pIdr = origDef?.currency === 'USD' ? pNative * usdIdrRate : pNative;
+        return {
+          ...prev,
+          [assetId]: {
+            ...h,
+            isNominalOnly: false,
+            currentPrice: pNative,
+            units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(4)),
+          },
+        };
+      }
+    });
   };
 
   // Dynamically recompute the 25 presets whenever slotMap, RDPT promo, or custom asset return assumptions change
@@ -1482,6 +1676,11 @@ export function App() {
     const customAssets = allAssets.filter(
       (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
     );
+    const customizedCoreAssets = allAssets.filter(
+      (a) =>
+        CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id) &&
+        (a.isRenamed || a.isNominalOnly || a.originalShortName !== undefined)
+    );
 
     return {
       version: 2,
@@ -1501,6 +1700,8 @@ export function App() {
           slotMap,
           rdptPromoActive,
           customAssets,
+          customizedCoreAssets,
+          allAssets,
           lockedAssetIds,
         },
         menu2_rebalancer: {
@@ -1656,6 +1857,43 @@ export function App() {
         details.push(`Ticker kustom: +${d1.customAssets.length} aset`);
       }
 
+      if (Array.isArray(d1.allAssets) && d1.allAssets.length > 0) {
+        setAllAssets((prev) => {
+          const importedMap = new Map<string, AssetDefinition>(
+            d1.allAssets.map((a: AssetDefinition) => [a.id, a])
+          );
+          const updated = prev.map((curr) => {
+            const imp = importedMap.get(curr.id);
+            if (!imp) return curr;
+            return {
+              ...curr,
+              ...imp,
+              symbol: imp.shortName ?? imp.symbol ?? curr.symbol,
+            };
+          });
+          const currIds = new Set(updated.map((a) => a.id));
+          const additionsFromAll = d1.allAssets.filter((a: AssetDefinition) => !currIds.has(a.id));
+          return additionsFromAll.length > 0 ? [...updated, ...additionsFromAll] : updated;
+        });
+        details.push(`Metadata instrumen dipulihkan`);
+      } else if (Array.isArray(d1.customizedCoreAssets) && d1.customizedCoreAssets.length > 0) {
+        setAllAssets((prev) => {
+          const customMap = new Map<string, AssetDefinition>(
+            d1.customizedCoreAssets.map((a: AssetDefinition) => [a.id, a])
+          );
+          return prev.map((curr) => {
+            const c = customMap.get(curr.id);
+            if (!c) return curr;
+            return {
+              ...curr,
+              ...c,
+              symbol: c.shortName ?? c.symbol ?? curr.symbol,
+            };
+          });
+        });
+        details.push(`Kustomisasi aset acuan dipulihkan`);
+      }
+
       // 2. Menu 2: Rebalancer & History
       if (d2.holdings && typeof d2.holdings === 'object') {
         if (mode === 'merge') {
@@ -1758,6 +1996,33 @@ export function App() {
 
       // Instant Atomic Persistence to LocalStorage (STORAGE_KEY)
       try {
+        let mergedAllAssets = dg.allAssets ?? allAssets;
+        if (Array.isArray(d1.allAssets) && d1.allAssets.length > 0) {
+          const impMap = new Map<string, AssetDefinition>(
+            d1.allAssets.map((a: AssetDefinition) => [a.id, a])
+          );
+          const updated = mergedAllAssets.map((curr: AssetDefinition) => {
+            const imp = impMap.get(curr.id);
+            return imp ? { ...curr, ...imp, symbol: imp.shortName ?? imp.symbol ?? curr.symbol } : curr;
+          });
+          const currIds = new Set(updated.map((a: AssetDefinition) => a.id));
+          const additionsFromAll = d1.allAssets.filter((a: AssetDefinition) => !currIds.has(a.id));
+          mergedAllAssets = additionsFromAll.length > 0 ? [...updated, ...additionsFromAll] : updated;
+        } else if (Array.isArray(d1.customizedCoreAssets) && d1.customizedCoreAssets.length > 0) {
+          const cMap = new Map<string, AssetDefinition>(
+            d1.customizedCoreAssets.map((a: AssetDefinition) => [a.id, a])
+          );
+          mergedAllAssets = mergedAllAssets.map((curr: AssetDefinition) => {
+            const c = cMap.get(curr.id);
+            return c ? { ...curr, ...c, symbol: c.shortName ?? c.symbol ?? curr.symbol } : curr;
+          });
+        }
+        if (Array.isArray(d1.customAssets) && d1.customAssets.length > 0) {
+          const currIds = new Set(mergedAllAssets.map((a: AssetDefinition) => a.id));
+          const add = d1.customAssets.filter((a: AssetDefinition) => !currIds.has(a.id));
+          mergedAllAssets = [...mergedAllAssets, ...add];
+        }
+
         const snapshotToStore = {
           activeTab,
           activeWeights: d1.activeWeights ?? activeWeights,
@@ -1794,7 +2059,7 @@ export function App() {
           customTableRows: d1.customTableRows ?? customTableRows,
           rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
           pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
-          allAssets: dg.allAssets ?? allAssets,
+          allAssets: mergedAllAssets,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
       } catch {
@@ -1839,6 +2104,16 @@ export function App() {
     const customAssets = allAssets.filter(
       (a) => !CORE_AND_EXPANDED_ASSETS.some((c) => c.id === a.id)
     );
+    const renamedAssets = allAssets
+      .filter((a) => a.isRenamed || a.isNominalOnly)
+      .map((a) => ({
+        id: a.id,
+        shortName: a.shortName,
+        name: a.name,
+        isNominalOnly: Boolean(a.isNominalOnly),
+        lotSize: a.lotSize,
+        allowFractional: a.allowFractional,
+      }));
     const shareData = utf8ToBase64(
       JSON.stringify({
         weights: activeWeights,
@@ -1854,6 +2129,7 @@ export function App() {
         dca: monthlySavingsIdr,
         goal: targetGoalIdr,
         customAssets,
+        renamedAssets,
       })
     );
     const url = `${window.location.origin}${window.location.pathname}#porto=${encodeURIComponent(
@@ -2045,6 +2321,8 @@ export function App() {
             hasCustomAssetAssumptions={hasCustomAssetAssumptions}
             onUpdateAssetAssumption={handleUpdateAssetAssumption}
             onResetAssetAssumptions={handleResetAssetAssumptions}
+            onUpdateAssetMeta={handleUpdateAssetMeta}
+            onResetAssetMeta={handleResetAssetMeta}
             pinnedPresetIds={pinnedPresetIds}
             onTogglePinPreset={handleTogglePinPreset}
             onOpenFactsheet={() => setIsFactsheetOpen(true)}

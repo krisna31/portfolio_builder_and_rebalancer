@@ -309,11 +309,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       }
       for (const item of items) {
         if (!item.assetId || !item.isRecognized) continue;
+        const matchedAsset = allAssets.find((a) => a.id === item.assetId);
+        const isNominal =
+          Boolean(matchedAsset?.isNominalOnly) ||
+          matchedAsset?.category === 'money-market' ||
+          matchedAsset?.category === 'bonds';
         onUpdateHolding(item.assetId, {
           currentValueIdr: item.nominalIdr,
-          units: item.units,
-          currentPrice: item.priceNative,
+          units: isNominal ? item.nominalIdr : item.units,
+          currentPrice: isNominal ? 1 : item.priceNative,
           shockPercent: 0,
+          isNominalOnly: isNominal,
         });
       }
     }
@@ -1667,6 +1673,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           {(() => {
                             const isNominal =
                               h.isNominalOnly ??
+                              asset?.isNominalOnly ??
                               (asset?.category === 'bonds' || asset?.category === 'money-market');
 
                             if (isNominal) {
@@ -2088,6 +2095,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   currentPrice: asset?.defaultPrice ?? 1,
                   shockPercent: 0,
                 };
+                const isNominal =
+                  h.isNominalOnly ??
+                  asset?.isNominalOnly ??
+                  (asset?.category === 'bonds' || asset?.category === 'money-market');
 
                 return (
                   <div
@@ -2112,10 +2123,6 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             </span>
                           </div>
                           {(() => {
-                            const isNominal =
-                              h.isNominalOnly ??
-                              (asset?.category === 'bonds' || asset?.category === 'money-market');
-
                             if (isNominal) {
                               return (
                                 <div className="flex items-center gap-1.5 pt-1">
@@ -2331,7 +2338,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               aria-label={`Units held for ${item.symbol}`}
                               title="Jumlah unit/lembar"
                             />
-                            {!h.isNominalOnly && (
+                            {!isNominal && (
                               <div className="flex items-center gap-0.5">
                                 <span className="ui-text-muted text-[10px]">@</span>
                                 <input

@@ -91,7 +91,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       const def = assetDefMap.get(item.assetId);
       const cat = def?.category ?? 'custom';
 
-      if (cat === 'money-market' || cat === 'bonds') {
+      if (item.isNominalOnly || def?.isNominalOnly || cat === 'money-market' || cat === 'bonds') {
         groups.mutual_funds.push(item);
       } else if (cat === 'idx-equity') {
         groups.idx_stocks.push(item);
@@ -111,7 +111,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     if (groups.mutual_funds.length > 0) {
       result.push({
         id: 'mutual_funds',
-        name: 'Reksa Dana Pasar Uang & Obligasi',
+        name: 'Reksa Dana & Pasar Uang / Nominal',
         apps: 'Makmur / Bibit / Bareksa',
         icon: <Building2 className="w-4 h-4 text-emerald-400" />,
         colorClass: 'border-emerald-500/30 bg-emerald-950/20',
@@ -265,7 +265,11 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         const isDone = executedMap[item.assetId] ? '[x]' : '[ ]';
         const actionStr = item.action === 'BUY' ? 'BELI' : 'JUAL';
 
-        if (g.id === 'idx_stocks') {
+        if (item.isNominalOnly || def?.isNominalOnly) {
+          lines.push(
+            `${isDone} ${actionStr} ${item.symbol} - ${formatIdr(Math.abs(item.tradeAmountIdr))}`
+          );
+        } else if (g.id === 'idx_stocks') {
           const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
           const unitPrice = holdings?.[item.assetId]?.currentPrice ?? def?.defaultPrice ?? 0;
           lines.push(
@@ -532,7 +536,18 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
                         {/* Right: Quantity / Lots / Nominal specifications */}
                         <div className="text-left sm:text-right pl-8 sm:pl-0">
-                          {isIdx ? (
+                          {item.isNominalOnly || def?.isNominalOnly ? (
+                            <div>
+                              <div className="text-sm font-bold text-slate-100 flex items-center sm:justify-end gap-1.5">
+                                <span className="text-emerald-300">
+                                  {formatIdr(Math.abs(item.tradeAmountIdr))}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                Reksa Dana / Nominal Bebas Lot
+                              </div>
+                            </div>
+                          ) : isIdx ? (
                             <div>
                               <div className="text-sm font-bold text-slate-100 flex items-center sm:justify-end gap-1.5">
                                 <span className="text-indigo-300">

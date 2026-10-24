@@ -171,6 +171,9 @@ export function parseHoldingsText(
     if (asset.shortName) {
       assetLookup.set(asset.shortName.toUpperCase(), asset);
     }
+    if (asset.originalShortName) {
+      assetLookup.set(asset.originalShortName.toUpperCase(), asset);
+    }
     if (asset.yahooSymbol) {
       assetLookup.set(asset.yahooSymbol.toUpperCase(), asset);
       const stripped = asset.yahooSymbol.replace(/\.[A-Z]+$/i, '').toUpperCase();
@@ -241,9 +244,13 @@ export function parseHoldingsText(
       continue;
     }
 
-    const assetPrice = matchedAsset?.defaultPrice || 1;
+    const isNominalAsset =
+      Boolean(matchedAsset?.isNominalOnly) ||
+      matchedAsset?.category === 'money-market' ||
+      matchedAsset?.category === 'bonds';
+    const assetPrice = isNominalAsset ? 1 : (matchedAsset?.defaultPrice || 1);
     const isAssetUsd = matchedAsset?.currency === 'USD';
-    const lotSize = matchedAsset?.lotSize || 1;
+    const lotSize = isNominalAsset ? 1 : (matchedAsset?.lotSize || 1);
 
     let nominalIdr = 0;
     let units = 0;
@@ -359,12 +366,16 @@ export function exportHoldingsToText(
     const headers = ['Symbol', 'Asset Name', 'Value (IDR)', 'Units', 'Lots (IDX)', 'Price'];
     const rows = holdingEntries.map(([assetId, h]) => {
       const asset = assetMap.get(assetId);
-      const symbol = asset?.symbol || assetId;
+      const symbol = asset?.shortName || asset?.symbol || assetId;
       const name = asset?.name || assetId;
       const nominal = h.currentValueIdr || 0;
       const units = h.units || 0;
-      const lots = asset?.lotSize && asset.lotSize > 1 ? +(units / asset.lotSize).toFixed(2) : '-';
-      const price = h.currentPrice || asset?.defaultPrice || 0;
+      const isNominalOnly =
+        h.isNominalOnly ??
+        asset?.isNominalOnly ??
+        (asset?.category === 'bonds' || asset?.category === 'money-market');
+      const lots = isNominalOnly ? '-' : (asset?.lotSize && asset.lotSize > 1 ? +(units / asset.lotSize).toFixed(2) : '-');
+      const price = isNominalOnly ? 1 : (h.currentPrice || asset?.defaultPrice || 0);
       const curr = asset?.currency || 'IDR';
       return [symbol, name, nominal, units, lots, `${curr} ${price}`].join('\t');
     });
@@ -375,12 +386,16 @@ export function exportHoldingsToText(
     const headers = ['Symbol', 'Asset Name', 'Value (IDR)', 'Units', 'Lots (IDX)', 'Price'];
     const rows = holdingEntries.map(([assetId, h]) => {
       const asset = assetMap.get(assetId);
-      const symbol = asset?.symbol || assetId;
+      const symbol = asset?.shortName || asset?.symbol || assetId;
       const name = `"${(asset?.name || assetId).replace(/"/g, '""')}"`;
       const nominal = h.currentValueIdr || 0;
       const units = h.units || 0;
-      const lots = asset?.lotSize && asset.lotSize > 1 ? +(units / asset.lotSize).toFixed(2) : '';
-      const price = h.currentPrice || asset?.defaultPrice || 0;
+      const isNominalOnly =
+        h.isNominalOnly ??
+        asset?.isNominalOnly ??
+        (asset?.category === 'bonds' || asset?.category === 'money-market');
+      const lots = isNominalOnly ? '' : (asset?.lotSize && asset.lotSize > 1 ? +(units / asset.lotSize).toFixed(2) : '');
+      const price = isNominalOnly ? 1 : (h.currentPrice || asset?.defaultPrice || 0);
       return [symbol, name, nominal, units, lots, price].join(',');
     });
     return [headers.join(','), ...rows].join('\n');
@@ -404,11 +419,17 @@ export function exportHoldingsToText(
 
   for (const [assetId, h] of holdingEntries) {
     const asset = assetMap.get(assetId);
-    const symbol = asset?.symbol || assetId;
+    const symbol = asset?.shortName || asset?.symbol || assetId;
     const name = asset?.name || assetId;
     const nominalStr = `Rp ${(h.currentValueIdr || 0).toLocaleString('id-ID')}`;
+    const isNominalOnly =
+      h.isNominalOnly ??
+      asset?.isNominalOnly ??
+      (asset?.category === 'bonds' || asset?.category === 'money-market');
     let unitStr = '';
-    if (asset?.lotSize && asset.lotSize === 100) {
+    if (isNominalOnly) {
+      unitStr = '';
+    } else if (asset?.lotSize && asset.lotSize === 100) {
       const lots = +(h.units / 100).toFixed(1);
       unitStr = ` (≈ ${lots} Lot / ${h.units.toLocaleString('id-ID')} lbr)`;
     } else if (h.units > 0) {
