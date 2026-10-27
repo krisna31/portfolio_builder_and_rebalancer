@@ -25,10 +25,18 @@ import {
   Database,
   ClipboardPaste,
   Lock,
+  Fingerprint,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
 import { formatIdr } from '../lib/formatters';
+import {
+  isWebAuthnSupported,
+  isPlatformAuthenticatorAvailable,
+  hasRegisteredBiometric,
+  registerBiometricCredential,
+  clearBiometricCredential,
+} from '../lib/auth/webauthnUtils';
 
 export interface SavedPortfolioSnapshot {
   id: string;
@@ -114,6 +122,80 @@ export const Header: React.FC<HeaderProps> = ({
   const [newSaveName, setNewSaveName] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+
+  // Biometric / WebAuthn settings state
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [hasBiometric, setHasBiometric] = useState(() => hasRegisteredBiometric());
+  const [biometricFeedback, setBiometricFeedback] = useState<string | null>(null);
+  const [isRegisteringBiometric, setIsRegisteringBiometric] = useState(false);
+
+  // Detect platform biometric authenticator support on mount
+  useEffect(() => {
+    let mounted = true;
+    const detectSupport = async () => {
+      try {
+        if (!isWebAuthnSupported()) {
+          if (mounted) setIsBiometricSupported(false);
+          return;
+        }
+        const available = await isPlatformAuthenticatorAvailable();
+        const registered = hasRegisteredBiometric();
+        if (mounted) {
+          // Biometric is supported if platform authenticator is available OR already registered
+          setIsBiometricSupported(available || registered);
+          setHasBiometric(registered);
+        }
+      } catch {
+        if (mounted) setIsBiometricSupported(false);
+      }
+    };
+    detectSupport();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Sync biometric status whenever tools menu or mobile menu opens
+  useEffect(() => {
+    if (isToolsMenuOpen || isMobileMenuOpen) {
+      setHasBiometric(hasRegisteredBiometric());
+      setBiometricFeedback(null);
+    }
+  }, [isToolsMenuOpen, isMobileMenuOpen]);
+
+  const handleRegisterBiometric = async () => {
+    setIsRegisteringBiometric(true);
+    setBiometricFeedback(null);
+    try {
+      const res = await registerBiometricCredential();
+      if (res.success) {
+        setHasBiometric(true);
+        setIsBiometricSupported(true);
+        setBiometricFeedback('Sidik jari berhasil didaftarkan di perangkat ini!');
+      } else if (res.error) {
+        setBiometricFeedback(res.error);
+      }
+    } catch {
+      setBiometricFeedback('Gagal mendaftarkan sidik jari.');
+    } finally {
+      setIsRegisteringBiometric(false);
+    }
+  };
+
+  const handleRevokeBiometric = async () => {
+    const shouldRevoke =
+      typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm('Hapus pendaftaran sidik jari di perangkat ini?')
+        : true;
+
+    if (shouldRevoke) {
+      clearBiometricCredential();
+      setHasBiometric(false);
+      setBiometricFeedback('Pendaftaran sidik jari telah dihapus.');
+      const avail = await isPlatformAuthenticatorAvailable();
+      setIsBiometricSupported(avail);
+    }
+  };
 
   // Close tools dropdown when clicking outside
   useEffect(() => {
@@ -458,6 +540,57 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <div className="ui-border space-y-1.5 border-t pt-2">
+                      {/* WebAuthn Biometric / Fingerprint Settings */}
+                      {isBiometricSupported && (
+                        <div className="ui-subtle rounded-lg p-2 space-y-1.5 border border-slate-700/40">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
+                              <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                              <span>Login Sidik Jari</span>
+                            </div>
+                            <span
+                              className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                                hasBiometric
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-zinc-500/15 text-zinc-500'
+                              }`}
+                            >
+                              {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-1 text-[11px] pt-0.5">
+                            <span className="ui-text-muted text-[10px] truncate max-w-[150px]">
+                              {hasBiometric ? 'Terdaftar di perangkat ini' : 'Belum didaftarkan'}
+                            </span>
+                            {hasBiometric ? (
+                              <button
+                                type="button"
+                                onClick={handleRevokeBiometric}
+                                className="text-rose-500 hover:text-rose-400 underline font-medium text-[11px]"
+                              >
+                                Hapus
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleRegisterBiometric}
+                                disabled={isRegisteringBiometric}
+                                className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold text-[11px] disabled:opacity-50"
+                              >
+                                {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
+                              </button>
+                            )}
+                          </div>
+
+                          {biometricFeedback && (
+                            <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
+                              {biometricFeedback}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Saved Portfolios */}
                       <button
                         type="button"
@@ -830,6 +963,57 @@ export const Header: React.FC<HeaderProps> = ({
                     <Lock className="h-3.5 w-3.5" />
                     <span>Kunci Sesi</span>
                   </button>
+                )}
+
+                {/* WebAuthn Biometric Settings Mobile */}
+                {isBiometricSupported && (
+                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5 border border-slate-700/40">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="ui-text-main font-semibold">Login Sidik Jari:</span>
+                      </div>
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                          hasBiometric
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-zinc-500/15 text-zinc-500'
+                        }`}
+                      >
+                        {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <span className="ui-text-muted text-[11px]">
+                        {hasBiometric ? 'Terdaftar di perangkat ini' : 'Belum didaftarkan'}
+                      </span>
+                      {hasBiometric ? (
+                        <button
+                          type="button"
+                          onClick={handleRevokeBiometric}
+                          className="text-rose-500 hover:text-rose-400 font-semibold underline text-xs"
+                        >
+                          Hapus Sidik Jari
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleRegisterBiometric}
+                          disabled={isRegisteringBiometric}
+                          className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline text-xs disabled:opacity-50"
+                        >
+                          {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
+                        </button>
+                      )}
+                    </div>
+
+                    {biometricFeedback && (
+                      <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
+                        {biometricFeedback}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {/* Reset All to Initial Settings Mobile */}

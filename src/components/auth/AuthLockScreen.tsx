@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Lock, Eye, EyeOff, ShieldCheck, AlertCircle, Clock, ArrowRight } from 'lucide-react';
+import {
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  AlertCircle,
+  Clock,
+  ArrowRight,
+  Fingerprint,
+} from 'lucide-react';
 import { BrandLogo } from '../BrandLogo';
 import { stopInteractiveTour } from '../../services/tourGuide';
 import {
@@ -9,6 +18,15 @@ import {
   getRemainingLockoutSeconds,
   MAX_AUTH_ATTEMPTS,
 } from '../../lib/auth/authUtils';
+import {
+  isWebAuthnSupported,
+  isPlatformAuthenticatorAvailable,
+  hasRegisteredBiometric,
+  registerBiometricCredential,
+  authenticateWithBiometric,
+  isBiometricPromptDismissed,
+  setBiometricPromptDismissed,
+} from '../../lib/auth/webauthnUtils';
 
 interface AuthLockScreenProps {
   expectedHash: string;
@@ -26,19 +44,66 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   const [isShaking, setIsShaking] = useState(false);
   const [lockoutSec, setLockoutSec] = useState(() => getRemainingLockoutSeconds());
 
+  // Biometric authentication state
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [isVerifyingBiometric, setIsVerifyingBiometric] = useState(false);
+  const [biometricError, setBiometricError] = useState<string | null>(null);
+
+  // Post-password registration offer state
+  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+  const [isRegisteringBiometric, setIsRegisteringBiometric] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Check WebAuthn platform biometric availability on mount
+  useEffect(() => {
+    let mounted = true;
+
+    const detectBiometrics = async () => {
+      try {
+        if (!isWebAuthnSupported()) {
+          if (mounted) {
+            setIsBiometricSupported(false);
+            setIsRegistered(false);
+          }
+          return;
+        }
+
+        const platformAvailable = await isPlatformAuthenticatorAvailable();
+        const registered = hasRegisteredBiometric();
+
+        if (mounted) {
+          // Biometric is supported if platform authenticator is physically available OR already registered
+          setIsBiometricSupported(platformAvailable || registered);
+          setIsRegistered(registered);
+        }
+      } catch {
+        if (mounted) {
+          setIsBiometricSupported(false);
+          setIsRegistered(false);
+        }
+      }
+    };
+
+    detectBiometrics();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Ensure no lingering tour overlays are present while locked
   useEffect(() => {
     stopInteractiveTour();
   }, []);
 
-  // Auto-focus input on mount
+  // Auto-focus input on mount if not in prompt or lockout
   useEffect(() => {
-    if (lockoutSec <= 0) {
+    if (lockoutSec <= 0 && !showRegisterPrompt) {
       inputRef.current?.focus();
     }
-  }, [lockoutSec]);
+  }, [lockoutSec, showRegisterPrompt]);
 
   // Lockout countdown timer
   useEffect(() => {
@@ -57,12 +122,36 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     return () => clearInterval(timer);
   }, [lockoutSec]);
 
+  // Biometric Instant Login Handler
+  const handleBiometricLogin = async () => {
+    if (isVerifyingBiometric || lockoutSec > 0) return;
+
+    setIsVerifyingBiometric(true);
+    setBiometricError(null);
+    setErrorMessage(null);
+
+    try {
+      const result = await authenticateWithBiometric();
+      if (result.success) {
+        onAuthenticated();
+      } else if (result.error) {
+        setBiometricError(result.error);
+      }
+    } catch {
+      setBiometricError('Terjadi kendala saat memverifikasi sensor sidik jari.');
+    } finally {
+      setIsVerifyingBiometric(false);
+    }
+  };
+
+  // Password Login Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || isVerifying || lockoutSec > 0) return;
 
     setIsVerifying(true);
     setErrorMessage(null);
+    setBiometricError(null);
 
     try {
       const computed = await sha256Hash(password);
@@ -70,7 +159,13 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
 
       if (isMatch) {
         authenticateSession();
-        onAuthenticated();
+
+        // If biometric is supported on this device but not yet registered and not dismissed, offer registration
+        if (isBiometricSupported && !isRegistered && !isBiometricPromptDismissed()) {
+          setShowRegisterPrompt(true);
+        } else {
+          onAuthenticated();
+        }
       } else {
         const attemptResult = recordFailedAttempt();
         setIsShaking(true);
@@ -96,6 +191,32 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     }
   };
 
+  // Registration after password login handler
+  const handleRegisterBiometricNow = async () => {
+    setIsRegisteringBiometric(true);
+    setRegisterError(null);
+
+    try {
+      const res = await registerBiometricCredential();
+      if (res.success) {
+        setIsRegistered(true);
+        onAuthenticated();
+      } else if (res.error) {
+        setRegisterError(res.error);
+      }
+    } catch {
+      setRegisterError('Gagal mendaftarkan sidik jari di perangkat ini.');
+    } finally {
+      setIsRegisteringBiometric(false);
+    }
+  };
+
+  // User explicitly skips post-login biometric setup
+  const handleSkipRegistration = () => {
+    setBiometricPromptDismissed(true);
+    onAuthenticated();
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
       {/* Background Ambience */}
@@ -113,10 +234,12 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
             <span>Sesi Akses Portofolio Terproteksi</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-1">
-            Masukkan Kata Sandi
+            {showRegisterPrompt ? 'Pendaftaran Sidik Jari' : 'Masukkan Kata Sandi'}
           </h1>
           <p className="text-xs text-slate-400 max-w-xs">
-            Akses dashboard QuantPorto dilindungi untuk keamanan strategi investasi dan data portofolio Anda.
+            {showRegisterPrompt
+              ? 'Daftarkan sensor biometrik perangkat ini untuk kemudahan login cepat di masa mendatang.'
+              : 'Akses dashboard QuantPorto dilindungi untuk keamanan strategi investasi dan data portofolio Anda.'}
           </p>
         </div>
 
@@ -126,74 +249,166 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
             isShaking ? 'animate-shake border-rose-500/50' : ''
           }`}
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="access-password"
-                className="block text-xs font-medium text-slate-300 mb-1.5"
-              >
-                Kata Sandi Akses:
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
+          {showRegisterPrompt ? (
+            /* Post-Login Biometric Registration Prompt */
+            <div className="space-y-4 text-center">
+              <div className="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner">
+                <Fingerprint className="w-8 h-8" />
+              </div>
+
+              <div>
+                <h2 className="text-base font-bold text-white">
+                  Aktifkan Login Sidik Jari?
+                </h2>
+                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                  Buka kunci dashboard pada browser ini langsung dengan sensor sidik jari (Windows Hello / Touch ID) tanpa mengetik kata sandi lagi.
+                </p>
+              </div>
+
+              {registerError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs text-left">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{registerError}</span>
                 </div>
-                <input
-                  ref={inputRef}
-                  id="access-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isVerifying || lockoutSec > 0}
-                  placeholder={lockoutSec > 0 ? 'Terkunci sementara...' : 'Ketik kata sandi...'}
-                  autoComplete="current-password"
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-900 rounded-xl pl-10 pr-11 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none transition"
-                />
+              )}
+
+              <div className="space-y-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  tabIndex={-1}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
-                  aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                  onClick={handleRegisterBiometricNow}
+                  disabled={isRegisteringBiometric}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition duration-150 active:scale-[0.99]"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <Fingerprint className={`w-4 h-4 ${isRegisteringBiometric ? 'animate-pulse' : ''}`} />
+                  <span>
+                    {isRegisteringBiometric ? 'Memindai Sensor...' : 'Aktifkan Sidik Jari Sekarang'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSkipRegistration}
+                  disabled={isRegisteringBiometric}
+                  className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs py-2 rounded-xl transition"
+                >
+                  <span>Lewati (Lanjut ke Dashboard)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
+          ) : (
+            /* Normal Login Card */
+            <div>
+              {/* Prominent Biometric Login Button when registered & supported */}
+              {isRegistered && isBiometricSupported && (
+                <div className="space-y-3 mb-5">
+                  <button
+                    type="button"
+                    id="biometric-login-btn"
+                    onClick={handleBiometricLogin}
+                    disabled={isVerifyingBiometric || lockoutSec > 0}
+                    aria-label="Masuk dengan Sidik Jari atau Biometrik"
+                    className="w-full py-3 px-4 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg hover:shadow-emerald-950/40 disabled:opacity-50 active:scale-[0.99]"
+                  >
+                    <Fingerprint
+                      className={`w-5 h-5 text-emerald-400 ${
+                        isVerifyingBiometric ? 'animate-pulse' : ''
+                      }`}
+                    />
+                    <span>
+                      {isVerifyingBiometric ? 'Memindai Sidik Jari...' : 'Masuk dengan Sidik Jari'}
+                    </span>
+                  </button>
 
-            {/* Error / Lockout Banner */}
-            {lockoutSec > 0 ? (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
-                <Clock className="w-4 h-4 shrink-0 animate-pulse" />
-                <span>
-                  Terlalu banyak percobaan. Silakan tunggu{' '}
-                  <strong className="font-mono font-bold text-amber-300">{lockoutSec} detik</strong>{' '}
-                  lagi.
-                </span>
-              </div>
-            ) : errorMessage ? (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
+                  {biometricError && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{biometricError}</span>
+                    </div>
+                  )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={!password || isVerifying || lockoutSec > 0}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition duration-150 active:scale-[0.99]"
-            >
-              {isVerifying ? (
-                <span>Memverifikasi...</span>
-              ) : (
-                <>
-                  <span>Buka Dashboard</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-slate-800" />
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+                      atau gunakan kata sandi
+                    </span>
+                    <div className="flex-1 h-px bg-slate-800" />
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="access-password"
+                    className="block text-xs font-medium text-slate-300 mb-1.5"
+                  >
+                    Kata Sandi Akses:
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      ref={inputRef}
+                      id="access-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isVerifying || lockoutSec > 0}
+                      placeholder={lockoutSec > 0 ? 'Terkunci sementara...' : 'Ketik kata sandi...'}
+                      autoComplete="current-password"
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-900 rounded-xl pl-10 pr-11 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      tabIndex={-1}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                      aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error / Lockout Banner */}
+                {lockoutSec > 0 ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                    <Clock className="w-4 h-4 shrink-0 animate-pulse" />
+                    <span>
+                      Terlalu banyak percobaan. Silakan tunggu{' '}
+                      <strong className="font-mono font-bold text-amber-300">
+                        {lockoutSec} detik
+                      </strong>{' '}
+                      lagi.
+                    </span>
+                  </div>
+                ) : errorMessage ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                ) : null}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={!password || isVerifying || lockoutSec > 0}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition duration-150 active:scale-[0.99]"
+                >
+                  {isVerifying ? (
+                    <span>Memverifikasi...</span>
+                  ) : (
+                    <>
+                      <span>Buka Dashboard</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* Tab Session Note */}
           <div className="mt-4 pt-4 border-t border-slate-800 text-center">
