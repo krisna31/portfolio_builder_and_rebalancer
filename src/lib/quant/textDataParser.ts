@@ -278,7 +278,7 @@ export function parseHoldingsText(
           parsedNum.isUsd ? parsedNum.value * usdIdrRate : parsedNum.value
         );
         const priceInIdr = isAssetUsd ? assetPrice * usdIdrRate : assetPrice;
-        units = +(nominalIdr / (priceInIdr || 1)).toFixed(4);
+        units = +(nominalIdr / (priceInIdr || 1)).toFixed(matchedAsset?.category === 'crypto' ? 8 : 4);
         if (lotSize > 1) lots = +(units / lotSize).toFixed(2);
         mode = 'nominal';
       } else {
@@ -301,7 +301,7 @@ export function parseHoldingsText(
         parsedNum.isUsd ? parsedNum.value * usdIdrRate : parsedNum.value
       );
       const priceInIdr = isAssetUsd ? assetPrice * usdIdrRate : assetPrice;
-      units = +(nominalIdr / (priceInIdr || 1)).toFixed(4);
+      units = +(nominalIdr / (priceInIdr || 1)).toFixed(matchedAsset?.category === 'crypto' ? 8 : 4);
       if (lotSize > 1) lots = +(units / lotSize).toFixed(2);
       mode = 'nominal';
     }

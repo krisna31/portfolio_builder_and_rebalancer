@@ -240,14 +240,37 @@ export function calculateTacticalWeights(
   for (const id of Object.keys(tacticalSignals)) {
     if (tacticalWeights[id] !== undefined) {
       tacticalSignals[id].tacticalTargetWeightPercent = tacticalWeights[id];
+      const baseRounded = Number((baseWeights[id] ?? 0).toFixed(2));
+      if (Math.abs(tacticalWeights[id] - baseRounded) < 0.01) {
+        delete tacticalSignals[id];
+      }
     }
   }
+
+  // Verify whether any asset weight actually changed after 100% normalization
+  const hasEffectiveWeightChange = Object.keys(tacticalWeights).some(
+    (id) => Math.abs((tacticalWeights[id] ?? 0) - Number((baseWeights[id] ?? 0).toFixed(2))) >= 0.01
+  );
+
+  if (!hasEffectiveWeightChange) {
+    isAnyTiltApplied = false;
+    for (const id of Object.keys(tacticalSignals)) {
+      delete tacticalSignals[id];
+    }
+  }
+
+  const effectiveGrowthDelta = hasEffectiveWeightChange
+    ? growthAssetIds.reduce(
+        (sum, id) => sum + ((tacticalWeights[id] ?? 0) - (baseWeights[id] ?? 0)),
+        0
+      )
+    : 0;
 
   return {
     tacticalWeights,
     tacticalSignals,
     isAnyTiltApplied,
-    totalDefensiveDeltaPercent: Number(totalGrowthWeightDiff.toFixed(2)),
+    totalDefensiveDeltaPercent: Number(effectiveGrowthDelta.toFixed(2)),
   };
 }
 

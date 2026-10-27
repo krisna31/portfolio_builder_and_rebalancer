@@ -70,6 +70,8 @@ interface HeaderProps {
   activeCagr?: number;
   activeMaxDrawdown?: number;
   onLockApp?: () => void;
+  rebalanceBreachedCount?: number;
+  rebalanceMaxDriftPercent?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -103,6 +105,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeCagr = 0,
   activeMaxDrawdown = 0,
   onLockApp,
+  rebalanceBreachedCount,
+  rebalanceMaxDriftPercent,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -865,6 +869,34 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="ui-text-muted hidden shrink-0 font-mono md:inline">
                 Calmar {calmarRatio}x
               </span>
+
+              {/* Feature 1: Live Drift Status Badge */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('rebalancer')}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
+                  (rebalanceBreachedCount ?? 0) > 0
+                    ? 'border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                    : 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                }`}
+                title="Status Drift Portofolio — Klik untuk buka tab Rebalancer"
+              >
+                {(rebalanceBreachedCount ?? 0) > 0 ? (
+                  <>
+                    <span>⚠️</span>
+                    <span>
+                      {rebalanceBreachedCount} Aset Melenceng
+                      {rebalanceMaxDriftPercent !== undefined &&
+                        ` (Max: ±${rebalanceMaxDriftPercent.toFixed(1)}%)`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>✅</span>
+                    <span>Portofolio Seimbang</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <button

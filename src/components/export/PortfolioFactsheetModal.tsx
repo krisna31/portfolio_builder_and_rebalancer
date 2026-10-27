@@ -58,12 +58,15 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
   const isLight = sheetTheme === 'light';
 
-  // Active asset allocations with weight > 0
+  // Bug 18 fix: Normalize activeWeights by sum before computing nominalIdr
+  const totalActiveWeight =
+    Object.values(activeWeights).reduce((sum, w) => sum + (w > 0 ? w : 0), 0) || 100;
   const activeAssetList = allAssets
     .filter((a) => (activeWeights[a.id] ?? 0) > 0)
     .map((a) => {
-      const weightPct = activeWeights[a.id] ?? 0;
-      const nominalIdr = Math.round(initialCapitalIdr * (weightPct / 100));
+      const rawWeight = activeWeights[a.id] ?? 0;
+      const weightPct = Number(((rawWeight / totalActiveWeight) * 100).toFixed(2));
+      const nominalIdr = Math.round(initialCapitalIdr * (rawWeight / totalActiveWeight));
       return {
         ...a,
         weightPct,

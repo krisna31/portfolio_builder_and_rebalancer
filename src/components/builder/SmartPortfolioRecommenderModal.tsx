@@ -374,7 +374,18 @@ export const SmartPortfolioRecommenderModal: React.FC<
                     <button
                       key={slotOpt.id}
                       type="button"
-                      onClick={() => setIdxEquitySlotChoice(slotOpt.id)}
+                      onClick={() => {
+                        const oldSlot = idxEquitySlotChoice;
+                        const newSlot = slotOpt.id;
+                        setIdxEquitySlotChoice(newSlot);
+                        // Bug 16 fix: Sync selectedAssetIds so swapping equity slot doesn't revert on checkbox click
+                        setSelectedAssetIds((prev) => {
+                          const filtered = prev.filter(
+                            (id) => id !== oldSlot && id !== 'BBCA' && id !== 'PTBA' && id !== 'AADI'
+                          );
+                          return [...filtered, newSlot];
+                        });
+                      }}
                       className={`rounded px-2 py-1 text-[11px] font-medium ${
                         idxEquitySlotChoice === slotOpt.id
                           ? 'bg-emerald-600 font-semibold text-white'

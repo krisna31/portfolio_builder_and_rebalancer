@@ -141,6 +141,8 @@ export interface HoldingEntry {
   isNominalOnly?: boolean;
   /** Optional custom notes / allocation memo for this holding */
   notes?: string;
+  /** Optional average purchase price in native currency for tracking unrealized P&L (Feature 5) */
+  avgBuyPrice?: number;
 }
 
 export type RebalanceMode =
@@ -184,6 +186,12 @@ export interface RebalanceItemResult {
   isDustFiltered?: boolean;
   /** Optional tactical valuation signal information when Dynamic Valuation Band is enabled */
   tacticalSignal?: TacticalSignalInfo;
+  /** Optional average purchase price in native currency (Feature 5) */
+  avgBuyPrice?: number;
+  /** Unrealized profit/loss % relative to avgBuyPrice (Feature 5) */
+  unrealizedGainPercent?: number;
+  /** Unrealized profit/loss nominal in IDR (Feature 5) */
+  unrealizedGainIdr?: number;
 }
 
 export type SentimentZone =

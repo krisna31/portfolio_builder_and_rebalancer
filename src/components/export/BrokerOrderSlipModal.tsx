@@ -57,7 +57,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 }) => {
   const [executedMap, setExecutedMap] = useState<Record<string, boolean>>({});
   const [showAllItems, setShowAllItems] = useState<boolean>(false);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  // Bug 15 fix: Track which specific platform slip (or 'all') was copied
+  const [copiedGroupId, setCopiedGroupId] = useState<string | 'all' | null>(null);
 
   const assetDefMap = useMemo(() => {
     const map = new Map<string, AssetDefinition>();
@@ -271,9 +272,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           );
         } else if (g.id === 'idx_stocks') {
           const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
-          const unitPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
+          // Bug 15 fix: factor in shockPercent for spotPrice
+          const rawPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
             ? holdings[item.assetId].currentPrice
             : def?.defaultPrice ?? 0;
+          const shockMultiplier = Math.max(0, 1 + (holdings?.[item.assetId]?.shockPercent ?? 0) / 100);
+          const unitPrice = Math.round(rawPrice * shockMultiplier);
           lines.push(
             `${isDone} ${actionStr} ${item.symbol} - ${lots} Lot (${(lots * 100).toLocaleString('id-ID')} lembar) @ Rp ${unitPrice.toLocaleString('id-ID')} = ${formatIdr(Math.abs(item.tradeAmountIdr))}`
           );
@@ -308,11 +312,10 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     const text = generateSlipText(groupId);
     try {
       await navigator.clipboard.writeText(text);
-      setCopyFeedback(groupId ? `Slip ${groupId} Disalin!` : 'Semua Slip Disalin!');
-      setTimeout(() => setCopyFeedback(null), 2500);
+      setCopiedGroupId(groupId ?? 'all');
+      setTimeout(() => setCopiedGroupId(null), 2500);
     } catch {
-      setCopyFeedback('Gagal menyalin');
-      setTimeout(() => setCopyFeedback(null), 2000);
+      setCopiedGroupId(null);
     }
   };
 
@@ -347,10 +350,10 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-all shadow-indigo-500/20"
               title="Salin seluruh instruksi transaksi ke clipboard"
             >
-              {copyFeedback && !copyFeedback.includes('mutual') ? (
+              {copiedGroupId === 'all' ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-300" />
-                  <span>{copyFeedback}</span>
+                  <span>Semua Slip Disalin!</span>
                 </>
               ) : (
                 <>
@@ -457,8 +460,17 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                       className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white rounded border border-slate-700 transition-colors"
                       title={`Salin slip pesanan ${group.apps} saja`}
                     >
-                      <Copy className="w-3 h-3" />
-                      <span>Salin Slip Platform</span>
+                      {copiedGroupId === group.id ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span className="text-emerald-400">Slip Disalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Salin Slip Platform</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -476,9 +488,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     const isIdx = group.id === 'idx_stocks';
                     const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
                     const shares = lots * 100;
-                    const spotPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
+                    // Bug 15 fix: factor in shockPercent for item spotPrice
+                    const rawPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
                       ? holdings[item.assetId].currentPrice
                       : def?.defaultPrice ?? 0;
+                    const shockMultiplier = Math.max(0, 1 + (holdings?.[item.assetId]?.shockPercent ?? 0) / 100);
+                    const spotPrice = Math.round(rawPrice * shockMultiplier);
 
                     return (
                       <div

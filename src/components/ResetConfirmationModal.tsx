@@ -58,7 +58,7 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
             <div className="flex items-start gap-2">
               <span className="text-rose-400 font-bold">•</span>
               <span>
-                <strong>Asumsi Keuangan:</strong> Modal awal Rp 100 Jt, Target Rp 1 Miliar, DCA Rp 3 Jt/bln, Kurs USD Rp 18.000.
+                <strong>Asumsi Keuangan:</strong> Modal awal Rp 100 Jt, Target Rp 10 Miliar, DCA Rp 5 Jt/bln, Kurs USD Rp 16.500.
               </span>
             </div>
             <div className="flex items-start gap-2">

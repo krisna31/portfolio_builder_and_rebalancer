@@ -11,6 +11,7 @@ import {
   PortfolioPreset,
   RebalanceHistoryEntry,
   RebalanceMode,
+  RebalanceSummaryResult,
   QuantPortoBackupPayload,
   ValuationSentimentConfig,
 } from './lib/quant/types';
@@ -376,7 +377,7 @@ export function App() {
       init[a.id] = {
         assetId: a.id,
         currentValueIdr: valIdr,
-        units: isNominalOnly ? valIdr : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+        units: isNominalOnly ? valIdr : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(a.category === 'crypto' ? 8 : 4)),
         currentPrice: isNominalOnly ? 1 : a.defaultPrice,
         shockPercent: 0,
         isNominalOnly,
@@ -438,12 +439,13 @@ export function App() {
   // Rebalance Execution History Log (persisted inside quantporto_state_v2)
   const [rebalanceHistory, setRebalanceHistory] = useState<
     RebalanceHistoryEntry[]
-  >([]);
+  >(() => initialSaved?.rebalanceHistory ?? []);
 
   // Modals state
   const [isRecommenderOpen, setIsRecommenderOpen] = useState<boolean>(false);
   const [isFactsheetOpen, setIsFactsheetOpen] = useState<boolean>(false);
   const [isOrderSlipOpen, setIsOrderSlipOpen] = useState<boolean>(false);
+  const [orderSlipPlanOverride, setOrderSlipPlanOverride] = useState<RebalanceSummaryResult | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState<boolean>(false);
   const [isDataTransferModalOpen, setIsDataTransferModalOpen] = useState<boolean>(false);
   const [quickCopyFeedback, setQuickCopyFeedback] = useState<boolean>(false);
@@ -472,8 +474,22 @@ export function App() {
       localStorage.removeItem(TOUR_SEEN_KEY);
       localStorage.removeItem('quantporto_dca_3m_default_v1');
       localStorage.removeItem('quantporto_usd_18k_default_v1');
+      localStorage.removeItem('quantporto_asset_dividends');
+      localStorage.removeItem('quantporto_roadmap_settings_v1');
       localStorage.removeItem('color-scheme');
       setLockedAssetIds([]);
+      setIsFixedBudgetMode(false);
+      setFixedTotalBudgetIdr(0);
+      setEnableIdxLotRounding(true);
+      setFilterDustTrades(true);
+      setTacticalConfig({
+        enabled: false,
+        aggressiveness: 0.2,
+        cryptoScore: 50,
+        usEquityScore: 50,
+        idxEquityScore: 50,
+        goldScore: 50,
+      });
     } catch {
       // Ignore storage errors
     }
@@ -794,7 +810,7 @@ export function App() {
               ...h,
               isNominalOnly: false,
               currentPrice: pNative,
-              units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(4)),
+              units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(asset?.category === 'crypto' ? 8 : 4)),
             },
           };
         }
@@ -857,7 +873,7 @@ export function App() {
             ...h,
             isNominalOnly: false,
             currentPrice: pNative,
-            units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(4)),
+            units: Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(origDef?.category === 'crypto' ? 8 : 4)),
           },
         };
       }
@@ -909,22 +925,55 @@ export function App() {
     allAssets,
   ]);
 
+  // Decision 4: Dynamically evaluate metrics for custom table rows whenever return assumptions or promo changes
+  const effectiveCustomTableRows = useMemo(() => {
+    return customTableRows.map((row) => {
+      const metrics = evaluatePortfolioMetrics(row.weights, allAssets, dynamicPresets, {
+        rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
+        exactPresetMatch: null,
+        hasCustomAssetAssumptions,
+      });
+      return {
+        ...row,
+        cagr: metrics.cagr,
+        maxDrawdown: metrics.maxDrawdown,
+        riskTier: metrics.riskTier,
+      };
+    });
+  }, [customTableRows, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions]);
+
+  // Decision 4: Dynamically evaluate saved portfolio snapshots
+  const effectiveSavedPortfolios = useMemo(() => {
+    return savedPortfolios.map((snap) => {
+      const metrics = evaluatePortfolioMetrics(snap.weights, allAssets, dynamicPresets, {
+        rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
+        exactPresetMatch: null,
+        hasCustomAssetAssumptions,
+      });
+      return {
+        ...snap,
+        cagr: metrics.cagr,
+        maxDrawdown: metrics.maxDrawdown,
+      };
+    });
+  }, [savedPortfolios, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions]);
+
   // Evaluate portfolio CAGR, Max Drawdown, Risk Contributions, and Pareto Dominance
   const exactPresetMatch = useMemo(() => {
     if (!activePresetId) return null;
     return (
       dynamicPresets.find((p) => p.id === activePresetId) ??
-      customTableRows.find((p) => p.id === activePresetId) ??
+      effectiveCustomTableRows.find((p) => p.id === activePresetId) ??
       null
     );
-  }, [activePresetId, dynamicPresets, customTableRows]);
+  }, [activePresetId, dynamicPresets, effectiveCustomTableRows]);
 
   const solvedMetrics = useMemo(
     () =>
       evaluatePortfolioMetrics(
         activeWeights,
         allAssets,
-        [...dynamicPresets, ...customTableRows],
+        [...dynamicPresets, ...effectiveCustomTableRows],
         {
           rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
           exactPresetMatch,
@@ -935,7 +984,7 @@ export function App() {
       activeWeights,
       allAssets,
       dynamicPresets,
-      customTableRows,
+      effectiveCustomTableRows,
       rdptPromoActive,
       exactPresetMatch,
       hasCustomAssetAssumptions,
@@ -1172,7 +1221,7 @@ export function App() {
               const newValIdr = Math.round(h.units * pIdr);
               next[a.id] = { ...h, currentPrice: livePrice, currentValueIdr: newValIdr };
             } else {
-              const newUnits = Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+              const newUnits = Number((h.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(a.category === 'crypto' ? 8 : 4));
               next[a.id] = { ...h, currentPrice: livePrice, units: newUnits };
             }
           }
@@ -1225,7 +1274,7 @@ export function App() {
           currentValueIdr: valIdr,
           units: isNominal
             ? valIdr
-            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(a.category === 'crypto' ? 8 : 4)),
           currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: prevA?.shockPercent ?? 0,
           isNominalOnly: isNominal,
@@ -1281,7 +1330,7 @@ export function App() {
           const pNative = asset?.defaultPrice ?? 1;
           const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
           updated.currentPrice = pNative;
-          updated.units = Number((updated.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+          updated.units = Number((updated.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(asset?.category === 'crypto' ? 8 : 4));
         }
       }
       // Case 1: Price is changed -> units are preserved, currentValueIdr is updated: units * newPriceIdr
@@ -1300,7 +1349,7 @@ export function App() {
         }
 
         updated.currentPrice = pNative;
-        updated.units = Number(units.toFixed(6));
+        updated.units = Number(units.toFixed(asset?.category === 'crypto' ? 8 : 4));
         updated.currentValueIdr = Math.round(units * pIdr);
       }
       // Case 2: Nominal value is changed -> units are updated: currentValueIdr / priceIdr
@@ -1312,7 +1361,7 @@ export function App() {
           const pNative =
             updated.currentPrice > 0 ? updated.currentPrice : (asset?.defaultPrice ?? 1);
           const pIdr = asset?.currency === 'USD' ? pNative * usdIdrRate : pNative;
-          updated.units = Number((patch.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(6));
+          updated.units = Number((patch.currentValueIdr / Math.max(0.0001, pIdr)).toFixed(asset?.category === 'crypto' ? 8 : 4));
         }
       }
       // Case 3: Units are changed -> currentValueIdr is updated: units * priceIdr
@@ -1480,7 +1529,7 @@ export function App() {
           currentValueIdr: valIdr,
           units: isNominal
             ? valIdr
-            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(a.category === 'crypto' ? 8 : 4)),
           currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: prevA?.shockPercent ?? 0,
           isNominalOnly: isNominal,
@@ -1518,7 +1567,7 @@ export function App() {
           currentValueIdr: valIdr,
           units: isNominal
             ? valIdr
-            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
+            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(a.category === 'crypto' ? 8 : 4)),
           currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: 0,
           isNominalOnly: isNominal,
@@ -1531,14 +1580,24 @@ export function App() {
   };
 
   // Handler: Apply Step 1 Peer Diversification (14:17 in video: split BBCA bucket across BBCA, BMRI, BBRI, BBNI, NISP)
+  // Bug 11 fix: Sum all 5 banking peers so repeated clicks are idempotent
   const handleApplyPeerDiversification = () => {
-    const currentBbcaWeight = activeWeights.BBCA ?? 12;
-    const baseWeight = currentBbcaWeight > 0 ? currentBbcaWeight : 15;
+    const bankIds = ['BBCA', 'BMRI', 'BBRI', 'BBNI', 'NISP'];
+    const totalBankWeight = bankIds.reduce(
+      (sum, id) => sum + (activeWeights[id] ?? 0),
+      0
+    );
+    const baseWeight =
+      totalBankWeight > 0
+        ? totalBankWeight
+        : (activeWeights.BBCA ?? 12) > 0
+          ? activeWeights.BBCA
+          : 15;
     const perBank = Number((baseWeight / 5).toFixed(1));
     setAllocationMethod('custom');
     setActivePresetId(null);
     setSelectedUniverseIds((prev) =>
-      Array.from(new Set([...prev, 'BBCA', 'BMRI', 'BBRI', 'BBNI', 'NISP']))
+      Array.from(new Set([...prev, ...bankIds]))
     );
     setActiveWeights((prev) =>
       normalizeWeightsTo100({
@@ -1553,8 +1612,16 @@ export function App() {
   };
 
   // Handler: Apply Stress-Test Market Crash / Bull Run Scenarios (15:18 - 16:08)
+  // Handler: Apply Stress-Test Market Crash / Bull Run Scenarios (15:18 - 16:08 & Historical Presets)
   const handleApplyShockScenario = (
-    scenario: 'reset' | 'video-bull-3x' | 'video-crash-50' | 'global-crisis'
+    scenario:
+      | 'reset'
+      | 'video-bull-3x'
+      | 'video-crash-50'
+      | 'global-crisis'
+      | 'gfc-2008'
+      | 'covid-2020'
+      | 'crypto-tech-winter-2022'
   ) => {
     setHoldings((prev) => {
       const next = { ...prev };
@@ -1571,6 +1638,26 @@ export function App() {
             shock = -35;
           else if (a.category === 'gold') shock = 12;
           else if (a.category === 'bonds') shock = 3;
+        } else if (scenario === 'gfc-2008') {
+          // Feature 2: 2008 Global Financial Crisis
+          if (a.category === 'idx-equity') shock = -55;
+          else if (a.category === 'us-equity') shock = -50;
+          else if (a.category === 'crypto') shock = -70;
+          else if (a.category === 'gold') shock = 25;
+          else if (a.category === 'bonds') shock = 5;
+        } else if (scenario === 'covid-2020') {
+          // Feature 2: March 2020 COVID-19 Flash Crash
+          if (a.category === 'idx-equity') shock = -37;
+          else if (a.category === 'us-equity') shock = -34;
+          else if (a.category === 'crypto') shock = -50;
+          else if (a.category === 'gold') shock = -5;
+        } else if (scenario === 'crypto-tech-winter-2022') {
+          // Feature 2: 2022 Tech & Crypto Winter / Fed Rate Hikes
+          if (a.category === 'crypto') shock = -75;
+          else if (a.category === 'us-equity') shock = -33;
+          else if (a.category === 'idx-equity') shock = 4;
+          else if (a.category === 'gold') shock = -1;
+          else if (a.category === 'bonds') shock = -5;
         }
         next[a.id] = {
           ...(next[a.id] ?? {
@@ -1587,7 +1674,20 @@ export function App() {
   };
 
   // Handler: 1-Click Commit Rebalance to Holdings & Record History Snapshot
-  const handleCommitRebalanceToHoldings = (customNote?: string) => {
+  const handleCommitRebalanceToHoldings = (
+    customNote?: string,
+    planOverride?: RebalanceSummaryResult
+  ) => {
+    // Decision 1 & Bug 4: Preserve leftover unallocated cash remainder
+    // Use planOverride if user adjusted lots manually via Feature 4 steppers
+    const plan = planOverride ?? rebalanceResult;
+    const leftoverCash = Math.max(0, plan.unallocatedCashRemainderIdr ?? 0);
+    const actualCommittedHoldingsValueIdr = plan.items.reduce(
+      (sum, item) => sum + Math.max(0, Math.round((item.postShockValueIdr ?? 0) + item.tradeAmountIdr)),
+      0
+    );
+    const trueTotalValueAfterIdr = actualCommittedHoldingsValueIdr + leftoverCash;
+
     const newEntry: RebalanceHistoryEntry = {
       id: `reb-${Date.now()}`,
       timestamp: new Date().toLocaleDateString('id-ID', {
@@ -1606,19 +1706,14 @@ export function App() {
                 ? 'Prioritas RDPT Dulu'
                 : 'Buy-Only DCA'
         }`,
-      totalValueBeforeIdr: rebalanceResult.postShockTotalIdr,
-      cashInjectedIdr: rebalanceResult.cashInjectionIdr,
-      totalValueAfterIdr: rebalanceResult.finalTargetTotalIdr,
-      totalBuyIdr: rebalanceResult.totalBuyIdr,
-      totalSellIdr: rebalanceResult.totalSellIdr,
-      tradesSummary: rebalanceResult.items
+      totalValueBeforeIdr: plan.postShockTotalIdr,
+      cashInjectedIdr: plan.cashInjectionIdr,
+      totalValueAfterIdr: trueTotalValueAfterIdr,
+      totalBuyIdr: plan.totalBuyIdr,
+      totalSellIdr: plan.totalSellIdr,
+      tradesSummary: plan.items
         .filter((i) => i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000)
-        .map(
-          (i) =>
-            `${i.action} ${i.symbol} Rp ${Math.round(
-              Math.abs(i.tradeAmountIdr) / 1_000_000
-            )}Jt`
-        ),
+        .map((i) => `${i.action} ${i.symbol} ${formatIdr(Math.abs(i.tradeAmountIdr), true)}`),
       weightsAfter: { ...activeWeights },
     };
 
@@ -1627,7 +1722,7 @@ export function App() {
     // Update holdings to the post-rebalance target values & reset shocks to 0%
     setHoldings((prev) => {
       const next = { ...prev };
-      for (const item of rebalanceResult.items) {
+      for (const item of plan.items) {
         const asset = allAssets.find((a) => a.id === item.assetId);
         if (!asset) continue;
         const prevHold = next[item.assetId];
@@ -1638,7 +1733,7 @@ export function App() {
         const postShockUnitPriceNative = isNominal
           ? 1
           : (prevHold?.currentPrice ?? asset.defaultPrice) *
-            Math.max(0.01, 1 + (prevHold?.shockPercent ?? 0) / 100);
+            Math.max(0, 1 + (prevHold?.shockPercent ?? 0) / 100);
         const unitPriceIdr = isNominal
           ? 1
           : asset.currency === 'USD'
@@ -1654,8 +1749,10 @@ export function App() {
           currentValueIdr: executedValIdr,
           units: isNominal
             ? executedValIdr
-            : Number((executedValIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
-          currentPrice: isNominal ? 1 : Number(postShockUnitPriceNative.toFixed(4)),
+            : Number((executedValIdr / Math.max(1e-6, unitPriceIdr)).toFixed(asset.category === 'crypto' ? 8 : 4)),
+          currentPrice: isNominal
+            ? 1
+            : Number(postShockUnitPriceNative.toFixed(asset.category === 'crypto' ? 8 : 4)),
           shockPercent: 0,
           isNominalOnly: isNominal,
           subSplits: prevHold?.subSplits,
@@ -1664,7 +1761,8 @@ export function App() {
       }
       return next;
     });
-    setCashInjectionIdr(0);
+    // Decision 1: Keep unallocated cash remainder in cashInjectionIdr so it stays available
+    setCashInjectionIdr(leftoverCash);
     setIsHoldingsSyncedWithMenu1(false);
   };
 
@@ -1845,9 +1943,9 @@ export function App() {
       // 1. Menu 1: Builder
       if (d1.activeWeights && typeof d1.activeWeights === 'object') {
         if (mode === 'merge') {
-          setActiveWeights((prev) => ({ ...prev, ...d1.activeWeights }));
+          setActiveWeights((prev) => normalizeWeightsTo100({ ...prev, ...d1.activeWeights }));
         } else {
-          setActiveWeights(d1.activeWeights);
+          setActiveWeights(normalizeWeightsTo100(d1.activeWeights));
         }
         const activeCount = Object.values(d1.activeWeights).filter(
           (w) => typeof w === 'number' && w > 0
@@ -2064,17 +2162,28 @@ export function App() {
           mergedRebalanceHistory = [...newEntries, ...rebalanceHistory];
         }
 
+        const mergedActiveWeights =
+          mode === 'merge' && d1.activeWeights
+            ? normalizeWeightsTo100({ ...activeWeights, ...d1.activeWeights })
+            : d1.activeWeights
+              ? normalizeWeightsTo100(d1.activeWeights)
+              : activeWeights;
+
+        const mergedSelectedUniverseIds =
+          mode === 'merge' && Array.isArray(d1.selectedUniverseIds)
+            ? Array.from(new Set([...selectedUniverseIds, ...d1.selectedUniverseIds]))
+            : (d1.selectedUniverseIds ?? selectedUniverseIds);
+
         const snapshotToStore = {
           activeTab,
-          activeWeights: d1.activeWeights ?? activeWeights,
+          activeWeights: mergedActiveWeights,
           activePresetId: d1.activePresetId ?? activePresetId,
           allocationMethod: d1.allocationMethod ?? allocationMethod,
           convictionAssetId: d1.convictionAssetId ?? convictionAssetId,
           convictionRiskPercent:
             d1.convictionRiskPercent ?? convictionRiskPercent,
           solverMode: d1.solverMode ?? solverMode,
-          selectedUniverseIds:
-            d1.selectedUniverseIds ?? selectedUniverseIds,
+          selectedUniverseIds: mergedSelectedUniverseIds,
           initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
           targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
           monthlySavingsIdr: d3.monthlySavingsIdr ?? monthlySavingsIdr,
@@ -2302,14 +2411,16 @@ export function App() {
         onImportJson={handleImportJson}
         onCopyShareUrl={handleCopyShareUrl}
         shareCopied={shareCopied}
-        savedPortfolios={savedPortfolios}
+        savedPortfolios={effectiveSavedPortfolios}
         onSaveCurrentPortfolio={handleSaveCurrentPortfolio}
         onLoadSavedPortfolio={handleLoadSavedPortfolio}
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
         onOpenRecommender={() => setIsRecommenderOpen(true)}
         onStartInteractiveTour={handleStartTour}
-        onOpenFactsheet={() => setIsFactsheetOpen(true)}
-        onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
+        onOpenOrderSlip={() => {
+          setOrderSlipPlanOverride(null);
+          setIsOrderSlipOpen(true);
+        }}
         onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
         onOpenDataTransfer={() => setIsDataTransferModalOpen(true)}
         onQuickCopyConfig={handleQuickCopyConfig}
@@ -2326,6 +2437,8 @@ export function App() {
         }
         activeCagr={solvedMetrics.cagr}
         activeMaxDrawdown={solvedMetrics.maxDrawdown}
+        rebalanceBreachedCount={rebalanceResult.breachedCount}
+        rebalanceMaxDriftPercent={rebalanceResult.maxAbsoluteDrift}
       />
 
       <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
@@ -2334,7 +2447,7 @@ export function App() {
             allAssets={allAssets}
             onAddCustomAsset={handleAddCustomAsset}
             presets={dynamicPresets}
-            customTableRows={customTableRows}
+            customTableRows={effectiveCustomTableRows}
             onPinCurrentToTable={handlePinCurrentToTable}
             onRemoveCustomTableRow={handleRemoveCustomTableRow}
             slotMap={slotMap}
@@ -2429,7 +2542,10 @@ export function App() {
             onResetAllAssetPrices={handleResetAllAssetPrices}
             onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
             onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
-            onOpenOrderSlip={() => setIsOrderSlipOpen(true)}
+            onOpenOrderSlip={(planOverride) => {
+              setOrderSlipPlanOverride(planOverride ?? null);
+              setIsOrderSlipOpen(true);
+            }}
             onBatchUpdateHoldings={handleBatchUpdateHoldings}
             tacticalConfig={tacticalConfig}
             setTacticalConfig={setTacticalConfig}
@@ -2479,8 +2595,11 @@ export function App() {
       {isOrderSlipOpen && (
         <BrokerOrderSlipModal
           isOpen={isOrderSlipOpen}
-          onClose={() => setIsOrderSlipOpen(false)}
-          rebalanceResult={rebalanceResult}
+          onClose={() => {
+            setIsOrderSlipOpen(false);
+            setOrderSlipPlanOverride(null);
+          }}
+          rebalanceResult={orderSlipPlanOverride ?? rebalanceResult}
           allAssets={allAssets}
           holdings={holdings}
           usdIdrRate={usdIdrRate}

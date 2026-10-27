@@ -480,15 +480,8 @@ export async function fetchSingleYahooPrice(symbol: string): Promise<number | nu
     }
   }
 
-  // Fallback to Curated Estimates Dictionary if network/proxy failed
-  if (POPULAR_TICKER_ESTIMATES[cleanSym]?.price) {
-    return POPULAR_TICKER_ESTIMATES[cleanSym].price;
-  }
-  const alt = cleanSym.replace('.JK', '');
-  if (POPULAR_TICKER_ESTIMATES[alt]?.price) {
-    return POPULAR_TICKER_ESTIMATES[alt].price;
-  }
-
+  // Bug 13 fix: Do NOT fall back to POPULAR_TICKER_ESTIMATES here, as that overwrites
+  // fresher prices from ./data/market-data.json and falsely marks Yahoo Finance as active.
   return null;
 }
 

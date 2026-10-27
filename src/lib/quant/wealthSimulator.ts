@@ -323,6 +323,19 @@ export interface MonteCarloSimulationResult {
 }
 
 /**
+ * 32-bit Mulberry PRNG for fast, deterministic pseudo-random number generation.
+ */
+function createMulberry32(seed: number) {
+  let s = seed | 0;
+  return function () {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
  * Runs a 500-path stochastic Monte Carlo simulation using Geometric Brownian Motion
  * to model portfolio growth under market volatility and monthly DCA contributions.
  */
@@ -335,6 +348,8 @@ export function simulateMonteCarloPaths(params: {
   maxYears?: number;
   numSimulations?: number;
   annualStepUpPercent?: number;
+  annualInflationPercent?: number;
+  seed?: number;
 }): MonteCarloSimulationResult {
   const {
     initialCapitalIdr,
@@ -345,6 +360,8 @@ export function simulateMonteCarloPaths(params: {
     maxYears = 25,
     numSimulations = 500,
     annualStepUpPercent = 0,
+    annualInflationPercent = 0,
+    seed = 42,
   } = params;
 
   const muAnnual = Math.max(0, annualCagrPercent) / 100;
@@ -352,22 +369,27 @@ export function simulateMonteCarloPaths(params: {
   const sigmaAnnual = Math.max(0.04, annualVolatilityPercent / 100);
 
   // Geometric Brownian motion monthly drift and volatility
-  // Since annualCagrPercent is already the geometric return (CAGR), we use direct log-return drift
-  // so the stochastic median path correctly aligns with the expected CAGR without double volatility drag.
   const dt = 1 / 12;
   const driftMonthly = Math.log(1 + muAnnual) * dt;
   const volMonthly = sigmaAnnual * Math.sqrt(dt);
+
+  // Seeded Mulberry32 PRNG to eliminate random re-render jitter
+  const rng = createMulberry32(seed);
 
   // Pseudo-random Normal standard distribution N(0, 1) using Box-Muller transform
   const getStandardNormal = (): number => {
     let u1 = 0;
     let u2 = 0;
-    while (u1 === 0) u1 = Math.random();
-    while (u2 === 0) u2 = Math.random();
+    while (u1 === 0) u1 = rng();
+    while (u2 === 0) u2 = rng();
     return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
   };
 
   const totalMonths = maxYears * 12;
+  const monthlyInflationRate =
+    annualInflationPercent > 0
+      ? Math.pow(1 + annualInflationPercent / 100, 1 / 12) - 1
+      : 0;
 
   // Track values at each year end for all simulation paths: [yearIndex][pathIndex]
   const yearlyWealthDistribution: number[][] = Array.from(
@@ -395,7 +417,12 @@ export function simulateMonteCarloPaths(params: {
       const monthlyReturnMultiplier = Math.exp(driftMonthly + volMonthly * z);
       wealth = wealth * monthlyReturnMultiplier + currentMonthlyPmt;
 
-      if (wealth >= targetGoalIdr && goalReachedMonths[s] === null) {
+      // Decision 3: Compare inflation-adjusted real purchasing power against real goal target
+      const inflationDiscount =
+        monthlyInflationRate > 0 ? Math.pow(1 + monthlyInflationRate, m) : 1;
+      const realWealth = wealth / inflationDiscount;
+
+      if (realWealth >= targetGoalIdr && goalReachedMonths[s] === null) {
         goalReachedMonths[s] = m;
       }
 
@@ -441,14 +468,13 @@ export function simulateMonteCarloPaths(params: {
   const pathsReachedGoal = goalReachedMonths.filter((m) => m !== null).length;
   const successProbabilityPercent = Math.round((pathsReachedGoal / numSimulations) * 100);
 
-  // Median years to goal for successful paths (returns null if successProbabilityPercent < 50)
-  const successfulMonths = (goalReachedMonths.filter((m) => m !== null) as number[]).sort((a, b) => a - b);
-  const medianMonths =
-    successProbabilityPercent >= 50 && successfulMonths.length > 0
-      ? successfulMonths[Math.floor(successfulMonths.length / 2)]
-      : null;
+  // Bug 14 fix: True population median time across all paths (null if < 50% paths succeed)
+  const allPathMonths = goalReachedMonths
+    .map((m) => (m === null ? Infinity : m))
+    .sort((a, b) => a - b);
+  const medianMonthVal = allPathMonths[Math.floor(numSimulations / 2)];
   const medianYearsToGoal =
-    medianMonths !== null ? Number((medianMonths / 12).toFixed(1)) : null;
+    medianMonthVal !== Infinity ? Number((medianMonthVal / 12).toFixed(1)) : null;
 
   const finalYearValues = [...yearlyWealthDistribution[maxYears]].sort((a, b) => a - b);
 
@@ -462,4 +488,115 @@ export function simulateMonteCarloPaths(params: {
     totalSimulations: numSimulations,
   };
 }
+
+export interface ReverseDcaSolution {
+  deterministicMonthlyDcaIdr: number;
+  monteCarlo75MonthlyDcaIdr: number;
+  targetYears: number;
+  targetGoalIdr: number;
+}
+
+/**
+ * Feature 3: Reverse DCA Goal Solver
+ * Solves backward for required monthly DCA to reach a target in targetYears.
+ */
+export function solveRequiredMonthlySavings(params: {
+  initialCapitalIdr: number;
+  targetGoalIdr: number;
+  targetYears: number;
+  annualCagrPercent: number;
+  annualVolatilityPercent?: number;
+  annualStepUpPercent?: number;
+  annualInflationPercent?: number;
+}): ReverseDcaSolution {
+  const {
+    initialCapitalIdr,
+    targetGoalIdr,
+    targetYears,
+    annualCagrPercent,
+    annualVolatilityPercent = 18,
+    annualStepUpPercent = 0,
+    annualInflationPercent = 0,
+  } = params;
+
+  const totalMonths = Math.max(1, targetYears * 12);
+  const annualRate = Math.max(0, annualCagrPercent) / 100;
+  const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+  const monthlyInflation =
+    annualInflationPercent > 0
+      ? Math.pow(1 + annualInflationPercent / 100, 1 / 12) - 1
+      : 0;
+  const inflationDiscount =
+    monthlyInflation > 0 ? Math.pow(1 + monthlyInflation, totalMonths) : 1;
+
+  // 1. Solve Deterministic monthly DCA using bisection
+  let low = 0;
+  let high = Math.max(1_000_000, targetGoalIdr);
+  let bestPmt = high;
+
+  for (let iter = 0; iter < 40; iter++) {
+    const mid = (low + high) / 2;
+    let wealth = initialCapitalIdr;
+    let pmt = mid;
+    for (let m = 1; m <= totalMonths; m++) {
+      if (m > 1 && (m - 1) % 12 === 0 && annualStepUpPercent > 0) {
+        pmt *= 1 + annualStepUpPercent / 100;
+      }
+      wealth = wealth * (1 + monthlyRate) + pmt;
+    }
+    const realWealth = wealth / inflationDiscount;
+    if (realWealth >= targetGoalIdr) {
+      bestPmt = mid;
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  const deterministicMonthlyDcaIdr = Math.max(
+    0,
+    Math.round(bestPmt / 10_000) * 10_000
+  );
+
+  // 2. Solve Monte Carlo 75% confidence monthly DCA
+  // In a lognormal distribution, the 25th percentile (75% confidence of exceeding) has
+  // growth rate mu - 0.6745 * sigma.
+  const mu = Math.log(1 + annualRate);
+  const sigma = Math.max(0.04, annualVolatilityPercent / 100);
+  const conservativeAnnualRate = Math.max(0.01, Math.exp(mu - 0.6745 * sigma) - 1);
+  const conservativeMonthlyRate = Math.pow(1 + conservativeAnnualRate, 1 / 12) - 1;
+
+  low = 0;
+  high = Math.max(1_000_000, targetGoalIdr * 1.5);
+  let mc75Pmt = high;
+  for (let iter = 0; iter < 40; iter++) {
+    const mid = (low + high) / 2;
+    let wealth = initialCapitalIdr;
+    let pmt = mid;
+    for (let m = 1; m <= totalMonths; m++) {
+      if (m > 1 && (m - 1) % 12 === 0 && annualStepUpPercent > 0) {
+        pmt *= 1 + annualStepUpPercent / 100;
+      }
+      wealth = wealth * (1 + conservativeMonthlyRate) + pmt;
+    }
+    const realWealth = wealth / inflationDiscount;
+    if (realWealth >= targetGoalIdr) {
+      mc75Pmt = mid;
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  const monteCarlo75MonthlyDcaIdr = Math.max(
+    0,
+    Math.round(mc75Pmt / 10_000) * 10_000
+  );
+
+  return {
+    deterministicMonthlyDcaIdr,
+    monteCarlo75MonthlyDcaIdr,
+    targetYears,
+    targetGoalIdr,
+  };
+}
+
 

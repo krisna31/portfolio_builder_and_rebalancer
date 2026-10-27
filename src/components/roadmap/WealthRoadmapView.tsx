@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AssetDefinition, SolvedPortfolio } from '../../lib/quant/types';
 import {
   simulateMonteCarloPaths,
   simulateRebalancingFrequencyBacktest,
   simulateWealthToGoal,
+  solveRequiredMonthlySavings,
 } from '../../lib/quant/wealthSimulator';
 import { formatIdr } from '../../lib/formatters';
 import {
@@ -28,6 +29,7 @@ import {
   Sparkles,
   Activity,
   CheckCircle2,
+  Calculator,
 } from 'lucide-react';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 
@@ -43,6 +45,8 @@ interface WealthRoadmapViewProps {
   setMonthlySavingsIdr: (v: number) => void;
 }
 
+const ROADMAP_SETTINGS_STORAGE_KEY = 'quantporto_roadmap_settings_v1';
+
 export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   allAssets,
   activeWeights,
@@ -54,23 +58,74 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   monthlySavingsIdr,
   setMonthlySavingsIdr,
 }) => {
-  const [annualStepUpPct, setAnnualStepUpPct] = useState(0);
-  const [annualInflationPercent, setAnnualInflationPercent] = useState<number>(0);
-  const [monthlyLivingCostTargetIdr, setMonthlyLivingCostTargetIdr] = useState<number>(10_000_000);
+  // Bug 18: Hydrate local settings from localStorage to persist across tab unmounts
+  const [initialRoadmapSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(ROADMAP_SETTINGS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [annualStepUpPct, setAnnualStepUpPct] = useState<number>(
+    () => initialRoadmapSettings?.annualStepUpPct ?? 0
+  );
+  const [annualInflationPercent, setAnnualInflationPercent] = useState<number>(
+    () => initialRoadmapSettings?.annualInflationPercent ?? 0
+  );
+  const [monthlyLivingCostTargetIdr, setMonthlyLivingCostTargetIdr] = useState<number>(
+    () => initialRoadmapSettings?.monthlyLivingCostTargetIdr ?? 10_000_000
+  );
   const [simulationViewMode, setSimulationViewMode] = useState<
     'deterministic' | 'monte-carlo'
-  >('deterministic');
+  >(() => initialRoadmapSettings?.simulationViewMode ?? 'deterministic');
 
   // Dividend Estimator State
   const [taxMode, setTaxMode] = useState<
     'standard-net' | 'idx-tax-exempt-reinvest' | 'gross'
-  >('standard-net');
+  >(() => initialRoadmapSettings?.taxMode ?? 'standard-net');
   const [dividendUsageMode, setDividendUsageMode] = useState<
     'reinvest-drip' | 'cashout-passive'
-  >('reinvest-drip');
+  >(() => initialRoadmapSettings?.dividendUsageMode ?? 'reinvest-drip');
   const [customYieldOverrides, setCustomYieldOverrides] = useState<
     Record<string, number>
-  >({});
+  >(() => initialRoadmapSettings?.customYieldOverrides ?? {});
+
+  // Feature 3: Reverse DCA Goal Solver State
+  const [reverseDcaTargetYears, setReverseDcaTargetYears] = useState<number>(
+    () => initialRoadmapSettings?.reverseDcaTargetYears ?? 10
+  );
+
+  // Bug 18: Save settings whenever changed
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        ROADMAP_SETTINGS_STORAGE_KEY,
+        JSON.stringify({
+          annualStepUpPct,
+          annualInflationPercent,
+          monthlyLivingCostTargetIdr,
+          simulationViewMode,
+          taxMode,
+          dividendUsageMode,
+          customYieldOverrides,
+          reverseDcaTargetYears,
+        })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [
+    annualStepUpPct,
+    annualInflationPercent,
+    monthlyLivingCostTargetIdr,
+    simulationViewMode,
+    taxMode,
+    dividendUsageMode,
+    customYieldOverrides,
+    reverseDcaTargetYears,
+  ]);
 
   // Calculate Portfolio Weighted Gross & Net Dividend Yield
   const dividendBreakdown = useMemo(() => {
@@ -230,6 +285,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         maxYears: displayYears,
         numSimulations: 500,
         annualStepUpPercent: annualStepUpPct,
+        annualInflationPercent,
       }),
     [
       initialCapitalIdr,
@@ -239,8 +295,30 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       targetGoalIdr,
       displayYears,
       annualStepUpPct,
+      annualInflationPercent,
     ]
   );
+
+  // Feature 3: Reverse DCA Goal Solver
+  const reverseDcaSolution = useMemo(() => {
+    return solveRequiredMonthlySavings({
+      initialCapitalIdr: initialCapitalIdr >= 0 ? initialCapitalIdr : 0,
+      targetGoalIdr,
+      targetYears: reverseDcaTargetYears,
+      annualCagrPercent: effectiveCompoundingCagr,
+      annualVolatilityPercent: solvedMetrics.volatility || 18,
+      annualStepUpPercent: annualStepUpPct,
+      annualInflationPercent,
+    });
+  }, [
+    initialCapitalIdr,
+    targetGoalIdr,
+    reverseDcaTargetYears,
+    effectiveCompoundingCagr,
+    solvedMetrics.volatility,
+    annualStepUpPct,
+    annualInflationPercent,
+  ]);
 
   const monteCarloChartData = useMemo(() => {
     return monteCarloResult.series.map((pt) => ({
@@ -850,13 +928,19 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </span>
               <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="ui-text-main mt-1 font-mono text-lg font-bold">
-              Target Pokok:{' '}
-              {formatIdr(
-                sim.requiredNestEggSWRIdr ?? monthlyLivingCostTargetIdr * 12 * 25,
-                true
-              )}
+            <div className="ui-text-main mt-1 font-mono text-base font-bold">
+              Target Riil:{' '}
+              {formatIdr(monthlyLivingCostTargetIdr * 12 * 25, true)}
             </div>
+            {annualInflationPercent > 0 && (
+              <div className="text-[11px] font-mono text-indigo-500 dark:text-indigo-400 font-semibold">
+                Nominal Masa Depan:{' '}
+                {formatIdr(
+                  sim.requiredNestEggSWRIdr ?? monthlyLivingCostTargetIdr * 12 * 25,
+                  true
+                )}
+              </div>
+            )}
             <p className="ui-text-muted mt-0.5 text-[11px]">
               Tarik 4% per tahun (≈ {formatIdr(monthlyLivingCostTargetIdr, true)}/bln). Modal pokok tetap bertahan puluhan tahun menurut Trinity Study.
             </p>
@@ -886,16 +970,40 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </span>
               <Coins className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="ui-text-main mt-1 font-mono text-lg font-bold">
-              Target Pokok:{' '}
-              {dividendBreakdown.weightedNetYieldPct > 0
-                ? formatIdr(
-                    (monthlyLivingCostTargetIdr * 12) /
-                      (dividendBreakdown.weightedNetYieldPct / 100),
-                    true
-                  )
-                : 'N/A (Yield 0%)'}
-            </div>
+            {(() => {
+              const divRealTarget =
+                dividendBreakdown.weightedNetYieldPct > 0
+                  ? (monthlyLivingCostTargetIdr * 12) /
+                    (dividendBreakdown.weightedNetYieldPct / 100)
+                  : 0;
+              const divNominalTarget =
+                annualInflationPercent > 0 &&
+                divRealTarget > 0 &&
+                sim.monthsToFinancialFreedomDividends
+                  ? divRealTarget *
+                    Math.pow(
+                      1 + annualInflationPercent / 100,
+                      sim.monthsToFinancialFreedomDividends / 12
+                    )
+                  : divRealTarget;
+
+              return (
+                <>
+                  <div className="ui-text-main mt-1 font-mono text-base font-bold">
+                    Target Riil:{' '}
+                    {divRealTarget > 0
+                      ? formatIdr(divRealTarget, true)
+                      : 'N/A (Yield 0%)'}
+                  </div>
+                  {annualInflationPercent > 0 && divRealTarget > 0 && (
+                    <div className="text-[11px] font-mono text-purple-500 dark:text-purple-400 font-semibold">
+                      Nominal Masa Depan:{' '}
+                      {formatIdr(divNominalTarget, true)}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <p className="ui-text-muted mt-0.5 text-[11px]">
               Biaya hidup ditutup 100% dari kupon/dividen bersih (Yield saat ini {dividendBreakdown.weightedNetYieldPct.toFixed(2)}%) tanpa pernah menjual aset pokok sama sekali.
             </p>
@@ -972,6 +1080,101 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   }}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURE 3: REVERSE DCA GOAL SOLVER */}
+      <section className="ui-card rounded-xl p-5 border border-indigo-500/20 bg-indigo-500/5">
+        <div className="ui-border flex flex-col gap-3 border-b border-indigo-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Calculator className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+              <h3 className="ui-text-main text-sm font-bold">
+                Reverse DCA Goal Solver (Berapa Tabungan Bulanan yang Dibutuhkan?)
+              </h3>
+            </div>
+            <p className="ui-text-muted mt-0.5 text-xs">
+              Hitung mundur berapa DCA bulanan yang harus Anda sisihkan agar modal awal {formatIdr(initialCapitalIdr, true)} bertumbuh menjadi target {formatIdr(targetGoalIdr, true)} dalam rentang waktu yang Anda pilih:
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="ui-text-secondary font-medium">Target Waktu:</span>
+            <div className="flex gap-1">
+              {[3, 5, 10, 15, 20, 25].map((yr) => (
+                <button
+                  key={yr}
+                  type="button"
+                  onClick={() => setReverseDcaTargetYears(yr)}
+                  className={`rounded px-2 py-1 font-mono text-xs font-semibold transition ${
+                    reverseDcaTargetYears === yr
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'ui-subtle ui-text-secondary hover:opacity-80'
+                  }`}
+                >
+                  {yr} Thn
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Deterministic compounding solution */}
+          <div className="ui-subtle rounded-xl p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="ui-text-muted text-xs font-semibold uppercase">
+                  Estimasi Deterministik (CAGR {effectiveCompoundingCagr.toFixed(1)}%)
+                </span>
+                <Sparkles className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="ui-text-main mt-2 font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formatIdr(reverseDcaSolution.deterministicMonthlyDcaIdr)} / bln
+              </div>
+              <p className="ui-text-muted mt-1 text-[11px]">
+                Diperlukan menabung {formatIdr(reverseDcaSolution.deterministicMonthlyDcaIdr)} setiap bulan selama {reverseDcaTargetYears} tahun dengan asumsi return stabil dan inflasi {annualInflationPercent}%.
+              </p>
+            </div>
+            <div className="mt-3 pt-2 ui-border border-t flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMonthlySavingsIdr(reverseDcaSolution.deterministicMonthlyDcaIdr)}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition shadow-sm"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Terapkan DCA Ini ({formatIdr(reverseDcaSolution.deterministicMonthlyDcaIdr, true)})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Monte Carlo 75% confidence solution */}
+          <div className="ui-subtle rounded-xl p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="ui-text-muted text-xs font-semibold uppercase">
+                  Konservatif Monte Carlo (Tingkat Keyakinan 75%)
+                </span>
+                <ShieldAlert className="h-4 w-4 text-indigo-500" />
+              </div>
+              <div className="ui-text-main mt-2 font-mono text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                {formatIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr)} / bln
+              </div>
+              <p className="ui-text-muted mt-1 text-[11px]">
+                Memperhitungkan volatilitas pasar (75% kemungkinan sukses mencapai atau melampaui {formatIdr(targetGoalIdr, true)} bahkan jika kondisi pasar kurang bersahabat).
+              </p>
+            </div>
+            <div className="mt-3 pt-2 ui-border border-t flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMonthlySavingsIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr)}
+                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition shadow-sm"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Terapkan DCA Konservatif ({formatIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr, true)})</span>
+              </button>
             </div>
           </div>
         </div>

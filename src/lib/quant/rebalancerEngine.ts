@@ -177,25 +177,24 @@ export function calculateRebalancePlan(params: {
     // Minor drifts (< cutoff) remain HOLD without generating annoying micro/dust sell orders!
     const netFundingNeeded = Math.max(0, totalDeficit - cashInjectionIdr);
 
-    // Minimum positive drift to be considered a significant winner
-    const minDriftCutoff = Math.max(0.5, Math.min(2.0, driftThresholdAbsolutePercent * 0.5));
+    // Decision 2 / Bug 7: Minimum positive drift scales dynamically with driftThresholdAbsolutePercent without 2.0% hard-cap
+    const minDriftCutoff = Math.max(0.5, driftThresholdAbsolutePercent * 0.5);
 
     const candidateSellers = computedHoldings.filter((item) => {
       const curW = postShockTotalIdr > 0 ? (item.postShockValIdr / postShockTotalIdr) * 100 : 0;
       const tgtW = rawWeightSum > 0 ? ((effectiveTargetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100 : 0;
       const drift = curW - tgtW;
       const surplus = surpluses[item.asset.id] ?? 0;
-      return drift >= minDriftCutoff && surplus >= 25_000;
+      // Feature 5: If user specified avgBuyPrice, protect underwater positions from profit-trimming
+      const isProfitable =
+        !item.holding.avgBuyPrice ||
+        item.holding.avgBuyPrice <= 0 ||
+        ((item.holding.currentPrice || item.asset.defaultPrice) >= item.holding.avgBuyPrice);
+      return drift >= minDriftCutoff && surplus >= 25_000 && isProfitable;
     });
 
-    // If no candidate crossed cutoff, pick top 1-2 assets with largest nominal surplus
-    const eligibleSellers =
-      candidateSellers.length > 0
-        ? candidateSellers
-        : [...computedHoldings]
-            .filter((item) => (surpluses[item.asset.id] ?? 0) > 25_000)
-            .sort((a, b) => (surpluses[b.asset.id] ?? 0) - (surpluses[a.asset.id] ?? 0))
-            .slice(0, 1);
+    // Decision 2 / Bug 7: Output HOLD (0 sells) when no asset exceeds drift cutoff, only deploying cashInjectionIdr if > 0
+    const eligibleSellers = candidateSellers;
 
     const eligibleSurplusTotal = eligibleSellers.reduce(
       (sum, item) => sum + (surpluses[item.asset.id] ?? 0),
@@ -211,7 +210,7 @@ export function calculateRebalancePlan(params: {
         // Trim proportionally from eligible surplus
         const trimShare = (surpluses[item.asset.id] / eligibleSurplusTotal) * actualTrimTotal;
         targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr - trimShare);
-      } else if (deficits[item.asset.id] > 0 && totalDeficit > 0) {
+      } else if (deficits[item.asset.id] > 0 && totalDeficit > 0 && availableBuyBudget > 0) {
         // Fund underweight asset up to available buy budget
         const buyShare =
           (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
@@ -249,7 +248,8 @@ export function calculateRebalancePlan(params: {
       0
     );
 
-    const netFundingNeeded = Math.max(0, growthDeficitTotal - cashInjectionIdr);
+    // Bug 8: netFundingNeeded must cover all deficits (growth + underweight defensive) less cash injection
+    const netFundingNeeded = Math.max(0, totalDeficit - cashInjectionIdr);
 
     if (defensiveSurplusesTotal > 0 && netFundingNeeded > 0) {
       const actualDefensiveTrim = Math.min(defensiveSurplusesTotal, netFundingNeeded);
@@ -263,7 +263,7 @@ export function calculateRebalancePlan(params: {
           // Trim proportionally from defensive surplus
           const drawShare = (itemSurplus / defensiveSurplusesTotal) * actualDefensiveTrim;
           targetValuesByAsset[item.asset.id] = Math.round(item.postShockValIdr - drawShare);
-        } else if (deficits[item.asset.id] > 0 && totalDeficit > 0) {
+        } else if (deficits[item.asset.id] > 0 && totalDeficit > 0 && availableBuyBudget > 0) {
           // Fund deficit assets (both growth and underweight defensive) using available buy budget
           const buyShare =
             (deficits[item.asset.id] / totalDeficit) * Math.min(totalDeficit, availableBuyBudget);
@@ -397,15 +397,28 @@ export function calculateRebalancePlan(params: {
         : Math.round(rawUnits);
     }
 
-    const tradeAmountUsd = Number((tradeAmountIdr / Math.max(1, usdIdrRate)).toFixed(2));
-
+    // Bug 6: Eliminate dead zone between Rp 1.000 and Rp 10.000 so phantom HOLD trades are zeroed out
     let action: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     if (tradeAmountIdr > 10_000) action = 'BUY';
     else if (tradeAmountIdr < -10_000) action = 'SELL';
+    else {
+      // Sub-10k orders are HOLD; add leftover positive buy amount to unallocated cash remainder
+      if (tradeAmountIdr > 0) {
+        totalUnallocatedRemainderIdr += tradeAmountIdr;
+      }
+      tradeAmountIdr = 0;
+      tradeUnits = 0;
+      tradeLots = 0;
+      tradeLotsInteger = 0;
+    }
 
-    if (tradeAmountIdr > 1000) {
+    // Bug 2: targetValueIdr must reflect executed postShockValIdr + tradeAmountIdr so lot remainders are not double-counted
+    const finalTargetValIdr = Math.round(item.postShockValIdr + tradeAmountIdr);
+    const tradeAmountUsd = Number((tradeAmountIdr / Math.max(1, usdIdrRate)).toFixed(2));
+
+    if (action === 'BUY') {
       totalBuyIdr += tradeAmountIdr;
-    } else if (tradeAmountIdr < -1000) {
+    } else if (action === 'SELL') {
       totalSellIdr += Math.abs(tradeAmountIdr);
     }
 
@@ -430,6 +443,21 @@ export function calculateRebalancePlan(params: {
       totalEstimatedFeeIdr += estimatedFeeIdr;
     }
 
+    // Feature 5: Unrealized P&L calculation if avgBuyPrice is provided
+    let unrealizedGainPercent: number | undefined;
+    let unrealizedGainIdr: number | undefined;
+    const avgBuyPrice = item.holding.avgBuyPrice;
+    if (avgBuyPrice && avgBuyPrice > 0) {
+      const spotNative = item.holding.currentPrice > 0 ? item.holding.currentPrice : item.asset.defaultPrice;
+      unrealizedGainPercent = Number((((spotNative - avgBuyPrice) / avgBuyPrice) * 100).toFixed(2));
+      const unitsHeld =
+        inputMode === 'nominal'
+          ? item.initialValIdr / Math.max(1e-6, item.postShockUnitPriceIdr)
+          : (item.holding.units ?? 0);
+      const fxRate = item.asset.currency === 'USD' ? usdIdrRate : 1;
+      unrealizedGainIdr = Math.round((spotNative - avgBuyPrice) * unitsHeld * fxRate);
+    }
+
     return {
       assetId: item.asset.id,
       symbol: item.asset.shortName || item.asset.symbol,
@@ -443,7 +471,7 @@ export function calculateRebalancePlan(params: {
       absoluteDriftPercent,
       relativeDriftPercent,
       isDriftBreached,
-      targetValueIdr,
+      targetValueIdr: finalTargetValIdr,
       tradeAmountIdr,
       tradeAmountUsd,
       tradeUnits,
@@ -453,10 +481,51 @@ export function calculateRebalancePlan(params: {
       estimatedFeeIdr,
       action,
       tacticalSignal: tacticalSignals[item.asset.id],
+      avgBuyPrice,
+      unrealizedGainPercent,
+      unrealizedGainIdr,
     };
   });
 
-  // Optional: Sweep unallocated lot remainder to main defensive anchor (RDPT or RDPU) if active
+  // Step 4 (Bug 3): Dust Trade Filter (Anti-Dust Protection) executed BEFORE defensive sweep
+  // Suppresses tiny negligible orders (< dustTradeThresholdIdr) into clean HOLDs
+  // and adds suppressed dust BUY funds to totalUnallocatedRemainderIdr so they can be swept to defensive anchor or preserved
+  let suppressedDustTradesCount = 0;
+  if (filterDustTrades) {
+    for (const item of items) {
+      // Don't suppress IDX stocks that already bought/sold full whole lots (tradeLotsInteger !== 0)
+      const hasIdxLot =
+        item.tradeLotsInteger !== undefined && Math.abs(item.tradeLotsInteger) >= 1;
+      if (
+        !hasIdxLot &&
+        item.action !== 'HOLD' &&
+        Math.abs(item.tradeAmountIdr) < dustTradeThresholdIdr
+      ) {
+        if (item.action === 'BUY') {
+          totalBuyIdr -= item.tradeAmountIdr;
+          totalUnallocatedRemainderIdr += item.tradeAmountIdr; // Bug 3 fix: add suppressed buy cash to remainder
+        } else if (item.action === 'SELL') {
+          totalSellIdr -= Math.abs(item.tradeAmountIdr);
+        }
+        const suppressedFee = item.estimatedFeeIdr ?? 0;
+        if (suppressedFee > 0) {
+          totalEstimatedFeeIdr = Math.max(0, totalEstimatedFeeIdr - suppressedFee);
+        }
+        item.action = 'HOLD';
+        item.isDustFiltered = true;
+        item.targetValueIdr = item.postShockValueIdr;
+        item.tradeAmountIdr = 0;
+        item.tradeAmountUsd = 0;
+        item.tradeUnits = 0;
+        item.tradeLots = 0;
+        item.tradeLotsInteger = 0;
+        item.estimatedFeeIdr = 0;
+        suppressedDustTradesCount += 1;
+      }
+    }
+  }
+
+  // Step 5: Sweep unallocated lot & dust remainder to main defensive anchor (RDPT or RDPU) if active
   if (
     enableIdxLotRounding &&
     sweepRemainderToDefensive &&
@@ -485,23 +554,21 @@ export function calculateRebalancePlan(params: {
         defensiveItem.tradeAmountUsd = Number(
           (proposedTradeAmount / Math.max(1, usdIdrRate)).toFixed(2)
         );
-        defensiveItem.targetValueIdr += totalUnallocatedRemainderIdr;
+        defensiveItem.targetValueIdr = Math.round(defensiveItem.postShockValueIdr + proposedTradeAmount);
         totalUnallocatedRemainderIdr = 0; // Swept to defensive asset, reset remainder
-        const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
-        const defHold = holdings[defensiveItem.assetId];
-        const defPriceIdr =
-          defAsset?.currency === 'USD'
-            ? (defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1) * usdIdrRate
-            : defHold?.currentPrice ?? defAsset?.defaultPrice ?? 1;
+
+        // Bug 2 fix: Use postShockUnitPriceIdr for unit-priced defensive assets
+        const defComputed = computedHoldings.find((c) => c.asset.id === defensiveItem.assetId);
+        const defPriceIdr = defComputed?.postShockUnitPriceIdr ?? 1;
 
         if (defensiveItem.isNominalOnly) {
-          // For nominal-only defensive assets (RDPT / RDPU / Kas), trade units are direct IDR nominal amounts
           defensiveItem.tradeUnits = defensiveItem.tradeAmountIdr;
         } else {
           defensiveItem.tradeUnits = Number(
-            (defensiveItem.tradeAmountIdr / Math.max(1, defPriceIdr)).toFixed(4)
+            (defensiveItem.tradeAmountIdr / Math.max(1e-6, defPriceIdr)).toFixed(4)
           );
         }
+
         if (defensiveItem.tradeAmountIdr > 10_000) {
           defensiveItem.action = 'BUY';
         } else if (defensiveItem.tradeAmountIdr < -10_000 && rebalanceMode !== 'buy-only-dca') {
@@ -511,49 +578,32 @@ export function calculateRebalancePlan(params: {
         }
 
         // Adjust totals for the delta
-        if (prevTradeAmount > 1000) totalBuyIdr -= prevTradeAmount;
-        else if (prevTradeAmount < -1000) totalSellIdr -= Math.abs(prevTradeAmount);
+        if (prevTradeAmount > 10_000) totalBuyIdr -= prevTradeAmount;
+        else if (prevTradeAmount < -10_000) totalSellIdr -= Math.abs(prevTradeAmount);
 
-        if (defensiveItem.tradeAmountIdr > 1000) totalBuyIdr += defensiveItem.tradeAmountIdr;
-        else if (defensiveItem.tradeAmountIdr < -1000 && rebalanceMode !== 'buy-only-dca') {
+        if (defensiveItem.tradeAmountIdr > 10_000) totalBuyIdr += defensiveItem.tradeAmountIdr;
+        else if (defensiveItem.tradeAmountIdr < -10_000 && rebalanceMode !== 'buy-only-dca') {
           totalSellIdr += Math.abs(defensiveItem.tradeAmountIdr);
         }
-      }
-    }
-  }
 
-  // Step 4: Dust Trade Filter (Anti-Dust Protection)
-  // Suppresses tiny negligible orders (e.g. < Rp 25.000 / ~$1.5) into clean HOLDs
-  let suppressedDustTradesCount = 0;
-  if (filterDustTrades) {
-    for (const item of items) {
-      // Don't suppress IDX stocks that already bought/sold full whole lots (tradeLotsInteger !== 0)
-      const hasIdxLot =
-        item.tradeLotsInteger !== undefined && Math.abs(item.tradeLotsInteger) >= 1;
-      if (
-        !hasIdxLot &&
-        item.action !== 'HOLD' &&
-        Math.abs(item.tradeAmountIdr) < dustTradeThresholdIdr
-      ) {
-        if (item.action === 'BUY') {
-          totalBuyIdr -= item.tradeAmountIdr;
-        } else if (item.action === 'SELL') {
-          totalSellIdr -= Math.abs(item.tradeAmountIdr);
+        // Bug 2 fix: Recompute defensive fee and update totalEstimatedFeeIdr
+        const prevDefFee = defensiveItem.estimatedFeeIdr ?? 0;
+        let newDefFee = 0;
+        if (enableBrokerFees && defensiveItem.action !== 'HOLD') {
+          const absTrade = Math.abs(defensiveItem.tradeAmountIdr);
+          const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
+          if (!defensiveItem.isNominalOnly && defAsset?.category === 'idx-equity') {
+            newDefFee = Math.round(absTrade * (defensiveItem.action === 'BUY' ? 0.0015 : 0.0025));
+          } else if (defAsset?.category === 'us-equity') {
+            newDefFee = Math.round(absTrade * 0.001);
+          } else if (defAsset?.category === 'crypto') {
+            newDefFee = Math.round(absTrade * 0.0015);
+          } else if (defAsset?.category === 'gold') {
+            newDefFee = Math.round(absTrade * 0.001);
+          }
         }
-        const suppressedFee = item.estimatedFeeIdr ?? 0;
-        if (suppressedFee > 0) {
-          totalEstimatedFeeIdr = Math.max(0, totalEstimatedFeeIdr - suppressedFee);
-        }
-        item.action = 'HOLD';
-        item.isDustFiltered = true;
-        item.targetValueIdr = item.postShockValueIdr;
-        item.tradeAmountIdr = 0;
-        item.tradeAmountUsd = 0;
-        item.tradeUnits = 0;
-        item.tradeLots = 0;
-        item.tradeLotsInteger = 0;
-        item.estimatedFeeIdr = 0;
-        suppressedDustTradesCount += 1;
+        defensiveItem.estimatedFeeIdr = newDefFee;
+        totalEstimatedFeeIdr = Math.max(0, totalEstimatedFeeIdr - prevDefFee + newDefFee);
       }
     }
   }
@@ -597,6 +647,9 @@ export function generateCrashBuyingLadder(params: {
   usdIdrRate: number;
   extraCashIdr?: number;
   dropTiers?: number[];
+  enableIdxLotRounding?: boolean;
+  filterDustTrades?: boolean;
+  tacticalConfig?: ValuationSentimentConfig;
 }): CrashLadderStep[] {
   const {
     targetAsset,
@@ -607,6 +660,9 @@ export function generateCrashBuyingLadder(params: {
     usdIdrRate,
     extraCashIdr = 0,
     dropTiers = [-10, -20, -35, -50],
+    enableIdxLotRounding = true,
+    filterDustTrades = true,
+    tacticalConfig,
   } = params;
 
   const baseHolding = holdings[targetAsset.id];
@@ -659,31 +715,44 @@ export function generateCrashBuyingLadder(params: {
       cashInjectionIdr: extraCashIdr,
       rebalanceMode: 'sell-and-buy',
       driftThresholdAbsolutePercent: 1,
+      enableIdxLotRounding,
+      filterDustTrades,
+      tacticalConfig,
     });
 
     const targetItem = plan.items.find((i) => i.assetId === targetAsset.id);
     const buyIdr = Math.max(0, targetItem?.tradeAmountIdr ?? 0);
     const rawUnits = buyIdr / Math.max(1, limitPriceIdr);
     const isNominalOnly = Boolean(
-      targetAsset.isNominalOnly ||
-      targetAsset.category === 'bonds' ||
-      targetAsset.category === 'money-market'
+      baseHolding?.isNominalOnly ??
+      targetAsset.isNominalOnly ??
+      (targetAsset.category === 'bonds' || targetAsset.category === 'money-market')
     );
+
+    // Bug 9 fix: Use already-calculated whole integer lots from plan if available to avoid double rounding down
     const buyLots =
       !isNominalOnly && targetAsset.lotSize === 100
-        ? Math.floor(rawUnits / 100)
+        ? (targetItem?.tradeLotsInteger !== undefined
+            ? Math.max(0, targetItem.tradeLotsInteger)
+            : Math.floor(rawUnits / 100))
         : undefined;
+
     const buyUnits =
       isNominalOnly
         ? buyIdr
         : targetAsset.lotSize === 100
-          ? (buyLots ?? 0) * 100
+          ? (targetItem?.tradeUnits !== undefined
+              ? Math.max(0, targetItem.tradeUnits)
+              : (buyLots ?? 0) * 100)
           : targetAsset.allowFractional
             ? Number(rawUnits.toFixed(targetAsset.category === 'crypto' ? 8 : 4))
             : Math.round(rawUnits);
+
     const executedBuyIdr =
       !isNominalOnly && targetAsset.lotSize === 100
-        ? Math.round(buyUnits * limitPriceIdr)
+        ? (targetItem?.tradeAmountIdr !== undefined
+            ? Math.max(0, targetItem.tradeAmountIdr)
+            : Math.round(buyUnits * limitPriceIdr))
         : buyIdr;
 
     // How much defensive assets (RDPT / RDPU / GLD) were sold to fund this dip buy

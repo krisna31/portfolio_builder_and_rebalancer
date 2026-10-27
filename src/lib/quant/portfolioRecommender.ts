@@ -326,7 +326,17 @@ export function generatePortfolioRecommendations(
         : 80;
 
   const optimalPresets = presets.filter((p) => p.isOptimal15);
-  const scoredPresets = optimalPresets
+  // Bug 16 fix: Strictly filter out crypto presets if user preference excludes crypto (!hasCrypto)
+  const candidatePresets = optimalPresets.filter((p) => {
+    if (!hasCrypto) {
+      const presetHasCrypto =
+        (p.weights.BTC ?? 0) > 0 || (p.weights.ETH ?? 0) > 0 || (p.weights.SOL ?? 0) > 0;
+      if (presetHasCrypto) return false;
+    }
+    return true;
+  });
+
+  const scoredPresets = candidatePresets
     .map((p) => {
       let score = 0;
       // Check drawdown alignment
@@ -338,10 +348,8 @@ export function generatePortfolioRecommendations(
 
       // Check crypto preference
       const presetHasCrypto =
-        (p.weights.BTC ?? 0) > 0 || (p.weights.ETH ?? 0) > 0;
-      if (!hasCrypto && presetHasCrypto) {
-        score -= 25;
-      } else if (hasCrypto && presetHasCrypto) {
+        (p.weights.BTC ?? 0) > 0 || (p.weights.ETH ?? 0) > 0 || (p.weights.SOL ?? 0) > 0;
+      if (hasCrypto && presetHasCrypto) {
         score += 15;
       }
 
