@@ -163,10 +163,10 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
   // Popular comparison shortcuts
   const popularPairs: Array<{ idA: string; idB: string; label: string }> = [
     { idA: 'SPY', idB: 'GLD', label: 'SPY ⚡ GLD (Saham vs Emas)' },
-    { idA: 'SPY', idB: 'TLT', label: 'SPY ⚡ TLT (Saham vs Obligasi)' },
+    { idA: 'SPY', idB: 'RDPT', label: 'SPY ⚡ RDPT (Saham vs Obligasi)' },
     { idA: 'BTC', idB: 'SPY', label: 'BTC ⚡ SPY (Kripto vs Saham AS)' },
-    { idA: 'BTC', idB: 'TLT', label: 'BTC ⚡ TLT (Kripto vs Obligasi)' },
-    { idA: 'RDPT', idB: 'BTC', label: 'RDPT ⚡ BTC (Pasar Uang vs Kripto)' },
+    { idA: 'BTC', idB: 'RDPT', label: 'BTC ⚡ RDPT (Kripto vs Obligasi)' },
+    { idA: 'RDPU', idB: 'BTC', label: 'RDPU ⚡ BTC (Pasar Uang vs Kripto)' },
   ];
 
   return (

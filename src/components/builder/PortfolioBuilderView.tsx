@@ -10,6 +10,7 @@ import { formatIdr, getRiskTierBadge } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import { simulateWealthToGoal } from '../../lib/quant/wealthSimulator';
 import { findStrictDominatingPresets } from '../../lib/quant/riskParitySolver';
+import { CORE_AND_EXPANDED_ASSETS } from '../../data/presets';
 import {
   lookupCustomYahooTicker,
   POPULAR_TICKER_ESTIMATES,
@@ -188,13 +189,15 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   const handleSaveEditAsset = (assetId: string) => {
     if (onUpdateAssetMeta) {
       const asset = allAssets.find((a) => a.id === assetId);
-      const origLot = asset?.originalLotSize ?? (draftIsNominal ? 1 : 100);
+      const baseDef = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === assetId);
+      const origLot = asset?.originalLotSize ?? baseDef?.lotSize ?? asset?.lotSize ?? (draftIsNominal ? 1 : 100);
+      const origFractional = baseDef?.allowFractional ?? asset?.allowFractional ?? (draftIsNominal ? true : false);
       onUpdateAssetMeta(assetId, {
         shortName: draftShortName.trim() || undefined,
         name: draftName.trim() || undefined,
         isNominalOnly: draftIsNominal,
         lotSize: draftIsNominal ? 1 : origLot,
-        allowFractional: draftIsNominal ? true : false,
+        allowFractional: draftIsNominal ? true : origFractional,
       });
     }
     setEditingAssetId(null);
@@ -1421,15 +1424,21 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     aria-label={`Slot benchmark ${slotId}`}
                     className="ui-text-main cursor-pointer bg-transparent font-bold focus:outline-none"
                   >
-                    {allAssets.map((a) => (
-                      <option
-                        key={a.id}
-                        value={a.id}
-                        className="bg-zinc-900 text-white"
-                      >
-                        {a.shortName}
-                      </option>
-                    ))}
+                    {allAssets.map((a) => {
+                      const isUsedInOtherSlot = core8Slots.some(
+                        (s) => s !== slotId && (slotMap[s] ?? s) === a.id
+                      );
+                      return (
+                        <option
+                          key={a.id}
+                          value={a.id}
+                          disabled={isUsedInOtherSlot}
+                          className="bg-zinc-900 text-white"
+                        >
+                          {a.shortName}{isUsedInOtherSlot ? ' (Sudah Dipakai)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               );
@@ -1530,15 +1539,21 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           aria-label={`Slot benchmark ${slotId}`}
                           className="ui-text-main cursor-pointer bg-transparent font-mono text-[11px] font-bold focus:outline-none"
                         >
-                          {allAssets.map((a) => (
-                            <option
-                              key={a.id}
-                              value={a.id}
-                              className="bg-zinc-900 text-white"
-                            >
-                              {a.shortName} ({getEffectiveAssetCagr(a).toFixed(1)}%)
-                            </option>
-                          ))}
+                          {allAssets.map((a) => {
+                            const isUsedInOtherSlot = core8Slots.some(
+                              (s) => s !== slotId && (slotMap[s] ?? s) === a.id
+                            );
+                            return (
+                              <option
+                                key={a.id}
+                                value={a.id}
+                                disabled={isUsedInOtherSlot}
+                                className="bg-zinc-900 text-white"
+                              >
+                                {a.shortName} ({getEffectiveAssetCagr(a).toFixed(1)}%){isUsedInOtherSlot ? ' (Sudah Dipakai)' : ''}
+                              </option>
+                            );
+                          })}
                         </select>
                         {slotAsset && (
                           <div

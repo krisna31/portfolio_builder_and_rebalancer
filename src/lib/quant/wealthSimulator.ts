@@ -441,10 +441,10 @@ export function simulateMonteCarloPaths(params: {
   const pathsReachedGoal = goalReachedMonths.filter((m) => m !== null).length;
   const successProbabilityPercent = Math.round((pathsReachedGoal / numSimulations) * 100);
 
-  // Median years to goal for successful paths
+  // Median years to goal for successful paths (returns null if successProbabilityPercent < 50)
   const successfulMonths = (goalReachedMonths.filter((m) => m !== null) as number[]).sort((a, b) => a - b);
   const medianMonths =
-    successfulMonths.length > 0
+    successProbabilityPercent >= 50 && successfulMonths.length > 0
       ? successfulMonths[Math.floor(successfulMonths.length / 2)]
       : null;
   const medianYearsToGoal =

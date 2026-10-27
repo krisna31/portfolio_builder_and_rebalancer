@@ -391,8 +391,9 @@ export function calculateRebalancePlan(params: {
         tradeUnits = Math.round(rawUnits);
       }
     } else {
+      const precision = item.asset.category === 'crypto' ? 8 : 4;
       tradeUnits = item.asset.allowFractional
-        ? Number(rawUnits.toFixed(4))
+        ? Number(rawUnits.toFixed(precision))
         : Math.round(rawUnits);
     }
 
@@ -459,7 +460,7 @@ export function calculateRebalancePlan(params: {
   if (
     enableIdxLotRounding &&
     sweepRemainderToDefensive &&
-    Math.abs(totalUnallocatedRemainderIdr) >= 10_000
+    Math.abs(totalUnallocatedRemainderIdr) >= dustTradeThresholdIdr
   ) {
     const defensiveItem =
       items.find((i) => i.assetId === 'RDPT' && (effectiveTargetWeights.RDPT ?? 0) > 0) ??
@@ -485,6 +486,7 @@ export function calculateRebalancePlan(params: {
           (proposedTradeAmount / Math.max(1, usdIdrRate)).toFixed(2)
         );
         defensiveItem.targetValueIdr += totalUnallocatedRemainderIdr;
+        totalUnallocatedRemainderIdr = 0; // Swept to defensive asset, reset remainder
         const defAsset = assets.find((a) => a.id === defensiveItem.assetId);
         const defHold = holdings[defensiveItem.assetId];
         const defPriceIdr =
@@ -677,7 +679,7 @@ export function generateCrashBuyingLadder(params: {
         : targetAsset.lotSize === 100
           ? (buyLots ?? 0) * 100
           : targetAsset.allowFractional
-            ? Number(rawUnits.toFixed(4))
+            ? Number(rawUnits.toFixed(targetAsset.category === 'crypto' ? 8 : 4))
             : Math.round(rawUnits);
     const executedBuyIdr =
       !isNominalOnly && targetAsset.lotSize === 100

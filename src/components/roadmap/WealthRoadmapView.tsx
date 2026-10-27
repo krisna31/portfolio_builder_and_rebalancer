@@ -695,9 +695,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
 
             {/* Monte Carlo Statistical Probability Summary Cards */}
             {simulationViewMode === 'monte-carlo' && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-border/80">
-                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
-                  <div className="text-[11px] text-slate-400">Peluang Capai Target</div>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t ui-border">
+                <div className="p-3 rounded-lg ui-card border ui-border">
+                  <div className="text-[11px] ui-text-muted">Peluang Capai Target</div>
                   <div
                     className={`mt-0.5 text-base font-bold font-mono ${
                       monteCarloResult.successProbabilityPercent >= 75
@@ -709,39 +709,41 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   >
                     {monteCarloResult.successProbabilityPercent}%
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] ui-text-muted mt-0.5">
                     Target {formatIdr(targetGoalIdr, true)}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
-                  <div className="text-[11px] text-slate-400">Median Waktu ke Goal</div>
+                <div className="p-3 rounded-lg ui-card border ui-border">
+                  <div className="text-[11px] ui-text-muted">Median Waktu ke Goal</div>
                   <div className="mt-0.5 text-base font-bold font-mono text-indigo-400">
                     {monteCarloResult.medianYearsToGoal !== null
                       ? `${monteCarloResult.medianYearsToGoal} Tahun`
                       : `> ${displayYears} Tahun`}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
-                    50% jalur simulasi
+                  <div className="text-[10px] ui-text-muted mt-0.5">
+                    {monteCarloResult.successProbabilityPercent < 50
+                      ? `Median dari jalur sukses (${monteCarloResult.successProbabilityPercent}%)`
+                      : '50% jalur simulasi'}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
-                  <div className="text-[11px] text-slate-400">Hasil P10 (Ujian Bear)</div>
+                <div className="p-3 rounded-lg ui-card border ui-border">
+                  <div className="text-[11px] ui-text-muted">Hasil P10 (Ujian Bear)</div>
                   <div className="mt-0.5 text-base font-bold font-mono text-rose-400">
                     {formatIdr(monteCarloResult.bearFinalWealthIdr, true)}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] ui-text-muted mt-0.5">
                     10% terburuk
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-slate-900/60 border border-border/60">
-                  <div className="text-[11px] text-slate-400">Hasil P90 (Kondisi Bull)</div>
+                <div className="p-3 rounded-lg ui-card border ui-border">
+                  <div className="text-[11px] ui-text-muted">Hasil P90 (Kondisi Bull)</div>
                   <div className="mt-0.5 text-base font-bold font-mono text-emerald-400">
                     {formatIdr(monteCarloResult.bullFinalWealthIdr, true)}
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] ui-text-muted mt-0.5">
                     10% terbaik
                   </div>
                 </div>

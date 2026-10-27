@@ -740,18 +740,12 @@ export function App() {
         const nextName = patch.name !== undefined ? patch.name.trim() : a.name;
         const nextIsNominal =
           patch.isNominalOnly !== undefined ? patch.isNominalOnly : Boolean(a.isNominalOnly);
-        const nextLotSize =
-          patch.lotSize !== undefined
-            ? patch.lotSize
-            : nextIsNominal
-              ? 1
-              : (origDef?.lotSize ?? a.originalLotSize ?? 100);
-        const nextAllowFractional =
-          patch.allowFractional !== undefined
-            ? patch.allowFractional
-            : nextIsNominal
-              ? true
-              : (origDef?.allowFractional ?? false);
+        const nextLotSize = nextIsNominal
+          ? 1
+          : (origDef?.lotSize ?? patch.lotSize ?? a.originalLotSize ?? a.lotSize ?? 100);
+        const nextAllowFractional = nextIsNominal
+          ? true
+          : (origDef?.allowFractional ?? patch.allowFractional ?? a.allowFractional ?? false);
 
         const isRenamed =
           nextShortName !== originalShortName ||
@@ -1003,17 +997,26 @@ export function App() {
 
   // Handler: Change a column benchmark slot in the table (e.g. BBCA -> PTBA)
   const handleChangeSlotAsset = (coreSlotId: string, newAssetId: string) => {
+    const oldAssetId = slotMap[coreSlotId] ?? coreSlotId;
+    if (oldAssetId === newAssetId) return;
+
     const nextMap = { ...slotMap, [coreSlotId]: newAssetId };
     setSlotMap(nextMap);
 
     if (activePresetId === null) {
       // User is in Custom mode, remap the weight of the old asset in this slot directly without overwriting with preset 8
       setActiveWeights((prev) => {
-        const oldAssetId = slotMap[coreSlotId] ?? coreSlotId;
         const oldW = prev[oldAssetId] ?? 0;
         const nextW = { ...prev };
-        delete nextW[oldAssetId];
-        nextW[newAssetId] = oldW;
+        // Check all slots (default core slots + any custom slot keys) to handle implicit mappings
+        const allSlotKeys = Array.from(new Set([...Object.keys(DEFAULT_SLOT_MAP), ...Object.keys(nextMap)]));
+        const isOldAssetStillUsed = allSlotKeys.some(
+          (s) => s !== coreSlotId && (nextMap[s] ?? s) === oldAssetId
+        );
+        if (!isOldAssetStillUsed) {
+          delete nextW[oldAssetId];
+        }
+        nextW[newAssetId] = (nextW[newAssetId] ?? 0) + oldW;
         return nextW;
       });
       return;
@@ -1363,18 +1366,28 @@ export function App() {
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
+        const prevA = prev[a.id];
+        const isNominal =
+          a.isNominalOnly ?? prevA?.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
         const w = activeWeights[a.id] ?? 0;
         const valIdr = Math.round(capitalIdr * (w / 100));
         const unitPriceIdr =
           a.currency === 'USD'
-            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
-            : next[a.id]?.currentPrice ?? a.defaultPrice;
+            ? (prevA?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : prevA?.currentPrice ?? a.defaultPrice;
+        const precision = a.category === 'crypto' ? 8 : 4;
         next[a.id] = {
+          ...prevA,
           assetId: a.id,
           currentValueIdr: valIdr,
-          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
-          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          units: isNominal
+            ? valIdr
+            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(precision)),
+          currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: 0,
+          isNominalOnly: isNominal,
+          notes: prevA?.notes,
+          subSplits: prevA?.subSplits,
         };
       }
       return next;
@@ -1388,12 +1401,19 @@ export function App() {
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
+        const prevA = prev[a.id];
+        const isNominal =
+          a.isNominalOnly ?? prevA?.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
         next[a.id] = {
+          ...prevA,
           assetId: a.id,
           currentValueIdr: 0,
           units: 0,
-          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: 0,
+          isNominalOnly: isNominal,
+          notes: prevA?.notes,
+          subSplits: prevA?.subSplits,
         };
       }
       return next;
@@ -1410,12 +1430,19 @@ export function App() {
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
+        const prevA = prev[a.id];
+        const isNominal =
+          a.isNominalOnly ?? prevA?.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
         next[a.id] = {
+          ...prevA,
           assetId: a.id,
           currentValueIdr: 0,
           units: 0,
-          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: 0,
+          isNominalOnly: isNominal,
+          notes: prevA?.notes,
+          subSplits: prevA?.subSplits,
         };
       }
       return next;
@@ -2023,6 +2050,20 @@ export function App() {
           mergedAllAssets = [...mergedAllAssets, ...add];
         }
 
+        const mergedHoldings =
+          mode === 'merge'
+            ? { ...holdings, ...(d2.holdings ?? {}) }
+            : (d2.holdings ?? holdings);
+
+        let mergedRebalanceHistory = d2.rebalanceHistory ?? rebalanceHistory;
+        if (mode === 'merge' && Array.isArray(d2.rebalanceHistory)) {
+          const existingIds = new Set(rebalanceHistory.map((h: any) => h.id));
+          const newEntries = d2.rebalanceHistory.filter(
+            (h: any) => !existingIds.has(h.id)
+          );
+          mergedRebalanceHistory = [...newEntries, ...rebalanceHistory];
+        }
+
         const snapshotToStore = {
           activeTab,
           activeWeights: d1.activeWeights ?? activeWeights,
@@ -2037,7 +2078,7 @@ export function App() {
           initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
           targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
           monthlySavingsIdr: d3.monthlySavingsIdr ?? monthlySavingsIdr,
-          holdings: d2.holdings ?? holdings,
+          holdings: mergedHoldings,
           isHoldingsSyncedWithMenu1:
             d2.isHoldingsSyncedWithMenu1 ?? isHoldingsSyncedWithMenu1,
           enableIdxLotRounding:
@@ -2057,7 +2098,7 @@ export function App() {
           lockedAssetIds: d1.lockedAssetIds ?? lockedAssetIds,
           usdIdrRate: dg.usdIdrRate ?? usdIdrRate,
           customTableRows: d1.customTableRows ?? customTableRows,
-          rebalanceHistory: d2.rebalanceHistory ?? rebalanceHistory,
+          rebalanceHistory: mergedRebalanceHistory,
           pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
           allAssets: mergedAllAssets,
         };
@@ -2195,18 +2236,28 @@ export function App() {
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
+        const prevA = prev[a.id];
+        const isNominal =
+          a.isNominalOnly ?? prevA?.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
         const w = rec.weights[a.id] ?? 0;
         const valIdr = Math.round(initialCapitalIdr * (w / 100));
         const unitPriceIdr =
           a.currency === 'USD'
-            ? (next[a.id]?.currentPrice ?? a.defaultPrice) * usdIdrRate
-            : next[a.id]?.currentPrice ?? a.defaultPrice;
+            ? (prevA?.currentPrice ?? a.defaultPrice) * usdIdrRate
+            : prevA?.currentPrice ?? a.defaultPrice;
+        const precision = a.category === 'crypto' ? 8 : 4;
         next[a.id] = {
+          ...prevA,
           assetId: a.id,
           currentValueIdr: valIdr,
-          units: Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(4)),
-          currentPrice: next[a.id]?.currentPrice ?? a.defaultPrice,
+          units: isNominal
+            ? valIdr
+            : Number((valIdr / Math.max(1, unitPriceIdr)).toFixed(precision)),
+          currentPrice: isNominal ? 1 : (prevA?.currentPrice ?? a.defaultPrice),
           shockPercent: 0,
+          isNominalOnly: isNominal,
+          notes: prevA?.notes,
+          subSplits: prevA?.subSplits,
         };
       }
       return next;

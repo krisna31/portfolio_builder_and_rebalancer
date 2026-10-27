@@ -230,6 +230,17 @@ export function calculateTacticalWeights(
     for (const id of Object.keys(tacticalWeights)) {
       tacticalWeights[id] = Number((tacticalWeights[id] * normFactor).toFixed(2));
     }
+  } else {
+    for (const id of Object.keys(tacticalWeights)) {
+      tacticalWeights[id] = Number(tacticalWeights[id].toFixed(2));
+    }
+  }
+
+  // Re-synchronize tacticalTargetWeightPercent in tacticalSignals after normalization
+  for (const id of Object.keys(tacticalSignals)) {
+    if (tacticalWeights[id] !== undefined) {
+      tacticalSignals[id].tacticalTargetWeightPercent = tacticalWeights[id];
+    }
   }
 
   return {

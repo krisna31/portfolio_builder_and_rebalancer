@@ -227,6 +227,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     'nominal' | 'units' | 'percent'
   >(inputMode);
   const [quickTotalIdr, setQuickTotalIdr] = useState<number>(initialCapitalMenu1Idr);
+  const [percentReferenceTotalIdr, setPercentReferenceTotalIdr] = useState<number>(() => {
+    return rebalanceResult?.initialTotalIdr > 0
+      ? rebalanceResult.initialTotalIdr
+      : initialCapitalMenu1Idr;
+  });
 
   const anyPriceModified = useMemo(() => {
     return allAssets.some((a) => {
@@ -478,7 +483,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     }
 
     if (sells.length === 0 && buys.length === 0) {
-      lines.push(`✅ *Seluruh bobot aset sudah seimbang (Tidak ada order).*`);
+      if (rebalanceResult.maxAbsoluteDrift > driftThresholdPercent) {
+        lines.push(
+          `⚠️ *Alokasi belum seimbang (Drift ${rebalanceResult.maxAbsoluteDrift.toFixed(1)}% > ${driftThresholdPercent}%), namun transaksi dibatasi oleh mode ${
+            rebalanceMode === 'buy-only-dca'
+              ? 'Buy-Only DCA (perlu top-up kas)'
+              : rebalanceMode === 'trim-defensive-first'
+                ? 'Trim Defensive First (tidak ada surplus defensif)'
+                : rebalanceMode === 'selective-profit-trim'
+                  ? 'Selective Profit Trim (tidak ada aset profit)'
+                  : 'saat ini'
+          }.*`
+        );
+      } else {
+        lines.push(`✅ *Seluruh bobot aset sudah seimbang (Tidak ada order).*`);
+      }
       lines.push('');
     }
 
@@ -531,7 +550,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         cashInjectionIdr === 0 &&
         !isFixedBudgetMode &&
         !isWelcomeBannerDismissed && (
-        <div className="relative overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/90 p-4 sm:p-5 shadow-sm">
+        <div className="relative overflow-hidden rounded-xl border ui-border ui-card p-4 sm:p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -539,17 +558,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-slate-100">
+                  <h3 className="text-sm font-semibold ui-text-main">
                     Mulai Belanja Perdana Portofolio
                   </h3>
                   <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
                     Saldo Rp 0
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                <p className="text-xs ui-text-muted max-w-2xl leading-relaxed">
                   Portofolio Anda saat ini masih kosong. Siapkan daftar belanja perdana dari Modal Awal Menu 1 (
-                  <strong className="text-emerald-400">{formatIdr(initialCapitalMenu1Idr, true)}</strong>)
-                  sesuai racikan <strong className="text-slate-200">{activePortfolioName}</strong>, atau baca panduan SOP eksekusi.
+                  <strong className="text-emerald-500 dark:text-emerald-400">{formatIdr(initialCapitalMenu1Idr, true)}</strong>)
+                  sesuai racikan <strong className="ui-text-main font-semibold">{activePortfolioName}</strong>, atau baca panduan SOP eksekusi.
                 </p>
               </div>
             </div>
@@ -567,16 +586,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <button
                 type="button"
                 onClick={() => setIsGuideModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs px-2.5 py-2 transition"
+                className="flex items-center justify-center gap-1.5 rounded-lg border ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800 ui-text-secondary font-medium text-xs px-2.5 py-2 transition"
               >
-                <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
+                <HelpCircle className="h-3.5 w-3.5 ui-text-muted" />
                 <span>Panduan</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsWelcomeBannerDismissed(true)}
-                className="rounded-lg p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+                className="rounded-lg p-1.5 ui-text-muted hover:ui-text-main hover:ui-subtle transition"
                 title="Tutup banner ini"
                 aria-label="Tutup banner sambutan"
               >
@@ -632,6 +651,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 type="button"
                 onClick={() => {
                   setQuickTotalIdr(initialCapitalMenu1Idr);
+                  setPercentReferenceTotalIdr(initialCapitalMenu1Idr);
                   onPopulateCapital(initialCapitalMenu1Idr);
                 }}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
@@ -1543,6 +1563,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   onClick={() => {
                     setHoldingEntryMode('percent');
                     setInputMode('nominal');
+                    setPercentReferenceTotalIdr(
+                      rebalanceResult.initialTotalIdr > 0
+                        ? rebalanceResult.initialTotalIdr
+                        : initialCapitalMenu1Idr
+                    );
                   }}
                   className={`rounded-md px-2 py-1 font-medium transition ${
                     holdingEntryMode === 'percent'
@@ -1888,9 +1913,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                       Math.min(100, Number(e.target.value))
                                     );
                                     const baseTotal =
-                                      rebalanceResult.initialTotalIdr > 0
-                                        ? rebalanceResult.initialTotalIdr
-                                        : initialCapitalMenu1Idr;
+                                      percentReferenceTotalIdr > 0
+                                        ? percentReferenceTotalIdr
+                                        : (rebalanceResult.initialTotalIdr > 0
+                                          ? rebalanceResult.initialTotalIdr
+                                          : initialCapitalMenu1Idr);
+                                    if (percentReferenceTotalIdr === 0 && baseTotal > 0) {
+                                      setPercentReferenceTotalIdr(baseTotal);
+                                    }
                                     onUpdateHolding(item.assetId, {
                                       currentValueIdr: Math.round(
                                         baseTotal * (pct / 100)
@@ -2309,9 +2339,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   Math.min(100, Number(e.target.value))
                                 );
                                 const baseTotal =
-                                  rebalanceResult.initialTotalIdr > 0
-                                    ? rebalanceResult.initialTotalIdr
-                                    : initialCapitalMenu1Idr;
+                                  percentReferenceTotalIdr > 0
+                                    ? percentReferenceTotalIdr
+                                    : (rebalanceResult.initialTotalIdr > 0
+                                      ? rebalanceResult.initialTotalIdr
+                                      : initialCapitalMenu1Idr);
+                                if (percentReferenceTotalIdr === 0 && baseTotal > 0) {
+                                  setPercentReferenceTotalIdr(baseTotal);
+                                }
                                 onUpdateHolding(item.assetId, {
                                   currentValueIdr: Math.round(
                                     baseTotal * (pct / 100)

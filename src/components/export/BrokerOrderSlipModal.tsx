@@ -271,7 +271,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           );
         } else if (g.id === 'idx_stocks') {
           const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
-          const unitPrice = holdings?.[item.assetId]?.currentPrice ?? def?.defaultPrice ?? 0;
+          const unitPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
+            ? holdings[item.assetId].currentPrice
+            : def?.defaultPrice ?? 0;
           lines.push(
             `${isDone} ${actionStr} ${item.symbol} - ${lots} Lot (${(lots * 100).toLocaleString('id-ID')} lembar) @ Rp ${unitPrice.toLocaleString('id-ID')} = ${formatIdr(Math.abs(item.tradeAmountIdr))}`
           );
@@ -281,7 +283,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           );
         } else if (g.id === 'crypto') {
           lines.push(
-            `${isDone} ${actionStr} ${item.symbol} - ${formatIdr(Math.abs(item.tradeAmountIdr))} ~ ${Math.abs(item.tradeUnits).toFixed(6)} ${item.symbol}`
+            `${isDone} ${actionStr} ${item.symbol} - ${formatIdr(Math.abs(item.tradeAmountIdr))} ~ ${Math.abs(item.tradeUnits).toFixed(8)} ${item.symbol}`
           );
         } else {
           lines.push(
@@ -474,7 +476,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     const isIdx = group.id === 'idx_stocks';
                     const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
                     const shares = lots * 100;
-                    const spotPrice = item.initialValueIdr > 0 && holdings?.[item.assetId]
+                    const spotPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
                       ? holdings[item.assetId].currentPrice
                       : def?.defaultPrice ?? 0;
 
@@ -584,7 +586,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                                 {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
                               <div className="text-xs text-amber-400 font-medium">
-                                ~{Math.abs(item.tradeUnits).toFixed(6)} {item.symbol}
+                                ~{Math.abs(item.tradeUnits).toFixed(8)} {item.symbol}
                               </div>
                             </div>
                           ) : (

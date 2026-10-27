@@ -782,6 +782,16 @@ export function buildDynamicPresetsForSlotMap(
       .map((slot) => assetMap.get(slotMap[slot] ?? slot))
       .filter((a): a is AssetDefinition => Boolean(a));
 
+    // Deduplicate mapped assets by ID to ensure unique asset set for solver
+    const seenAssetIds = new Set<string>();
+    const uniqueMappedAssets: AssetDefinition[] = [];
+    for (const a of mappedAssets) {
+      if (!seenAssetIds.has(a.id)) {
+        seenAssetIds.add(a.id);
+        uniqueMappedAssets.push(a);
+      }
+    }
+
     const mappedConvictionId = preset.convictionAssetId
       ? slotMap[preset.convictionAssetId] ?? preset.convictionAssetId
       : undefined;
@@ -790,16 +800,16 @@ export function buildDynamicPresetsForSlotMap(
     if (preset.method === 'custom') {
       for (const [k, v] of Object.entries(preset.weights)) {
         const mappedKey = slotMap[k] ?? k;
-        customWeightsMapped[mappedKey] = v;
+        customWeightsMapped[mappedKey] = (customWeightsMapped[mappedKey] ?? 0) + v;
       }
     }
 
-    // Solve new weights for the mapped assets
+    // Solve new weights for the unique mapped assets
     const solvedByAssetId =
       preset.method === 'custom'
         ? customWeightsMapped
         : solveRiskBudgetingWeights(
-            mappedAssets,
+            uniqueMappedAssets,
             preset.method,
             mappedConvictionId,
             preset.convictionRiskPercent ?? 70,
