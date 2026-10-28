@@ -542,7 +542,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="ui-border space-y-1.5 border-t pt-2">
                       {/* WebAuthn Biometric / Fingerprint Settings */}
                       {isBiometricSupported && (
-                        <div className="ui-subtle rounded-lg p-2 space-y-1.5 border border-slate-700/40">
+                        <div className="ui-subtle rounded-lg p-2 space-y-1.5 border border-slate-200 dark:border-slate-800">
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
                               <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
@@ -967,7 +967,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* WebAuthn Biometric Settings Mobile */}
                 {isBiometricSupported && (
-                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5 border border-slate-700/40">
+                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5 border border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5">
                         <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
@@ -1036,11 +1036,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
-        <div className="ui-border bg-slate-900/40 backdrop-blur-xs border-t px-3 py-1 sm:px-6">
+        <div className="ui-card border-t ui-border backdrop-blur-md px-3 py-1 sm:px-6 bg-white/95 dark:bg-zinc-950/90">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-              <span className="ui-text-main truncate font-semibold">
+              <span className="ui-text-main truncate max-w-[85px] sm:max-w-none font-semibold">
                 {activePortfolioName}
               </span>
               <span className="ui-text-muted hidden sm:inline">•</span>
@@ -1058,7 +1058,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
+                className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
                   (rebalanceBreachedCount ?? 0) > 0
                     ? 'border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
                     : 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -1067,9 +1067,11 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {(rebalanceBreachedCount ?? 0) > 0 ? (
                   <>
-                    <span>⚠️</span>
-                    <span>
-                      {rebalanceBreachedCount} Aset Melenceng
+                    <span className="sm:hidden">
+                      ⚠️ {rebalanceBreachedCount} Melenceng
+                    </span>
+                    <span className="hidden sm:inline">
+                      ⚠️ {rebalanceBreachedCount} Aset Melenceng
                       {rebalanceMaxDriftPercent !== undefined &&
                         ` (Max: ±${rebalanceMaxDriftPercent.toFixed(1)}%)`}
                     </span>
@@ -1077,7 +1079,8 @@ export const Header: React.FC<HeaderProps> = ({
                 ) : (
                   <>
                     <span>✅</span>
-                    <span>Portofolio Seimbang</span>
+                    <span className="sm:hidden">Seimbang</span>
+                    <span className="hidden sm:inline">Portofolio Seimbang</span>
                   </>
                 )}
               </button>

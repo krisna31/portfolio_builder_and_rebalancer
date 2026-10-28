@@ -12,6 +12,7 @@ import {
   setBiometricPromptDismissed,
   registerBiometricCredential,
   authenticateWithBiometric,
+  getRelyingPartyEntity,
   WEBAUTHN_STORAGE_KEY,
   WEBAUTHN_PROMPT_DISMISSED_KEY,
   StoredBiometricCredential,
@@ -84,6 +85,7 @@ describe('webauthnUtils', () => {
 
     mockWindow.isSecureContext = true;
     mockWindow.PublicKeyCredential = {};
+    delete mockWindow.location;
     mockNavigator.credentials = {
       create: vi.fn(),
       get: vi.fn(),
@@ -257,6 +259,51 @@ describe('webauthnUtils', () => {
     });
   });
 
+  describe('Relying Party (RP) Resolution (getRelyingPartyEntity)', () => {
+    it('returns default fallback name without rp.id when window.location is absent or empty', () => {
+      delete mockWindow.location;
+      const rp = getRelyingPartyEntity();
+      expect(rp).toEqual({ name: 'QuantPorto' });
+      expect(rp.id).toBeUndefined();
+    });
+
+    it('sets rp.id when running on standard production domain (e.g., porto.k31.my.id)', () => {
+      mockWindow.location = { hostname: 'porto.k31.my.id' };
+      const rp = getRelyingPartyEntity();
+      expect(rp).toEqual({
+        name: 'QuantPorto',
+        id: 'porto.k31.my.id',
+      });
+    });
+
+    it('normalizes uppercase or whitespace in hostname to lowercase rp.id', () => {
+      mockWindow.location = { hostname: '  PORTO.K31.MY.ID  ' };
+      const rp = getRelyingPartyEntity();
+      expect(rp).toEqual({
+        name: 'QuantPorto',
+        id: 'porto.k31.my.id',
+      });
+    });
+
+    it('omits rp.id when running on localhost to allow default origin scoping', () => {
+      mockWindow.location = { hostname: 'localhost' };
+      const rp = getRelyingPartyEntity();
+      expect(rp).toEqual({ name: 'QuantPorto' });
+      expect(rp.id).toBeUndefined();
+    });
+
+    it('omits rp.id on IPv4 or IPv6 addresses per WebAuthn specification', () => {
+      mockWindow.location = { hostname: '192.168.1.100' };
+      expect(getRelyingPartyEntity().id).toBeUndefined();
+
+      mockWindow.location = { hostname: '127.0.0.1' };
+      expect(getRelyingPartyEntity().id).toBeUndefined();
+
+      mockWindow.location = { hostname: '::1' };
+      expect(getRelyingPartyEntity().id).toBeUndefined();
+    });
+  });
+
   describe('Biometric Registration (registerBiometricCredential)', () => {
     it('fails gracefully when WebAuthn is not supported', async () => {
       delete mockWindow.PublicKeyCredential;
@@ -349,6 +396,152 @@ describe('webauthnUtils', () => {
       const result = await registerBiometricCredential();
       expect(result.success).toBe(false);
       expect(result.error).toContain('sudah terdaftar');
+    });
+
+    it('configures creationOptions with userVerification preferred, universal pubKeyCredParams and dynamic rp', async () => {
+      mockWindow.location = { hostname: 'porto.k31.my.id' };
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      const mockCreate = vi.fn().mockResolvedValue({
+        id: 'cred-123',
+        rawId: new Uint8Array([1, 2]).buffer,
+      });
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(true);
+
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      const passedOptions = mockCreate.mock.calls[0][0];
+      expect(passedOptions.publicKey.rp).toEqual({
+        name: 'QuantPorto',
+        id: 'porto.k31.my.id',
+      });
+      expect(passedOptions.publicKey.authenticatorSelection.userVerification).toBe('preferred');
+      expect(passedOptions.publicKey.pubKeyCredParams).toEqual([
+        { type: 'public-key', alg: -7 },
+        { type: 'public-key', alg: -257 },
+      ]);
+    });
+
+    it('automatically attempts fallback without authenticatorAttachment when platform attachment fails with NotReadableError on Android', async () => {
+      const notReadableErr = new Error('An unknown error occurred while talking to the credential manager.');
+      notReadableErr.name = 'NotReadableError';
+
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(notReadableErr)
+        .mockResolvedValueOnce({
+          id: 'fallback-passkey-id',
+          rawId: new Uint8Array([5, 6, 7]).buffer,
+        });
+
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(true);
+      expect(res.credential?.id).toBe('fallback-passkey-id');
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+
+      // First attempt: with authenticatorAttachment: 'platform'
+      expect(
+        mockCreate.mock.calls[0][0].publicKey.authenticatorSelection.authenticatorAttachment
+      ).toBe('platform');
+      // Second attempt (fallback): authenticatorAttachment omitted
+      expect(
+        mockCreate.mock.calls[1][0].publicKey.authenticatorSelection.authenticatorAttachment
+      ).toBeUndefined();
+      expect(
+        mockCreate.mock.calls[1][0].publicKey.authenticatorSelection.userVerification
+      ).toBe('preferred');
+    });
+
+    it('maps Android Credential Manager errors to friendly Indonesian guidance when both attempts fail', async () => {
+      const androidErr = new Error('An unknown error occurred while talking to the credential manager.');
+      androidErr.name = 'NotReadableError';
+
+      const mockCreate = vi.fn().mockRejectedValue(androidErr);
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe(
+        'Layanan Kredensial Android memerlukan Kunci Layar (PIN/Pola/Sidik Jari) aktif di Pengaturan HP Anda dan browser Chrome resmi.'
+      );
+    });
+
+    it('triggers fallback when initial attempt error message contains credential manager even with different error name', async () => {
+      const credMgrErr = new Error('Failed talking to credential manager backend.');
+      credMgrErr.name = 'UnknownError';
+
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(credMgrErr)
+        .mockResolvedValueOnce({
+          id: 'recovered-passkey-id',
+          rawId: new Uint8Array([8, 9]).buffer,
+        });
+
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(true);
+      expect(res.credential?.id).toBe('recovered-passkey-id');
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+
+    it('maps to Indonesian guidance if fallback attempt fails with generic error following credential manager rejection', async () => {
+      const initialErr = new Error('talk to credential manager failed');
+      initialErr.name = 'NotReadableError';
+      const fallbackGenericErr = new Error('Internal hardware bridge failure');
+      fallbackGenericErr.name = 'UnknownError';
+
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(initialErr)
+        .mockRejectedValueOnce(fallbackGenericErr);
+
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe(
+        'Layanan Kredensial Android memerlukan Kunci Layar (PIN/Pola/Sidik Jari) aktif di Pengaturan HP Anda dan browser Chrome resmi.'
+      );
+    });
+
+    it('correctly reports user cancellation when user cancels during the fallback attempt', async () => {
+      const initialErr = new Error('talk to credential manager failed');
+      initialErr.name = 'NotReadableError';
+      const cancelErr = new Error('The user canceled the operation.');
+      cancelErr.name = 'NotAllowedError';
+
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(initialErr)
+        .mockRejectedValueOnce(cancelErr);
+
+      mockWindow.PublicKeyCredential = {
+        isUserVerifyingPlatformAuthenticatorAvailable: vi.fn().mockResolvedValue(true),
+      };
+      mockNavigator.credentials = { create: mockCreate, get: vi.fn() };
+
+      const res = await registerBiometricCredential();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('Pendaftaran sidik jari dibatalkan oleh pengguna atau waktu habis.');
     });
   });
 
@@ -488,6 +681,53 @@ describe('webauthnUtils', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('Domain atau konteks keamanan tidak valid');
       expect(isSessionAuthenticated()).toBe(false);
+    });
+
+    it('passes userVerification preferred and rpId when authenticating', async () => {
+      mockWindow.location = { hostname: 'porto.k31.my.id' };
+      const validRawId = bufferToBase64Url(new Uint8Array([1, 2, 3, 4]));
+      saveBiometricCredential({
+        id: 'registered-id-123',
+        rawId: validRawId,
+        createdAt: new Date().toISOString(),
+      });
+
+      const mockGet = vi.fn().mockResolvedValue({
+        id: 'registered-id-123',
+      });
+      mockWindow.PublicKeyCredential = {};
+      mockNavigator.credentials = { create: vi.fn(), get: mockGet };
+
+      const result = await authenticateWithBiometric();
+      expect(result.success).toBe(true);
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      const passedGetOptions = mockGet.mock.calls[0][0];
+      expect(passedGetOptions.publicKey.userVerification).toBe('preferred');
+      expect(passedGetOptions.publicKey.rpId).toBe('porto.k31.my.id');
+    });
+
+    it('maps Android Credential Manager errors to friendly Indonesian guidance during authentication', async () => {
+      const validRawId = bufferToBase64Url(new Uint8Array([1, 2, 3, 4]));
+      saveBiometricCredential({
+        id: 'registered-id-123',
+        rawId: validRawId,
+        createdAt: new Date().toISOString(),
+      });
+
+      const androidErr = new Error('An unknown error occurred while talking to the credential manager.');
+      androidErr.name = 'NotReadableError';
+
+      mockWindow.PublicKeyCredential = {};
+      mockNavigator.credentials = {
+        create: vi.fn(),
+        get: vi.fn().mockRejectedValue(androidErr),
+      };
+
+      const result = await authenticateWithBiometric();
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        'Layanan Kredensial Android memerlukan Kunci Layar (PIN/Pola/Sidik Jari) aktif di Pengaturan HP Anda dan browser Chrome resmi.'
+      );
     });
 
     it('executes full client-side lifecycle: register -> verify -> revoke', async () => {

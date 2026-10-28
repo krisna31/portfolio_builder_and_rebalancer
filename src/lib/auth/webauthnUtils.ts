@@ -293,6 +293,31 @@ export function setBiometricPromptDismissed(dismissed = true): void {
 }
 
 /**
+ * Resolves the Relying Party (RP) configuration dynamically.
+ * According to the WebAuthn specification, rp.id cannot be an IP address (IPv4 or IPv6).
+ * If hostname is a valid domain (e.g., 'porto.k31.my.id'), id is dynamically set to window.location.hostname.
+ * Fallback name is 'QuantPorto'.
+ */
+export function getRelyingPartyEntity(): PublicKeyCredentialRpEntity {
+  const win = getWindow();
+  const rawHostname = win?.location?.hostname;
+  const hostname = rawHostname ? rawHostname.trim().toLowerCase() : '';
+  const isIpAddress = Boolean(
+    hostname && (/^[0-9.]+$/.test(hostname) || hostname.includes(':'))
+  );
+
+  const rp: PublicKeyCredentialRpEntity = {
+    name: 'QuantPorto',
+  };
+
+  if (hostname && !isIpAddress && hostname !== 'localhost') {
+    rp.id = hostname;
+  }
+
+  return rp;
+}
+
+/**
  * Registers a new biometric credential using native platform authenticator (Windows Hello, Touch ID).
  */
 export async function registerBiometricCredential(
@@ -321,6 +346,8 @@ export async function registerBiometricCredential(
     };
   }
 
+  let attemptedFallback = false;
+
   try {
     const challenge = new Uint8Array(32);
     cryptoObj.getRandomValues(challenge);
@@ -328,15 +355,15 @@ export async function registerBiometricCredential(
     const userId = new Uint8Array(16);
     cryptoObj.getRandomValues(userId);
 
+    const rpEntity = getRelyingPartyEntity();
+
     const creationOptions: CredentialCreationOptions = {
       publicKey: {
         challenge: challenge.buffer.slice(
           challenge.byteOffset,
           challenge.byteOffset + challenge.byteLength
         ) as ArrayBuffer,
-        rp: {
-          name: 'QuantPorto',
-        },
+        rp: rpEntity,
         user: {
           id: userId.buffer.slice(
             userId.byteOffset,
@@ -348,12 +375,10 @@ export async function registerBiometricCredential(
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 }, // ES256 (standard)
           { type: 'public-key', alg: -257 }, // RS256 (fallback)
-          { type: 'public-key', alg: -8 }, // Ed25519
-          { type: 'public-key', alg: -37 }, // PS256
         ],
         authenticatorSelection: {
           authenticatorAttachment: 'platform',
-          userVerification: 'required',
+          userVerification: 'preferred',
           residentKey: 'preferred',
         },
         timeout: 60000,
@@ -361,9 +386,38 @@ export async function registerBiometricCredential(
       },
     };
 
-    const credential = (await nav.credentials.create(
-      creationOptions
-    )) as PublicKeyCredential | null;
+    let credential: PublicKeyCredential | null = null;
+    try {
+      credential = (await nav.credentials.create(
+        creationOptions
+      )) as PublicKeyCredential | null;
+    } catch (initialErr: any) {
+      // If initial registration with platform attachment fails on Android Credential Manager,
+      // fallback without authenticatorAttachment constraint (allows Google Password Manager / hybrid sync).
+      const isAndroidCredMgrError =
+        initialErr?.name === 'NotReadableError' ||
+        (typeof initialErr?.message === 'string' &&
+          (initialErr.message.toLowerCase().includes('credential manager') ||
+            initialErr.message.toLowerCase().includes('unknown error')));
+
+      if (isAndroidCredMgrError) {
+        attemptedFallback = true;
+        const fallbackOptions: CredentialCreationOptions = {
+          publicKey: {
+            ...creationOptions.publicKey!,
+            authenticatorSelection: {
+              userVerification: 'preferred',
+              residentKey: 'preferred',
+            },
+          },
+        };
+        credential = (await nav.credentials.create(
+          fallbackOptions
+        )) as PublicKeyCredential | null;
+      } else {
+        throw initialErr;
+      }
+    }
 
     if (!credential) {
       return {
@@ -392,8 +446,19 @@ export async function registerBiometricCredential(
       credential: stored,
     };
   } catch (err: any) {
+    const isCredManagerError =
+      err?.name === 'NotReadableError' ||
+      (typeof err?.message === 'string' &&
+        err.message.toLowerCase().includes('credential manager')) ||
+      (attemptedFallback &&
+        err?.name !== 'NotAllowedError' &&
+        err?.name !== 'AbortError');
+
     let friendlyError = 'Gagal mendaftarkan sidik jari di perangkat ini.';
-    if (err?.name === 'NotAllowedError') {
+    if (isCredManagerError) {
+      friendlyError =
+        'Layanan Kredensial Android memerlukan Kunci Layar (PIN/Pola/Sidik Jari) aktif di Pengaturan HP Anda dan browser Chrome resmi.';
+    } else if (err?.name === 'NotAllowedError') {
       friendlyError = 'Pendaftaran sidik jari dibatalkan oleh pengguna atau waktu habis.';
     } else if (err?.name === 'AbortError') {
       friendlyError = 'Pendaftaran sidik jari dibatalkan.';
@@ -460,14 +525,17 @@ export async function authenticateWithBiometric(): Promise<{
       id: base64UrlToBuffer(stored.rawId || stored.id),
     };
 
+    const rpEntity = getRelyingPartyEntity();
+
     const getOptions: CredentialRequestOptions = {
       publicKey: {
         challenge: challenge.buffer.slice(
           challenge.byteOffset,
           challenge.byteOffset + challenge.byteLength
         ) as ArrayBuffer,
+        ...(rpEntity.id ? { rpId: rpEntity.id } : {}),
         allowCredentials: [credentialDescriptor],
-        userVerification: 'required',
+        userVerification: 'preferred',
         timeout: 60000,
       },
     };
@@ -490,8 +558,16 @@ export async function authenticateWithBiometric(): Promise<{
       success: true,
     };
   } catch (err: any) {
+    const isCredManagerError =
+      err?.name === 'NotReadableError' ||
+      (typeof err?.message === 'string' &&
+        err.message.toLowerCase().includes('credential manager'));
+
     let friendlyError = 'Verifikasi sidik jari gagal.';
-    if (err?.name === 'NotAllowedError') {
+    if (isCredManagerError) {
+      friendlyError =
+        'Layanan Kredensial Android memerlukan Kunci Layar (PIN/Pola/Sidik Jari) aktif di Pengaturan HP Anda dan browser Chrome resmi.';
+    } else if (err?.name === 'NotAllowedError') {
       friendlyError = 'Autentikasi sidik jari dibatalkan atau tidak terdeteksi.';
     } else if (err?.name === 'AbortError') {
       friendlyError = 'Autentikasi sidik jari dibatalkan.';
