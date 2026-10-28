@@ -23,7 +23,10 @@ import {
   normalizeWeightsTo100,
   solveRiskBudgetingWeights,
 } from './lib/quant/riskParitySolver';
-import { calculateRebalancePlan } from './lib/quant/rebalancerEngine';
+import {
+  calculateRebalancePlan,
+  computeUpdatedAverageCostBasis,
+} from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
 import { startInteractiveTour, stopInteractiveTour } from './services/tourGuide';
 import { Header, SavedPortfolioSnapshot } from './components/Header';
@@ -262,6 +265,9 @@ export function App() {
     return defaultPreset.weights;
   });
 
+  const activeWeightsRef = useRef(activeWeights);
+  activeWeightsRef.current = activeWeights;
+
   // User-Locked Asset IDs in manual weight customizer
   const [lockedAssetIds, setLockedAssetIds] = useState<string[]>(() => {
     if (Array.isArray(initialSaved?.lockedAssetIds)) {
@@ -269,6 +275,10 @@ export function App() {
     }
     return [];
   });
+
+  // Version counter to trigger remount/rehydration of WealthRoadmapView when settings are imported
+  const [roadmapSettingsVersion, setRoadmapSettingsVersion] = useState<number>(0);
+
 
   const handleToggleLockAsset = (assetId: string) => {
     setLockedAssetIds((prev) =>
@@ -577,6 +587,18 @@ export function App() {
             setMonthlySavingsIdr(hashParsed.dca);
           if (hashParsed?.goal !== undefined)
             setTargetGoalIdr(hashParsed.goal);
+          if (hashParsed?.roadmap) {
+            try {
+              localStorage.setItem(
+                'quantporto_roadmap_settings_v1',
+                JSON.stringify(hashParsed.roadmap)
+              );
+              setRoadmapSettingsVersion((v) => v + 1);
+            } catch {
+              // Ignore
+            }
+          }
+
           if (
             Array.isArray(hashParsed?.customAssets) &&
             hashParsed.customAssets.length > 0
@@ -911,7 +933,9 @@ export function App() {
         allocationMethod,
         convictionAssetId,
         convictionRiskPercent,
-        solverMode
+        solverMode,
+        lockedAssetIds,
+        activeWeightsRef.current
       );
       setActiveWeights(solvedW);
       setActivePresetId(null);
@@ -922,6 +946,7 @@ export function App() {
     convictionAssetId,
     convictionRiskPercent,
     solverMode,
+    lockedAssetIds,
     allAssets,
   ]);
 
@@ -1676,17 +1701,39 @@ export function App() {
   // Handler: 1-Click Commit Rebalance to Holdings & Record History Snapshot
   const handleCommitRebalanceToHoldings = (
     customNote?: string,
-    planOverride?: RebalanceSummaryResult
+    planOverride?: RebalanceSummaryResult,
+    isTopUpConfirmed?: boolean
   ) => {
-    // Decision 1 & Bug 4: Preserve leftover unallocated cash remainder
+    // Decision 1 & Bug 4: Preserve leftover unallocated cash remainder, handle overbudget deficit
     // Use planOverride if user adjusted lots manually via Feature 4 steppers
     const plan = planOverride ?? rebalanceResult;
-    const leftoverCash = Math.max(0, plan.unallocatedCashRemainderIdr ?? 0);
+    const rawDeficit = plan.unallocatedCashRemainderIdr ?? 0;
+    const hasDeficit = rawDeficit < -100;
+    const topUpAmount = hasDeficit ? Math.abs(rawDeficit) : 0;
+    const effectiveCashInjected = (plan.cashInjectionIdr ?? 0) + (isTopUpConfirmed ? topUpAmount : 0);
+    const leftoverCash = hasDeficit ? 0 : Math.max(0, rawDeficit);
+
     const actualCommittedHoldingsValueIdr = plan.items.reduce(
       (sum, item) => sum + Math.max(0, Math.round((item.postShockValueIdr ?? 0) + item.tradeAmountIdr)),
       0
     );
     const trueTotalValueAfterIdr = actualCommittedHoldingsValueIdr + leftoverCash;
+
+    const baseNote =
+      customNote ||
+      `Rebalance ${
+        rebalanceMode === 'sell-and-buy'
+          ? 'Sell + Buy (Jual Rata)'
+          : rebalanceMode === 'selective-profit-trim'
+            ? 'Jual Untung Saja (Selective Trim)'
+            : rebalanceMode === 'trim-defensive-first'
+              ? 'Prioritas RDPT Dulu'
+              : 'Buy-Only DCA'
+      }`;
+    const deficitSuffix =
+      hasDeficit && isTopUpConfirmed
+        ? ` (+Top-Up Defisit ${formatIdr(topUpAmount, true)})`
+        : '';
 
     const newEntry: RebalanceHistoryEntry = {
       id: `reb-${Date.now()}`,
@@ -1695,27 +1742,18 @@ export function App() {
         month: 'short',
         year: 'numeric',
       }),
-      note:
-        customNote ||
-        `Rebalance ${
-          rebalanceMode === 'sell-and-buy'
-            ? 'Sell + Buy (Jual Rata)'
-            : rebalanceMode === 'selective-profit-trim'
-              ? 'Jual Untung Saja (Selective Trim)'
-              : rebalanceMode === 'trim-defensive-first'
-                ? 'Prioritas RDPT Dulu'
-                : 'Buy-Only DCA'
-        }`,
-      totalValueBeforeIdr: plan.postShockTotalIdr,
-      cashInjectedIdr: plan.cashInjectionIdr,
-      totalValueAfterIdr: trueTotalValueAfterIdr,
-      totalBuyIdr: plan.totalBuyIdr,
-      totalSellIdr: plan.totalSellIdr,
-      tradesSummary: plan.items
-        .filter((i) => i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000)
-        .map((i) => `${i.action} ${i.symbol} ${formatIdr(Math.abs(i.tradeAmountIdr), true)}`),
-      weightsAfter: { ...activeWeights },
-    };
+
+        note: `${baseNote}${deficitSuffix}`,
+        totalValueBeforeIdr: plan.postShockTotalIdr,
+        cashInjectedIdr: effectiveCashInjected,
+        totalValueAfterIdr: trueTotalValueAfterIdr,
+        totalBuyIdr: plan.totalBuyIdr,
+        totalSellIdr: plan.totalSellIdr,
+        tradesSummary: plan.items
+          .filter((i) => i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000)
+          .map((i) => `${i.action} ${i.symbol} ${formatIdr(Math.abs(i.tradeAmountIdr), true)}`),
+        weightsAfter: { ...activeWeights },
+      };
 
     setRebalanceHistory((prev) => [newEntry, ...prev]);
 
@@ -1742,17 +1780,38 @@ export function App() {
 
         const postShockVal = item.postShockValueIdr ?? (item as any).postShockValIdr ?? 0;
         const executedValIdr = Math.max(0, Math.round(postShockVal + item.tradeAmountIdr));
+        const newUnits = isNominal
+          ? executedValIdr
+          : Number((executedValIdr / Math.max(1e-6, unitPriceIdr)).toFixed(asset.category === 'crypto' ? 8 : 4));
+
+        const boughtUnits =
+          item.action === 'BUY' && item.tradeAmountIdr > 0
+            ? (item.tradeUnits > 0 ? item.tradeUnits : (item.tradeAmountIdr / Math.max(1e-6, unitPriceIdr)))
+            : 0;
+        const buyPrice = postShockUnitPriceNative > 0 ? postShockUnitPriceNative : (asset.defaultPrice || 1);
+
+        // Bug 1: Weighted average cost basis calculation (avgBuyPrice)
+        const newAvgBuyPrice = computeUpdatedAverageCostBasis({
+          prevUnits: prevHold?.units ?? 0,
+          prevAvgBuyPrice: prevHold?.avgBuyPrice,
+          prevCurrentPrice: prevHold?.currentPrice ?? asset.defaultPrice ?? 1,
+          boughtUnits,
+          buyPrice,
+          newTotalUnits: newUnits,
+          isNominal,
+          category: asset.category,
+        });
+
 
         next[item.assetId] = {
           ...prevHold,
           assetId: item.assetId,
           currentValueIdr: executedValIdr,
-          units: isNominal
-            ? executedValIdr
-            : Number((executedValIdr / Math.max(1e-6, unitPriceIdr)).toFixed(asset.category === 'crypto' ? 8 : 4)),
+          units: newUnits,
           currentPrice: isNominal
             ? 1
             : Number(postShockUnitPriceNative.toFixed(asset.category === 'crypto' ? 8 : 4)),
+          avgBuyPrice: newAvgBuyPrice,
           shockPercent: 0,
           isNominalOnly: isNominal,
           subSplits: prevHold?.subSplits,
@@ -1764,6 +1823,7 @@ export function App() {
     // Decision 1: Keep unallocated cash remainder in cashInjectionIdr so it stays available
     setCashInjectionIdr(leftoverCash);
     setIsHoldingsSyncedWithMenu1(false);
+    setOrderSlipPlanOverride(null);
   };
 
   const handleDeleteRebalanceHistoryEntry = (id: string) => {
@@ -1807,6 +1867,14 @@ export function App() {
         (a.isRenamed || a.isNominalOnly || a.originalShortName !== undefined)
     );
 
+    let roadmapSettings: any = null;
+    try {
+      const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
+      if (raw) roadmapSettings = JSON.parse(raw);
+    } catch {
+      // Ignore
+    }
+
     return {
       version: 2,
       app: 'QuantPorto',
@@ -1848,6 +1916,14 @@ export function App() {
           initialCapitalIdr,
           targetGoalIdr,
           monthlySavingsIdr,
+          annualInflationPercent: roadmapSettings?.annualInflationPercent,
+          annualStepUpPct: roadmapSettings?.annualStepUpPct,
+          monthlyLivingCostTargetIdr: roadmapSettings?.monthlyLivingCostTargetIdr,
+          simulationViewMode: roadmapSettings?.simulationViewMode,
+          taxMode: roadmapSettings?.taxMode,
+          dividendUsageMode: roadmapSettings?.dividendUsageMode,
+          customYieldOverrides: roadmapSettings?.customYieldOverrides,
+          reverseDcaTargetYears: roadmapSettings?.reverseDcaTargetYears,
         },
         global: {
           usdIdrRate,
@@ -2089,6 +2165,28 @@ export function App() {
         );
       }
 
+      // Restore Menu 3 Roadmap simulation parameters into local storage
+      try {
+        const existingRaw = localStorage.getItem('quantporto_roadmap_settings_v1');
+        const existing = existingRaw ? JSON.parse(existingRaw) : {};
+        const updatedRoadmapSettings = {
+          ...existing,
+          ...(d3.annualInflationPercent !== undefined ? { annualInflationPercent: d3.annualInflationPercent } : {}),
+          ...(d3.annualStepUpPct !== undefined ? { annualStepUpPct: d3.annualStepUpPct } : {}),
+          ...(d3.monthlyLivingCostTargetIdr !== undefined ? { monthlyLivingCostTargetIdr: d3.monthlyLivingCostTargetIdr } : {}),
+          ...(d3.simulationViewMode !== undefined ? { simulationViewMode: d3.simulationViewMode } : {}),
+          ...(d3.taxMode !== undefined ? { taxMode: d3.taxMode } : {}),
+          ...(d3.dividendUsageMode !== undefined ? { dividendUsageMode: d3.dividendUsageMode } : {}),
+          ...(d3.customYieldOverrides !== undefined ? { customYieldOverrides: d3.customYieldOverrides } : {}),
+          ...(d3.reverseDcaTargetYears !== undefined ? { reverseDcaTargetYears: d3.reverseDcaTargetYears } : {}),
+        };
+        localStorage.setItem('quantporto_roadmap_settings_v1', JSON.stringify(updatedRoadmapSettings));
+        setRoadmapSettingsVersion((v) => v + 1);
+      } catch {
+        // Ignore storage errors
+      }
+
+
       // 4. Global
       if (typeof dg.usdIdrRate === 'number' && dg.usdIdrRate > 1000) {
         setUsdIdrRate(dg.usdIdrRate);
@@ -2264,6 +2362,14 @@ export function App() {
         lotSize: a.lotSize,
         allowFractional: a.allowFractional,
       }));
+    let roadmapSettings: any = null;
+    try {
+      const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
+      if (raw) roadmapSettings = JSON.parse(raw);
+    } catch {
+      // Ignore
+    }
+
     const shareData = utf8ToBase64(
       JSON.stringify({
         weights: activeWeights,
@@ -2280,6 +2386,7 @@ export function App() {
         goal: targetGoalIdr,
         customAssets,
         renamedAssets,
+        roadmap: roadmapSettings,
       })
     );
     const url = `${window.location.origin}${window.location.pathname}#porto=${encodeURIComponent(
@@ -2418,7 +2525,6 @@ export function App() {
         onOpenRecommender={() => setIsRecommenderOpen(true)}
         onStartInteractiveTour={handleStartTour}
         onOpenOrderSlip={() => {
-          setOrderSlipPlanOverride(null);
           setIsOrderSlipOpen(true);
         }}
         onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
@@ -2546,6 +2652,7 @@ export function App() {
               setOrderSlipPlanOverride(planOverride ?? null);
               setIsOrderSlipOpen(true);
             }}
+            onPlanOverrideChange={(plan) => setOrderSlipPlanOverride(plan)}
             onBatchUpdateHoldings={handleBatchUpdateHoldings}
             tacticalConfig={tacticalConfig}
             setTacticalConfig={setTacticalConfig}
@@ -2554,6 +2661,7 @@ export function App() {
 
         {activeTab === 'roadmap' && (
           <WealthRoadmapView
+            key={`roadmap-${roadmapSettingsVersion}`}
             allAssets={allAssets}
             activeWeights={activeWeights}
             solvedMetrics={solvedMetrics}
@@ -2597,7 +2705,6 @@ export function App() {
           isOpen={isOrderSlipOpen}
           onClose={() => {
             setIsOrderSlipOpen(false);
-            setOrderSlipPlanOverride(null);
           }}
           rebalanceResult={orderSlipPlanOverride ?? rebalanceResult}
           allAssets={allAssets}

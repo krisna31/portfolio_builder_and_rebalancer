@@ -6,6 +6,7 @@ import {
   RebalanceSummaryResult,
 } from '../../lib/quant/types';
 import { formatIdr, formatPercent, formatUsd } from '../../lib/formatters';
+import { roundToIdxTick } from '../../lib/quant/rebalancerEngine';
 import {
   X,
   Copy,
@@ -23,6 +24,7 @@ import {
   Minus,
   Sparkles,
   ExternalLink,
+  Share2,
 } from 'lucide-react';
 
 export interface BrokerOrderSlipModalProps {
@@ -272,12 +274,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           );
         } else if (g.id === 'idx_stocks') {
           const lots = Math.abs(item.tradeLotsInteger ?? Math.round(item.tradeLots ?? 0));
-          // Bug 15 fix: factor in shockPercent for spotPrice
+          // Bug 15 fix: factor in shockPercent for spotPrice, Feature 1: apply BEI tick size rounding
           const rawPrice = (holdings?.[item.assetId]?.currentPrice && holdings[item.assetId].currentPrice > 0)
             ? holdings[item.assetId].currentPrice
             : def?.defaultPrice ?? 0;
           const shockMultiplier = Math.max(0, 1 + (holdings?.[item.assetId]?.shockPercent ?? 0) / 100);
-          const unitPrice = Math.round(rawPrice * shockMultiplier);
+          const unitPrice = roundToIdxTick(rawPrice * shockMultiplier, 'nearest');
           lines.push(
             `${isDone} ${actionStr} ${item.symbol} - ${lots} Lot (${(lots * 100).toLocaleString('id-ID')} lembar) @ Rp ${unitPrice.toLocaleString('id-ID')} = ${formatIdr(Math.abs(item.tradeAmountIdr))}`
           );
@@ -319,6 +321,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     }
   };
 
+  const handleSendWhatsApp = (groupId?: string) => {
+    const text = generateSlipText(groupId);
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
+  };
+
   // If not open, do not render modal DOM
   if (!isOpen) return null;
 
@@ -345,6 +353,15 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleSendWhatsApp()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all shadow-emerald-500/20"
+              title="Kirim seluruh instruksi order rebalance langsung via WhatsApp"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Kirim ke WhatsApp</span>
+            </button>
+
             <button
               onClick={() => handleCopySlip()}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-all shadow-indigo-500/20"
@@ -456,6 +473,15 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
+                      onClick={() => handleSendWhatsApp(group.id)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/50 hover:text-emerald-200 rounded border border-emerald-700/50 transition-colors"
+                      title={`Kirim slip ${group.apps} ke WhatsApp`}
+                    >
+                      <Share2 className="w-3 h-3 text-emerald-400" />
+                      <span>WhatsApp</span>
+                    </button>
+
+                    <button
                       onClick={() => handleCopySlip(group.id)}
                       className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white rounded border border-slate-700 transition-colors"
                       title={`Salin slip pesanan ${group.apps} saja`}
@@ -493,7 +519,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                       ? holdings[item.assetId].currentPrice
                       : def?.defaultPrice ?? 0;
                     const shockMultiplier = Math.max(0, 1 + (holdings?.[item.assetId]?.shockPercent ?? 0) / 100);
-                    const spotPrice = Math.round(rawPrice * shockMultiplier);
+                    const rawSpot = rawPrice * shockMultiplier;
+                    const spotPrice = isIdx ? roundToIdxTick(rawSpot, 'nearest') : Math.round(rawSpot);
 
                     return (
                       <div

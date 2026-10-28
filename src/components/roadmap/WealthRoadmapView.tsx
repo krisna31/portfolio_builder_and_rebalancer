@@ -80,6 +80,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   const [simulationViewMode, setSimulationViewMode] = useState<
     'deterministic' | 'monte-carlo'
   >(() => initialRoadmapSettings?.simulationViewMode ?? 'deterministic');
+  const [monteCarloDisplayMode, setMonteCarloDisplayMode] = useState<
+    'nominal' | 'real'
+  >(() => initialRoadmapSettings?.monteCarloDisplayMode ?? 'real');
 
   // Dividend Estimator State
   const [taxMode, setTaxMode] = useState<
@@ -107,6 +110,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
           annualInflationPercent,
           monthlyLivingCostTargetIdr,
           simulationViewMode,
+          monteCarloDisplayMode,
           taxMode,
           dividendUsageMode,
           customYieldOverrides,
@@ -121,6 +125,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     annualInflationPercent,
     monthlyLivingCostTargetIdr,
     simulationViewMode,
+    monteCarloDisplayMode,
     taxMode,
     dividendUsageMode,
     customYieldOverrides,
@@ -320,17 +325,35 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     annualInflationPercent,
   ]);
 
+  const isRealMonteCarlo =
+    simulationViewMode === 'monte-carlo' &&
+    monteCarloDisplayMode === 'real' &&
+    annualInflationPercent > 0;
+
   const monteCarloChartData = useMemo(() => {
+    const isReal = monteCarloDisplayMode === 'real' && annualInflationPercent > 0;
     return monteCarloResult.series.map((pt) => ({
       yearLabel: `Thn ${pt.year}`,
-      ModalPokok: Math.round(pt.principal / 1_000_000),
-      P90Bull: Math.round(pt.p90 / 1_000_000),
-      P75: Math.round(pt.p75 / 1_000_000),
-      P50Median: Math.round(pt.p50 / 1_000_000),
-      P25: Math.round(pt.p25 / 1_000_000),
-      P10Bear: Math.round(pt.p10 / 1_000_000),
+      ModalPokok: Math.round(
+        (isReal ? (pt.principalReal ?? pt.principal) : pt.principal) / 1_000_000
+      ),
+      P90Bull: Math.round(
+        (isReal ? (pt.p90Real ?? pt.p90) : pt.p90) / 1_000_000
+      ),
+      P75: Math.round(
+        (isReal ? (pt.p75Real ?? pt.p75) : pt.p75) / 1_000_000
+      ),
+      P50Median: Math.round(
+        (isReal ? (pt.p50Real ?? pt.p50) : pt.p50) / 1_000_000
+      ),
+      P25: Math.round(
+        (isReal ? (pt.p25Real ?? pt.p25) : pt.p25) / 1_000_000
+      ),
+      P10Bear: Math.round(
+        (isReal ? (pt.p10Real ?? pt.p10) : pt.p10) / 1_000_000
+      ),
     }));
-  }, [monteCarloResult]);
+  }, [monteCarloResult, monteCarloDisplayMode, annualInflationPercent]);
 
   return (
     <div className="space-y-6">
@@ -588,35 +611,68 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 <p className="ui-text-muted text-xs mt-0.5">
                   {simulationViewMode === 'deterministic'
                     ? `Proyeksi pada CAGR efektif ${effectiveCompoundingCagr.toFixed(2)}% beserta batas bawah Maximum Drawdown (-${solvedMetrics.maxDrawdown}%):`
-                    : `Simulasi 500 lintasan acak (volatilitas \u03c3 = ${(solvedMetrics.volatility || 18).toFixed(1)}%) memetakan rentang hasil terburuk (P10) hingga terbaik (P90):`}
+                    : `Simulasi 500 lintasan acak (volatilitas \u03c3 = ${(solvedMetrics.volatility || 18).toFixed(1)}%) memetakan rentang hasil terburuk (P10) hingga terbaik (P90)${
+                        isRealMonteCarlo ? ` dalam daya beli riil (inflasi ${annualInflationPercent}%)` : ''
+                      }:`}
                 </p>
               </div>
 
-              {/* Mode Toggle: Deterministik vs Monte Carlo */}
-              <div className="ui-subtle flex rounded-lg p-0.5 text-xs shrink-0 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setSimulationViewMode('deterministic')}
-                  className={`px-2.5 py-1 rounded font-medium transition ${
-                    simulationViewMode === 'deterministic'
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:opacity-80'
-                  }`}
-                >
-                  Deterministik
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimulationViewMode('monte-carlo')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded font-medium transition ${
-                    simulationViewMode === 'monte-carlo'
-                      ? 'bg-indigo-600 font-semibold text-white shadow-2xs'
-                      : 'ui-text-muted hover:opacity-80'
-                  }`}
-                >
-                  <Activity className="h-3 w-3" />
-                  <span>Monte Carlo (500x)</span>
-                </button>
+              {/* Mode Toggle: Deterministik vs Monte Carlo & Real vs Nominal */}
+              <div className="flex flex-wrap items-center gap-2">
+                {simulationViewMode === 'monte-carlo' && annualInflationPercent > 0 && (
+                  <div className="ui-subtle flex rounded-lg p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setMonteCarloDisplayMode('real')}
+                      className={`px-2 py-1 rounded font-medium transition ${
+                        monteCarloDisplayMode === 'real'
+                          ? 'bg-purple-600 font-semibold text-white shadow-2xs'
+                          : 'ui-text-muted hover:opacity-80'
+                      }`}
+                      title="Tampilkan proyeksi dalam daya beli riil yang didiskonto inflasi"
+                    >
+                      Daya Beli Riil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMonteCarloDisplayMode('nominal')}
+                      className={`px-2 py-1 rounded font-medium transition ${
+                        monteCarloDisplayMode === 'nominal'
+                          ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                          : 'ui-text-muted hover:opacity-80'
+                      }`}
+                      title="Tampilkan proyeksi dalam nilai nominal pasar"
+                    >
+                      Nominal
+                    </button>
+                  </div>
+                )}
+
+                <div className="ui-subtle flex rounded-lg p-0.5 text-xs shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setSimulationViewMode('deterministic')}
+                    className={`px-2.5 py-1 rounded font-medium transition ${
+                      simulationViewMode === 'deterministic'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:opacity-80'
+                    }`}
+                  >
+                    Deterministik
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSimulationViewMode('monte-carlo')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded font-medium transition ${
+                      simulationViewMode === 'monte-carlo'
+                        ? 'bg-indigo-600 font-semibold text-white shadow-2xs'
+                        : 'ui-text-muted hover:opacity-80'
+                    }`}
+                  >
+                    <Activity className="h-3 w-3" />
+                    <span>Monte Carlo (500x)</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -735,7 +791,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Area
                       type="monotone"
                       dataKey="P90Bull"
-                      name="P90: Skenario Optimis (Bull 10%)"
+                      name={isRealMonteCarlo ? 'P90: Optimis (Daya Beli Riil)' : 'P90: Skenario Optimis (Bull 10%)'}
                       stroke="#10b981"
                       fill="#10b981"
                       fillOpacity={0.15}
@@ -743,7 +799,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Area
                       type="monotone"
                       dataKey="P50Median"
-                      name="P50: Ekspektasi Median (Realistis)"
+                      name={
+                        isRealMonteCarlo
+                          ? `P50: Ekspektasi Riil (Inflasi ${annualInflationPercent}%)`
+                          : 'P50: Ekspektasi Median (Realistis)'
+                      }
                       stroke="#059669"
                       fill="#059669"
                       fillOpacity={0.25}
@@ -752,7 +812,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Area
                       type="monotone"
                       dataKey="P10Bear"
-                      name="P10: Ujian Krisis (Bear 10%)"
+                      name={isRealMonteCarlo ? 'P10: Ujian Krisis (Daya Beli Riil)' : 'P10: Ujian Krisis (Bear 10%)'}
                       stroke="#f43f5e"
                       fill="#f43f5e"
                       fillOpacity={0.12}
@@ -760,7 +820,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Area
                       type="monotone"
                       dataKey="ModalPokok"
-                      name="Modal Pokok Disimpan"
+                      name={isRealMonteCarlo ? 'Modal Pokok Disimpan (Riil)' : 'Modal Pokok Disimpan'}
                       stroke="#0ea5e9"
                       fill="#0ea5e9"
                       fillOpacity={0.08}

@@ -74,7 +74,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         description: `
           Pusat kendali parameter eksternal:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
-            <li><strong>Kurs USD/IDR:</strong> Atur asumsi nilai tukar rupiah (default Rp 16.500).</li>
+            <li><strong>Kurs USD/IDR:</strong> Atur asumsi nilai tukar rupiah (default Rp 18.000).</li>
             <li><strong>Promo RDPT +3%:</strong> Aktifkan simulasi promo kupon reksa dana.</li>
             <li><strong>Sync Harga Live:</strong> Ambil harga terkini saham BEI, ETF AS via Yahoo Finance, & kripto via CoinGecko.</li>
             <li><strong>Simpan &amp; Share:</strong> Simpan racikan ke browser atau bagikan via tautan URL.</li>

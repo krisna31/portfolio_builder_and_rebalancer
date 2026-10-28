@@ -629,6 +629,45 @@ export function calculateRebalancePlan(params: {
 }
 
 /**
+ * Official Bursa Efek Indonesia (BEI) Price Tick Size (Fraksi Harga)
+ * Regulation: Kep-00023/BEI/03-2020
+ * 
+ * - Price < Rp 200         : Tick = Rp 1
+ * - Rp 200 - < Rp 500      : Tick = Rp 2
+ * - Rp 500 - < Rp 2.000    : Tick = Rp 5
+ * - Rp 2.000 - < Rp 5.000  : Tick = Rp 10
+ * - Rp 5.000 ke atas       : Tick = Rp 25
+ */
+export function getIdxTickSize(price: number): number {
+  if (price < 200) return 1;
+  if (price < 500) return 2;
+  if (price < 2000) return 5;
+  if (price < 5000) return 10;
+  return 25;
+}
+
+/**
+ * Rounds an Indonesian stock price to the nearest valid BEI tick size.
+ *
+ * @param price Raw stock price in IDR
+ * @param roundMode 'nearest' (default), 'floor' (conservative bid), or 'ceil'
+ */
+export function roundToIdxTick(
+  price: number,
+  roundMode: 'nearest' | 'floor' | 'ceil' = 'nearest'
+): number {
+  if (price <= 0) return 0;
+  const tick = getIdxTickSize(price);
+  if (roundMode === 'floor') {
+    return Math.floor(price / tick) * tick;
+  }
+  if (roundMode === 'ceil') {
+    return Math.ceil(price / tick) * tick;
+  }
+  return Math.round(price / tick) * tick;
+}
+
+/**
  * Generates a Pre-Planned Rebalance-Driven Crash Buying Ladder (`-10%`, `-20%`, `-35%`, `-50%`)
  * for a chosen target asset (e.g., `BTC`, `ETH`, `PTBA`, `AADI`, `BBCA`, `QQQ`).
  *
@@ -673,7 +712,10 @@ export function generateCrashBuyingLadder(params: {
 
   return dropTiers.map((dropPercent) => {
     const multiplier = Math.max(0.05, 1 + dropPercent / 100);
-    const limitPriceNative = Number((currentPriceNative * multiplier).toFixed(2));
+    let limitPriceNative = Number((currentPriceNative * multiplier).toFixed(2));
+    if (targetAsset.category === 'idx-equity' && !targetAsset.isNominalOnly) {
+      limitPriceNative = roundToIdxTick(limitPriceNative, 'nearest');
+    }
     const limitPriceIdr = Math.round(
       targetAsset.currency === 'USD'
         ? limitPriceNative * usdIdrRate
@@ -778,3 +820,74 @@ export function generateCrashBuyingLadder(params: {
     };
   });
 }
+
+/**
+ * Calculates updated average purchase price (cost basis / avgBuyPrice)
+ * using the weighted average method:
+ *   newAvg = ((oldUnits * oldCost) + (boughtUnits * buyPrice)) / (oldUnits + boughtUnits)
+ *
+ * Rules:
+ * - Nominal assets (money market / bonds / cash): cost basis is always 1
+ * - Liquidated positions (newTotalUnits <= 0): cost basis is cleared (undefined)
+ * - SELL or HOLD actions: cost basis per unit remains unchanged
+ * - Initial BUY (oldUnits <= 0): cost basis equals buyPrice
+ * - Subsequent BUY: weighted average of previous cost basis and new purchase
+ */
+export function computeUpdatedAverageCostBasis(params: {
+  prevUnits: number;
+  prevAvgBuyPrice?: number;
+  prevCurrentPrice: number;
+  boughtUnits: number;
+  buyPrice: number;
+  newTotalUnits: number;
+  isNominal?: boolean;
+  category?: string;
+}): number | undefined {
+  const {
+    prevUnits,
+    prevAvgBuyPrice,
+    prevCurrentPrice,
+    boughtUnits,
+    buyPrice,
+    newTotalUnits,
+    isNominal,
+    category,
+  } = params;
+
+  if (isNominal) {
+    return 1;
+  }
+
+  if (newTotalUnits <= 0) {
+    return undefined;
+  }
+
+  // Cost basis does not change on SELL or HOLD
+  if (boughtUnits <= 0) {
+    return prevAvgBuyPrice;
+  }
+
+  const precision = category === 'crypto' ? 4 : 2;
+
+  // Initial buy from zero units
+  if (prevUnits <= 0) {
+    return Number(buyPrice.toFixed(precision));
+  }
+
+  const oldCost =
+    prevAvgBuyPrice !== undefined && prevAvgBuyPrice > 0
+      ? prevAvgBuyPrice
+      : prevCurrentPrice > 0
+        ? prevCurrentPrice
+        : buyPrice;
+
+  const totalUnits = prevUnits + boughtUnits;
+  if (totalUnits <= 0) {
+    return Number(buyPrice.toFixed(precision));
+  }
+
+  const weightedSum = (prevUnits * oldCost) + (boughtUnits * buyPrice);
+  const newAvg = weightedSum / totalUnits;
+  return Number(newAvg.toFixed(precision));
+}
+

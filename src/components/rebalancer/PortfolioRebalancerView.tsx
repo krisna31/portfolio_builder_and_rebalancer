@@ -30,6 +30,7 @@ import {
   ArrowDownRight,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Download,
   Zap,
   History,
@@ -94,7 +95,7 @@ interface PortfolioRebalancerViewProps {
   rebalanceResult: RebalanceSummaryResult;
   onApplyPeerDiversification: () => void;
   rebalanceHistory: RebalanceHistoryEntry[];
-  onCommitRebalanceToHoldings: (note?: string, planOverride?: RebalanceSummaryResult) => void;
+  onCommitRebalanceToHoldings: (note?: string, planOverride?: RebalanceSummaryResult, isTopUpConfirmed?: boolean) => void;
   onDeleteRebalanceHistoryEntry: (id: string) => void;
   initialCapitalMenu1Idr: number;
   monthlySavingsMenu1Idr: number;
@@ -118,6 +119,7 @@ interface PortfolioRebalancerViewProps {
     distributeBy: 'current' | 'target'
   ) => void;
   onOpenOrderSlip?: (planOverride?: RebalanceSummaryResult) => void;
+  onPlanOverrideChange?: (plan: RebalanceSummaryResult | null) => void;
   onBatchUpdateHoldings?: (items: ParsedHoldingItem[], strategy: 'merge' | 'replace') => void;
   tacticalConfig?: ValuationSentimentConfig;
   setTacticalConfig?: React.Dispatch<React.SetStateAction<ValuationSentimentConfig>>;
@@ -164,6 +166,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onSetupInitialBuyFromMenu1,
   onScaleTotalHoldingsIdr,
   onOpenOrderSlip,
+  onPlanOverrideChange,
   onBatchUpdateHoldings,
   tacticalConfig,
   setTacticalConfig,
@@ -176,6 +179,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [isSyncingFng, setIsSyncingFng] = useState(false);
   const [fngSyncMessage, setFngSyncMessage] = useState<string | null>(null);
+  const [showDeficitConfirmModal, setShowDeficitConfirmModal] = useState(false);
   const optionsMenuRef = React.useRef<HTMLDivElement>(null);
 
   const handleSyncCryptoFearAndGreed = async () => {
@@ -346,6 +350,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     };
   }, [baseRebalanceResult, lotOverrides, holdings, allAssets]);
 
+  // Synchronize manual lot adjustments with parent order slip state in real-time
+  useEffect(() => {
+    if (Object.keys(lotOverrides).length > 0) {
+      onPlanOverrideChange?.(rebalanceResult);
+    } else {
+      onPlanOverrideChange?.(null);
+    }
+  }, [rebalanceResult, lotOverrides, onPlanOverrideChange]);
+
   const [percentReferenceTotalIdr, setPercentReferenceTotalIdr] = useState<number>(() => {
     return baseRebalanceResult?.initialTotalIdr > 0
       ? baseRebalanceResult.initialTotalIdr
@@ -456,7 +469,20 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   };
 
   const handleApplyAndRecord = () => {
+    const rawDeficit = rebalanceResult.unallocatedCashRemainderIdr ?? 0;
+    if (rawDeficit < -100) {
+      setShowDeficitConfirmModal(true);
+      return;
+    }
     onCommitRebalanceToHoldings(rebalanceNoteInput.trim() || undefined, rebalanceResult);
+    setRebalanceNoteInput('');
+    setCommittedBanner(true);
+    setTimeout(() => setCommittedBanner(false), 2500);
+  };
+
+  const handleConfirmDeficitTopUpAndCommit = () => {
+    onCommitRebalanceToHoldings(rebalanceNoteInput.trim() || undefined, rebalanceResult, true);
+    setShowDeficitConfirmModal(false);
     setRebalanceNoteInput('');
     setCommittedBanner(true);
     setTimeout(() => setCommittedBanner(false), 2500);
@@ -635,10 +661,20 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           selectedLadderAsset.currency === 'USD'
             ? `$${step.limitPriceNative.toLocaleString()}`
             : `Rp ${Math.round(step.limitPriceNative).toLocaleString('id-ID')}`;
+
+        let unitInfo = '';
+        if (selectedLadderAsset.lotSize === 100 && step.rebalanceBuyLots !== undefined) {
+          unitInfo = ` (${step.rebalanceBuyLots} Lot / ${(step.rebalanceBuyLots * 100).toLocaleString('id-ID')} lbr)`;
+        } else if (selectedLadderAsset.currency === 'USD') {
+          unitInfo = ` (${formatUsd(step.rebalanceBuyAmountIdr / Math.max(1, usdIdrRate))} ~ ${step.rebalanceBuyUnits} unit)`;
+        } else if (!selectedLadderAsset.isNominalOnly && step.rebalanceBuyUnits > 0) {
+          unitInfo = ` (${step.rebalanceBuyUnits} unit)`;
+        }
+
         lines.push(
           `• Crash ${step.dropPercent}% (@ ${triggerStr}): Pasang BELI *${formatIdr(
             step.rebalanceBuyAmountIdr
-          )}*`
+          )}*${unitInfo}`
         );
       }
     }
@@ -2513,11 +2549,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           style={{ backgroundColor: item.color }}
                         />
                         <div>
-                          <div className="ui-text-main text-xs font-bold">
-                            {item.symbol}{' '}
+                          <div className="ui-text-main text-xs font-bold flex items-center gap-1.5 flex-wrap">
+                            <span>{item.symbol}</span>
                             <span className="ui-text-muted font-normal">
                               • {item.name}
                             </span>
+                            {item.unrealizedGainPercent !== undefined && (
+                              <span
+                                className={`rounded px-1 py-0.2 font-mono text-[9px] font-bold ${
+                                  item.unrealizedGainPercent >= 0
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                }`}
+                                title={`Unrealized P&L: ${item.unrealizedGainPercent >= 0 ? '+' : ''}${item.unrealizedGainPercent}% (${formatIdr(item.unrealizedGainIdr ?? 0)})`}
+                              >
+                                P&L {item.unrealizedGainPercent >= 0 ? '+' : ''}{item.unrealizedGainPercent}%
+                              </span>
+                            )}
                           </div>
                           {(() => {
                             if (isNominal) {
@@ -2612,6 +2660,44 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   </button>
                                 </div>
 
+                                {/* Feature 5: Optional Avg Buy Price (Modal Beli Rata-Rata) */}
+                                <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
+                                  <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
+                                  <span className="ui-text-muted font-mono text-[9px] select-none">
+                                    {asset?.currency === 'USD' ? '$' : 'Rp'}
+                                  </span>
+                                  <input
+                                    type="number"
+                                    step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                    min={0}
+                                    placeholder="Modal Beli"
+                                    value={h.avgBuyPrice ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value ? Number(e.target.value) : undefined;
+                                      onUpdateHolding(item.assetId, {
+                                        avgBuyPrice: val && val > 0 ? val : undefined,
+                                      });
+                                    }}
+                                    className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
+                                    style={{ width: asset?.currency === 'USD' ? '4.8rem' : '5.8rem' }}
+                                    aria-label={`Harga modal beli rata-rata ${item.symbol}`}
+                                  />
+                                  {h.avgBuyPrice && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onUpdateHolding(item.assetId, {
+                                          avgBuyPrice: undefined,
+                                        })
+                                      }
+                                      className="ui-text-muted hover:text-rose-500 p-0.5 rounded transition text-[9px]"
+                                      title="Hapus modal beli"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+
                                 {/* Quick Drop Chips */}
                                 <div className="flex items-center gap-1">
                                   <span className="ui-text-muted text-[9px]">Drop:</span>
@@ -2657,9 +2743,50 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </span>
                       ) : (
                         <div className="flex flex-col items-end">
-                          <span className="ui-card ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
-                            HOLD
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="ui-card ui-text-muted rounded px-2 py-0.5 font-mono text-xs">
+                              HOLD
+                            </span>
+                            {enableIdxLotRounding && item.tradeLotsInteger !== undefined && (
+                              <span className="inline-flex items-center gap-0.5 ml-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdjustLotOverride(item.assetId, -1);
+                                  }}
+                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  title="Kurangi 1 Lot Jual"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdjustLotOverride(item.assetId, 1);
+                                  }}
+                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  title="Tambah 1 Lot Beli"
+                                >
+                                  +
+                                </button>
+                                {lotOverrides[item.assetId] !== undefined && lotOverrides[item.assetId] !== 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleResetLotOverride(item.assetId);
+                                    }}
+                                    className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                    title="Reset ke hitungan lot awal"
+                                  >
+                                    ↺
+                                  </button>
+                                )}
+                              </span>
+                            )}
+                          </div>
                           {item.isDustFiltered && (
                             <span className="text-[9px] text-indigo-500 font-sans font-medium">
                               Anti-Dust (&lt; 25rb)
@@ -2856,15 +2983,56 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             {item.action === 'BUY' ? 'Beli:' : 'Jual:'}{' '}
                             {formatIdr(Math.abs(item.tradeAmountIdr))}
                           </span>
-                          <span className="text-[10px]">
-                            {asset?.currency === 'USD'
-                              ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
-                              : item.tradeLotsInteger !== undefined
-                                ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
-                                : item.tradeLots !== undefined
-                                  ? `≈ ${Math.abs(item.tradeLots)} Lot`
-                                  : `≈ ${Math.abs(item.tradeUnits)} unit`}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px]">
+                              {asset?.currency === 'USD'
+                                ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
+                                : item.tradeLotsInteger !== undefined
+                                  ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
+                                  : item.tradeLots !== undefined
+                                    ? `≈ ${Math.abs(item.tradeLots)} Lot`
+                                    : `≈ ${Math.abs(item.tradeUnits)} unit`}
+                            </span>
+                            {enableIdxLotRounding && item.tradeLotsInteger !== undefined && (
+                              <span className="inline-flex items-center gap-0.5 ml-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdjustLotOverride(item.assetId, -1);
+                                  }}
+                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  title="Kurangi 1 Lot"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdjustLotOverride(item.assetId, 1);
+                                  }}
+                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  title="Tambah 1 Lot"
+                                >
+                                  +
+                                </button>
+                                {lotOverrides[item.assetId] !== undefined && lotOverrides[item.assetId] !== 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleResetLotOverride(item.assetId);
+                                    }}
+                                    className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                    title="Reset ke hitungan lot awal"
+                                  >
+                                    ↺
+                                  </button>
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {enableBrokerFees &&
                           item.estimatedFeeIdr !== undefined &&
@@ -2920,10 +3088,17 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 className="ui-input rounded-lg px-2.5 py-1.5 text-xs sm:w-52"
                 aria-label="Rebalance journal note"
               />
+              {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
+                rebalanceResult.unallocatedCashRemainderIdr < -100 && (
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2 py-1 text-[11px] font-mono font-bold text-rose-500">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>Defisit: {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}</span>
+                  </span>
+                )}
               <button
                 type="button"
                 onClick={handleApplyAndRecord}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 shadow-sm"
               >
                 <Check className="h-3.5 w-3.5" />
                 <span>
@@ -3338,6 +3513,67 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         onOpenOrderSlip={() => onOpenOrderSlip && onOpenOrderSlip(rebalanceResult)}
         onOpenTextImport={() => setIsHoldingsTextModalOpen(true)}
       />
+
+      {/* Feature 2 & Decision 1: Soft-Lock Overbudget Deficit Confirmation Modal */}
+      {showDeficitConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  Konfirmasi Defisit Kas (Overbudget)
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Pembelian melebihi kas yang tersedia
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300">Total Beli yang Diinginkan:</span>
+                <span className="font-mono font-bold text-emerald-400">{formatIdr(rebalanceResult.totalBuyIdr)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300">Kas Tersedia (Jual + DCA):</span>
+                <span className="font-mono font-bold text-slate-300">
+                  {formatIdr(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr)}
+                </span>
+              </div>
+              <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-rose-400 font-bold">
+                <span>Kekurangan Dana (Defisit):</span>
+                <span className="font-mono text-sm">
+                  {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Apakah Anda akan melakukan <strong>top-up kas sebesar {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}</strong> ke portofolio / RDN untuk menutup kekurangan dana ini sebelum menerapkan rebalance?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeficitConfirmModal(false)}
+                className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                Batal / Sesuaikan Lot
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeficitTopUpAndCommit}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm"
+              >
+                Ya, Setujui Top-Up &amp; Terapkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

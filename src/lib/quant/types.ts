@@ -339,6 +339,14 @@ export interface QuantPortoBackupPayload {
       initialCapitalIdr?: number;
       targetGoalIdr?: number;
       monthlySavingsIdr?: number;
+      annualInflationPercent?: number;
+      annualStepUpPct?: number;
+      monthlyLivingCostTargetIdr?: number;
+      simulationViewMode?: 'deterministic' | 'monte-carlo';
+      taxMode?: 'standard-net' | 'idx-tax-exempt-reinvest' | 'gross';
+      dividendUsageMode?: 'reinvest-drip' | 'cashout-passive';
+      customYieldOverrides?: Record<string, number>;
+      reverseDcaTargetYears?: number;
     };
     global: {
       usdIdrRate: number;

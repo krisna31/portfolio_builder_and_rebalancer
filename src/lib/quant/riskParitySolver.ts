@@ -223,9 +223,37 @@ export function solveRiskBudgetingWeights(
   method: 'all-in' | 'risk-parity' | 'risk-budgeting',
   convictionAssetId?: string,
   convictionRiskPercent: number = 70,
-  solverMode: 'calibrated-video' | 'euler-covariance' = 'calibrated-video'
+  solverMode: 'calibrated-video' | 'euler-covariance' = 'calibrated-video',
+  lockedAssetIds?: string[] | Set<string>,
+  currentWeights?: Record<string, number>
 ): Record<string, number> {
   if (activeAssets.length === 0) return {};
+
+  const applyLockingIfAny = (rawSolved: Record<string, number>): Record<string, number> => {
+    if (!lockedAssetIds || !currentWeights) {
+      return normalizeWeightsTo100(rawSolved);
+    }
+    const lockedSet = new Set(
+      Array.isArray(lockedAssetIds) ? lockedAssetIds : Array.from(lockedAssetIds)
+    );
+    const effectiveLockedSet = new Set<string>();
+    const merged: Record<string, number> = { ...rawSolved };
+    for (const asset of activeAssets) {
+      if (
+        lockedSet.has(asset.id) &&
+        currentWeights[asset.id] !== undefined &&
+        typeof currentWeights[asset.id] === 'number'
+      ) {
+        merged[asset.id] = currentWeights[asset.id];
+        effectiveLockedSet.add(asset.id);
+      }
+    }
+    if (effectiveLockedSet.size === 0) {
+      return normalizeWeightsTo100(rawSolved);
+    }
+    return normalizeWeightsTo100(merged, effectiveLockedSet, 'proportional');
+  };
+
 
   // Case 1: All-In on a single asset
   if (method === 'all-in' || activeAssets.length === 1) {
@@ -236,7 +264,7 @@ export function solveRiskBudgetingWeights(
     for (const asset of activeAssets) {
       result[asset.id] = asset.id === targetId ? 100 : 0;
     }
-    return result;
+    return applyLockingIfAny(result);
   }
 
   const k = activeAssets.length;
@@ -278,7 +306,7 @@ export function solveRiskBudgetingWeights(
     activeAssets.forEach((asset, idx) => {
       weights[asset.id] = Number(((w[idx] / totalW) * 100).toFixed(2));
     });
-    return normalizeWeightsTo100(weights);
+    return applyLockingIfAny(weights);
   }
 
   // Default: Calibrated Video Risk Solver
@@ -309,7 +337,7 @@ export function solveRiskBudgetingWeights(
     weights[asset.id] = Math.round((rawWeights[idx] / sumRaw) * 100);
   });
 
-  return normalizeWeightsTo100(weights);
+  return applyLockingIfAny(weights);
 }
 
 /**

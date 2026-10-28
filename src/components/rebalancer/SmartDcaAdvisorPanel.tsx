@@ -70,6 +70,13 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
     monthlySavingsMenu1Idr > 0 ? monthlySavingsMenu1Idr : 3_000_000
   );
 
+  // Bug 11 fix: Synchronize DCA monthly budget whenever Menu 1 savings change
+  useEffect(() => {
+    if (monthlySavingsMenu1Idr > 0) {
+      setMonthlyBudgetIdr(monthlySavingsMenu1Idr);
+    }
+  }, [monthlySavingsMenu1Idr]);
+
   // Overflow parking mode: 'park-rdpu' (default) vs 'boost-discount'
   const [overflowMode, setOverflowMode] =
     useState<SmartDcaOverflowMode>('park-rdpu');

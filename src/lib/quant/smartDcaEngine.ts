@@ -83,6 +83,7 @@ export interface SmartDcaItemResult {
   recommendedLotsInteger?: number;
   remainderLotIdr?: number;
   isNominalOnly?: boolean;
+  isDustFiltered?: boolean;
   explanation: SmartDcaExplanation;
 }
 
@@ -953,9 +954,11 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     let allocatedIdr = finalAllocationsIdr[p.asset.id] ?? 0;
 
     // Check anti-dust threshold
+    let isDustFiltered = false;
     if (filterDustTrades && allocatedIdr > 0 && allocatedIdr < dustTradeThresholdIdr) {
       unallocatedCashRemainderIdr += allocatedIdr;
       allocatedIdr = 0;
+      isDustFiltered = true;
     }
 
     let recommendedLotsInteger: number | undefined;
@@ -1071,6 +1074,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       recommendedLotsInteger,
       remainderLotIdr,
       isNominalOnly: p.asset.isNominalOnly,
+      isDustFiltered,
       explanation,
     });
   }
@@ -1083,23 +1087,33 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
         // Case 1: War Chest asset already in finalItems (targetWeight > 0)
         const oldRecommendedIdr = existingWarChestItem.recommendedAmountIdr;
         const newRecommendedIdr = oldRecommendedIdr + warChestParkedIdr;
-        existingWarChestItem.recommendedAmountIdr = newRecommendedIdr;
 
-        if (existingWarChestItem.isNominalOnly) {
-          existingWarChestItem.recommendedUnits = newRecommendedIdr;
-        } else if (existingWarChestItem.unitPriceIdr > 0) {
-          existingWarChestItem.recommendedUnits = Number(
-            (newRecommendedIdr / existingWarChestItem.unitPriceIdr).toFixed(4)
-          );
+        if (filterDustTrades && newRecommendedIdr < dustTradeThresholdIdr) {
+          unallocatedCashRemainderIdr += warChestParkedIdr;
+          existingWarChestItem.recommendedAmountIdr = 0;
+          existingWarChestItem.recommendedUnits = 0;
+          existingWarChestItem.isDustFiltered = true;
+          existingWarChestItem.action = 'HOLD_SKIP';
+        } else {
+          existingWarChestItem.recommendedAmountIdr = newRecommendedIdr;
+          existingWarChestItem.isDustFiltered = false;
+
+          if (existingWarChestItem.isNominalOnly) {
+            existingWarChestItem.recommendedUnits = newRecommendedIdr;
+          } else if (existingWarChestItem.unitPriceIdr > 0) {
+            existingWarChestItem.recommendedUnits = Number(
+              (newRecommendedIdr / existingWarChestItem.unitPriceIdr).toFixed(4)
+            );
+          }
+
+          totalAllocatedAssetsIdr += warChestParkedIdr;
+
+          // Synchronize explanation math
+          existingWarChestItem.explanation.budgetMath.finalAllocationIdr = newRecommendedIdr;
+          existingWarChestItem.explanation.budgetMath.warChestShareIdr = warChestParkedIdr;
+          existingWarChestItem.explanation.narrativeWhy += ` Aset ini juga menerima tambahan alokasi kas siaga (War Chest) sebesar Rp ${warChestParkedIdr.toLocaleString('id-ID')} dari aset-aset yang di-Hold/Skip.`;
+          existingWarChestItem.explanation.formulaHow += `\n   • Tambahan Parkir War Chest: +Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n   • Total Alokasi Smart DCA Final: Rp ${newRecommendedIdr.toLocaleString('id-ID')}`;
         }
-
-        totalAllocatedAssetsIdr += warChestParkedIdr;
-
-        // Synchronize explanation math
-        existingWarChestItem.explanation.budgetMath.finalAllocationIdr = newRecommendedIdr;
-        existingWarChestItem.explanation.budgetMath.warChestShareIdr = warChestParkedIdr;
-        existingWarChestItem.explanation.narrativeWhy += ` Aset ini juga menerima tambahan alokasi kas siaga (War Chest) sebesar Rp ${warChestParkedIdr.toLocaleString('id-ID')} dari aset-aset yang di-Hold/Skip.`;
-        existingWarChestItem.explanation.formulaHow += `\n   • Tambahan Parkir War Chest: +Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n   • Total Alokasi Smart DCA Final: Rp ${newRecommendedIdr.toLocaleString('id-ID')}`;
       } else {
         // Case 2: War Chest asset exists in portfolio universe but targetWeight was 0
         const h = holdings[warChestAsset.id];
@@ -1133,51 +1147,56 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
             ? Number((warChestParkedIdr / unitPriceIdr).toFixed(4))
             : 0;
 
-        const warChestItem: SmartDcaItemResult = {
-          assetId: warChestAsset.id,
-          symbol: warChestAsset.symbol,
-          name: warChestAsset.name,
-          category: warChestAsset.category,
-          color: warChestAsset.color,
-          targetWeightPercent: 0,
-          currentWeightPercent: currentW,
-          currentValueIdr: currentValIdr,
-          unitPriceIdr,
-          action: 'NORMAL_BUY',
-          actionLabel: 'Parkir War Chest',
-          multiplier: 1.0,
-          baseAllocationIdr: 0,
-          recommendedAmountIdr: warChestParkedIdr,
-          recommendedUnits,
-          isNominalOnly: isNominal,
-          explanation: {
-            compositeScore: 50,
-            valuationScore: 50,
-            driftScore: 50,
+        if (filterDustTrades && warChestParkedIdr < dustTradeThresholdIdr) {
+          unallocatedCashRemainderIdr += warChestParkedIdr;
+          warChestParkedIdr = 0;
+        } else {
+          const warChestItem: SmartDcaItemResult = {
+            assetId: warChestAsset.id,
+            symbol: warChestAsset.symbol,
+            name: warChestAsset.name,
+            category: warChestAsset.category,
+            color: warChestAsset.color,
+            targetWeightPercent: 0,
+            currentWeightPercent: currentW,
+            currentValueIdr: currentValIdr,
+            unitPriceIdr,
             action: 'NORMAL_BUY',
             actionLabel: 'Parkir War Chest',
             multiplier: 1.0,
-            valuationBreakdown: calculateValuationScore(
-              warChestAsset,
-              tacticalConfig,
-              undefined,
-              unitPriceNative,
-              usdIdrRate
-            ),
-            driftBreakdown: calculateDriftScore(0, currentW),
-            narrativeWhy: `Aset ini menerima alokasi Rp ${warChestParkedIdr.toLocaleString('id-ID')} sebagai kas siaga (War Chest) dari sisa budget aset yang di-Hold/Skip untuk persiapan serok crash.`,
-            formulaHow: `1. Pengalihan Sisa Dana Aset Hold/Skip: Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n2. Alokasi ke Kas Siaga (${warChestAsset.symbol}): Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n   • Total Alokasi Smart DCA Final: Rp ${warChestParkedIdr.toLocaleString('id-ID')}`,
-            budgetMath: {
-              baseAllocationIdr: 0,
+            baseAllocationIdr: 0,
+            recommendedAmountIdr: warChestParkedIdr,
+            recommendedUnits,
+            isNominalOnly: isNominal,
+            explanation: {
+              compositeScore: 50,
+              valuationScore: 50,
+              driftScore: 50,
+              action: 'NORMAL_BUY',
+              actionLabel: 'Parkir War Chest',
               multiplier: 1.0,
-              rawAllocationIdr: 0,
-              finalAllocationIdr: warChestParkedIdr,
-              warChestShareIdr: warChestParkedIdr,
+              valuationBreakdown: calculateValuationScore(
+                warChestAsset,
+                tacticalConfig,
+                undefined,
+                unitPriceNative,
+                usdIdrRate
+              ),
+              driftBreakdown: calculateDriftScore(0, currentW),
+              narrativeWhy: `Aset ini menerima alokasi Rp ${warChestParkedIdr.toLocaleString('id-ID')} sebagai kas siaga (War Chest) dari sisa budget aset yang di-Hold/Skip untuk persiapan serok crash.`,
+              formulaHow: `1. Pengalihan Sisa Dana Aset Hold/Skip: Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n2. Alokasi ke Kas Siaga (${warChestAsset.symbol}): Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n   • Total Alokasi Smart DCA Final: Rp ${warChestParkedIdr.toLocaleString('id-ID')}`,
+              budgetMath: {
+                baseAllocationIdr: 0,
+                multiplier: 1.0,
+                rawAllocationIdr: 0,
+                finalAllocationIdr: warChestParkedIdr,
+                warChestShareIdr: warChestParkedIdr,
+              },
             },
-          },
-        };
-        finalItems.push(warChestItem);
-        totalAllocatedAssetsIdr += warChestParkedIdr;
+          };
+          finalItems.push(warChestItem);
+          totalAllocatedAssetsIdr += warChestParkedIdr;
+        }
       }
     } else {
       // Case 3: No defensive asset in universe at all, retain as unallocated cash
@@ -1189,8 +1208,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
   // 7. Construct RebalanceSummaryResult for Broker Slip & 1-Click Execution compatibility
   const rebalanceItems: RebalanceItemResult[] = finalItems.map((item) => {
     const isBuy = item.recommendedAmountIdr >= 1000;
-    const isSuppressedDust =
-      item.recommendedAmountIdr < dustTradeThresholdIdr && item.recommendedAmountIdr > 0;
+    const isSuppressedDust = Boolean(item.isDustFiltered);
 
     const sentimentScore = item.explanation.compositeScore;
     const zone: SentimentZone =

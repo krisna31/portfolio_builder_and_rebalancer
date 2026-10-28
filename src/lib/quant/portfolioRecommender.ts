@@ -393,15 +393,21 @@ export function generatePortfolioRecommendations(
         targetWealthIdr: answers.targetGoalIdr,
       });
 
+      let dynamicBadge = 'Alternatif Seimbang';
+      if (idx === 0) {
+        dynamicBadge = 'Preset Video Terdekat';
+      } else if (m.maxDrawdown < primaryMetrics.maxDrawdown - 0.5) {
+        dynamicBadge = 'Alternatif Lebih Aman';
+      } else if (m.cagr > primaryMetrics.cagr + 0.5) {
+        dynamicBadge = 'Alternatif Pertumbuhan';
+      } else if (m.maxDrawdown > primaryMetrics.maxDrawdown + 0.5) {
+        dynamicBadge = 'Alternatif Lebih Agresif';
+      }
+
       return {
         id: `rec-alt-${preset.id}`,
         title: preset.name,
-        badgeLabel:
-          idx === 0
-            ? 'Preset Video Terdekat'
-            : idx === 1
-              ? 'Alternatif Lebih Aman'
-              : 'Alternatif Pertumbuhan',
+        badgeLabel: dynamicBadge,
         isPrimaryTailored: false,
         method:
           preset.method === 'risk-budgeting'

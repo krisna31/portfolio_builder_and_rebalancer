@@ -1,10 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { CORE_AND_EXPANDED_ASSETS, VIDEO_PORTFOLIO_PRESETS } from '../../../data/presets';
 import { HoldingEntry, PortfolioPreset } from '../types';
-import { calculateRebalancePlan, generateCrashBuyingLadder } from '../rebalancerEngine';
+import {
+  calculateRebalancePlan,
+  computeUpdatedAverageCostBasis,
+  generateCrashBuyingLadder,
+  getIdxTickSize,
+  roundToIdxTick,
+} from '../rebalancerEngine';
+
 import { parseFinancialNumber, parseHoldingsText } from '../textDataParser';
-import { buildDynamicPresetsForSlotMap } from '../riskParitySolver';
-import { simulateMonteCarloPaths } from '../wealthSimulator';
+import {
+  buildDynamicPresetsForSlotMap,
+  solveRiskBudgetingWeights,
+} from '../riskParitySolver';
+import {
+  simulateMonteCarloPaths,
+  solveRequiredMonthlySavings,
+} from '../wealthSimulator';
+import { calculateSmartDcaPlan } from '../smartDcaEngine';
 
 describe('Second Stage Audit Fixes Verification', () => {
   describe('Fix 1 & 2: Clamp Sell Lots to Owned Regular Lots (No Retail Naked Short-Selling)', () => {
@@ -490,4 +504,354 @@ describe('Second Stage Audit Fixes Verification', () => {
       expect(step.rebalanceBuyAmountIdr).toBe(0);
     });
   });
+
+  describe('Fix 8 & Feature 1: BEI Price Tick Rounding (Kep-00023/BEI/03-2020)', () => {
+    it('correctly maps stock prices to official BEI tick sizes across all 5 price tiers', () => {
+      // Tier 1: < Rp 200 -> Tick 1
+      expect(getIdxTickSize(50)).toBe(1);
+      expect(getIdxTickSize(199)).toBe(1);
+      // Tier 2: Rp 200 - < Rp 500 -> Tick 2
+      expect(getIdxTickSize(200)).toBe(2);
+      expect(getIdxTickSize(498)).toBe(2);
+      // Tier 3: Rp 500 - < Rp 2.000 -> Tick 5
+      expect(getIdxTickSize(500)).toBe(5);
+      expect(getIdxTickSize(1995)).toBe(5);
+      // Tier 4: Rp 2.000 - < Rp 5.000 -> Tick 10
+      expect(getIdxTickSize(2000)).toBe(10);
+      expect(getIdxTickSize(4990)).toBe(10);
+      // Tier 5: >= Rp 5.000 -> Tick 25
+      expect(getIdxTickSize(5000)).toBe(25);
+      expect(getIdxTickSize(9800)).toBe(25);
+    });
+
+    it('rounds prices accurately with roundToIdxTick nearest, floor, and ceil', () => {
+      // BBCA 9800 with 10% drop = 8820 IDR.
+      // 8820 / 25 = 352.8. Nearest = 353 * 25 = 8825. Floor = 352 * 25 = 8800.
+      expect(roundToIdxTick(8820, 'nearest')).toBe(8825);
+      expect(roundToIdxTick(8820, 'floor')).toBe(8800);
+      expect(roundToIdxTick(8820, 'ceil')).toBe(8825);
+
+      // Price in Tier 2 (200 - 500, tick 2): 355.4 -> 356 (nearest)
+      expect(roundToIdxTick(355.4, 'nearest')).toBe(356);
+      expect(roundToIdxTick(355.4, 'floor')).toBe(354);
+    });
+
+    it('enforces BEI tick rounding in generateCrashBuyingLadder for Indonesian equities', () => {
+      const bbcaAsset = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'BBCA')!;
+      const holdings: Record<string, HoldingEntry> = {
+        RDPT: { assetId: 'RDPT', currentValueIdr: 50_000_000, units: 50_000_000, currentPrice: 1, shockPercent: 0, isNominalOnly: true },
+        BBCA: { assetId: 'BBCA', currentValueIdr: 50_000_000, units: 5102, currentPrice: 9800, shockPercent: 0 },
+      };
+
+      const ladder = generateCrashBuyingLadder({
+        targetAsset: bbcaAsset,
+        allAssets: CORE_AND_EXPANDED_ASSETS,
+        targetWeights: { RDPT: 50, BBCA: 50 },
+        holdings,
+        inputMode: 'nominal',
+        usdIdrRate: 16000,
+        extraCashIdr: 10_000_000,
+        dropTiers: [-10],
+      });
+
+      expect(ladder).toHaveLength(1);
+      // 9800 * 0.9 = 8820, rounded to nearest 25 tick -> 8825
+      expect(ladder[0].limitPriceNative).toBe(8825);
+    });
+  });
+
+  describe('Bug 2 & Decision 2: Locked Assets in Risk Budgeting Solver', () => {
+    it('preserves exact locked asset weights and distributes remaining budget proportionally among unlocked assets', () => {
+      const assets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+        ['RDPT', 'BBCA', 'BTC'].includes(a.id)
+      );
+      const lockedAssetIds = new Set(['BBCA']);
+      const currentWeights = { RDPT: 20, BBCA: 40, BTC: 40 };
+
+      const solved = solveRiskBudgetingWeights(
+        assets,
+        'risk-budgeting',
+        'BTC',
+        70,
+        'calibrated-video',
+        lockedAssetIds,
+        currentWeights
+      );
+
+      // Locked asset BBCA must strictly retain its locked weight (40%)
+      expect(solved['BBCA']).toBe(40);
+      // Remaining 60% must be split between RDPT and BTC
+      expect(solved['RDPT'] + solved['BTC']).toBe(60);
+      // Sum must equal 100%
+      const total = Object.values(solved).reduce((sum, w) => sum + w, 0);
+      expect(Math.round(total)).toBe(100);
+    });
+  });
+
+  describe('Bug 3: Smart DCA Anti-Dust Filter Flag', () => {
+    it('sets isDustFiltered correctly on SmartDcaItemResult', () => {
+      const assets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+        ['RDPT', 'BBCA', 'BTC', 'ETH'].includes(a.id)
+      );
+      const targetWeights = { RDPT: 40, BBCA: 30, BTC: 15, ETH: 15 };
+      const holdings: Record<string, HoldingEntry> = {
+        RDPT: { assetId: 'RDPT', currentValueIdr: 400_000, units: 400_000, currentPrice: 1, shockPercent: 0, isNominalOnly: true },
+        BBCA: { assetId: 'BBCA', currentValueIdr: 300_000, units: 30, currentPrice: 10_000, shockPercent: 0 },
+        BTC: { assetId: 'BTC', currentValueIdr: 150_000, units: 0.0001, currentPrice: 1_500_000_000, shockPercent: 0 },
+        ETH: { assetId: 'ETH', currentValueIdr: 150_000, units: 0.003, currentPrice: 50_000_000, shockPercent: 0 },
+      };
+
+      const result = calculateSmartDcaPlan({
+        monthlyBudgetIdr: 50_000,
+        assets,
+        targetWeights,
+        holdings,
+        usdIdrRate: 16000,
+      });
+
+      // Filtered dust items must have isDustFiltered === true and recommendedAmountIdr === 0
+      const dustFiltered = result.items.filter((i) => i.isDustFiltered);
+      expect(dustFiltered.length).toBeGreaterThan(0);
+      for (const item of dustFiltered) {
+        expect(item.recommendedAmountIdr).toBe(0);
+      }
+
+      // In rebalance summary, dust-filtered items must have action === 'HOLD' and tradeAmountIdr === 0
+      const rebalanceDust = result.asRebalanceSummary.items.filter((i) => i.isDustFiltered);
+      expect(rebalanceDust.length).toBeGreaterThan(0);
+      for (const item of rebalanceDust) {
+        expect(item.action).toBe('HOLD');
+        expect(item.tradeAmountIdr).toBe(0);
+      }
+    });
+  });
+
+  describe('Bug 12: Reverse DCA Bisection Bound on Short Horizon with Inflation', () => {
+    it('solves required DCA on 1-month horizon without bisection bound clipping', () => {
+      const solution = solveRequiredMonthlySavings({
+        initialCapitalIdr: 0,
+        targetGoalIdr: 100_000_000,
+        targetYears: 1 / 12, // 1 month
+        annualCagrPercent: 12,
+        annualInflationPercent: 6,
+      });
+
+      // To reach 100M in 1 month with 0 initial capital, user must invest ~100M IDR
+      expect(solution.deterministicMonthlyDcaIdr).toBeGreaterThanOrEqual(99_000_000);
+      expect(solution.monteCarlo75MonthlyDcaIdr).toBeGreaterThanOrEqual(99_000_000);
+    });
+  });
+
+  describe('Bug 1: Weighted Average Cost Basis (computeUpdatedAverageCostBasis)', () => {
+    it('sets cost basis to purchase price on initial buy from zero units', () => {
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 0,
+        prevCurrentPrice: 9800,
+        boughtUnits: 1000,
+        buyPrice: 9800,
+        newTotalUnits: 1000,
+      });
+      expect(avg).toBe(9800);
+    });
+
+    it('calculates accurate weighted average cost basis when buying at higher price (averaging up)', () => {
+      // 100 units held @ Rp 8.000, buy 100 units @ Rp 10.000 -> Avg: (800k + 1000k) / 200 = Rp 9.000
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 100,
+        prevAvgBuyPrice: 8000,
+        prevCurrentPrice: 10000,
+        boughtUnits: 100,
+        buyPrice: 10000,
+        newTotalUnits: 200,
+      });
+      expect(avg).toBe(9000);
+    });
+
+    it('calculates accurate weighted average cost basis when buying at lower price (dollar-cost averaging down)', () => {
+      // 100 units held @ Rp 10.000, buy 100 units @ Rp 6.000 -> Avg: (1000k + 600k) / 200 = Rp 8.000
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 100,
+        prevAvgBuyPrice: 10000,
+        prevCurrentPrice: 6000,
+        boughtUnits: 100,
+        buyPrice: 6000,
+        newTotalUnits: 200,
+      });
+      expect(avg).toBe(8000);
+    });
+
+    it('preserves existing cost basis on HOLD or SELL actions (boughtUnits <= 0)', () => {
+      // Selling 30 units: remaining 70 units retain existing cost basis of Rp 8.000
+      const avgSell = computeUpdatedAverageCostBasis({
+        prevUnits: 100,
+        prevAvgBuyPrice: 8000,
+        prevCurrentPrice: 12000,
+        boughtUnits: 0,
+        buyPrice: 12000,
+        newTotalUnits: 70,
+      });
+      expect(avgSell).toBe(8000);
+
+      // HOLD (0 bought): preserves Rp 8.000
+      const avgHold = computeUpdatedAverageCostBasis({
+        prevUnits: 100,
+        prevAvgBuyPrice: 8000,
+        prevCurrentPrice: 12000,
+        boughtUnits: 0,
+        buyPrice: 12000,
+        newTotalUnits: 100,
+      });
+      expect(avgHold).toBe(8000);
+    });
+
+    it('clears cost basis to undefined upon full position liquidation (newTotalUnits <= 0)', () => {
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 100,
+        prevAvgBuyPrice: 8000,
+        prevCurrentPrice: 12000,
+        boughtUnits: 0,
+        buyPrice: 12000,
+        newTotalUnits: 0,
+      });
+      expect(avg).toBeUndefined();
+    });
+
+    it('always returns 1 for nominal-only assets (RDPT, cash, deposits)', () => {
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 50_000_000,
+        prevAvgBuyPrice: 1,
+        prevCurrentPrice: 1,
+        boughtUnits: 10_000_000,
+        buyPrice: 1,
+        newTotalUnits: 60_000_000,
+        isNominal: true,
+      });
+      expect(avg).toBe(1);
+    });
+
+    it('preserves 4 decimal precision for crypto assets', () => {
+      // 0.05 BTC held @ $60,000, buy 0.05 BTC @ $68,543.25
+      const avg = computeUpdatedAverageCostBasis({
+        prevUnits: 0.05,
+        prevAvgBuyPrice: 60000,
+        prevCurrentPrice: 68543.25,
+        boughtUnits: 0.05,
+        buyPrice: 68543.25,
+        newTotalUnits: 0.1,
+        category: 'crypto',
+      });
+      expect(avg).toBe(64271.625);
+    });
+  });
+
+  describe('Bug 2 & Decision 2 Edge Cases: Heavy Locking & Stability in Solver', () => {
+    it('handles extreme 95% asset lock with 5 unlocked assets without division by zero or NaN', () => {
+      const assets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+        ['BBCA', 'RDPT', 'RDPU', 'BTC', 'ETH', 'GLD'].includes(a.id)
+      );
+      const lockedAssetIds = new Set(['BBCA']);
+      const currentWeights = {
+        BBCA: 95,
+        RDPT: 1,
+        RDPU: 1,
+        BTC: 1,
+        ETH: 1,
+        GLD: 1,
+      };
+
+      const solved = solveRiskBudgetingWeights(
+        assets,
+        'risk-parity',
+        undefined,
+        70,
+        'calibrated-video',
+        lockedAssetIds,
+        currentWeights
+      );
+
+      // Locked asset must remain strictly at 95%
+      expect(solved['BBCA']).toBe(95);
+
+      // The 5 unlocked assets must share the remaining 5%
+      const unlockedSum = ['RDPT', 'RDPU', 'BTC', 'ETH', 'GLD'].reduce(
+        (sum, id) => sum + (solved[id] ?? 0),
+        0
+      );
+      expect(Math.round(unlockedSum)).toBe(5);
+
+      // No asset should have NaN or negative weight
+      for (const id of Object.keys(solved)) {
+        expect(Number.isNaN(solved[id])).toBe(false);
+        expect(solved[id]).toBeGreaterThanOrEqual(0);
+      }
+
+      // Total sum must strictly be 100%
+      const totalSum = Object.values(solved).reduce((sum, w) => sum + w, 0);
+      expect(Math.round(totalSum)).toBe(100);
+    });
+
+    it('handles 100% locked asset by allocating 0% to remaining unlocked assets', () => {
+      const assets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+        ['BBCA', 'RDPT', 'BTC'].includes(a.id)
+      );
+      const lockedAssetIds = new Set(['BBCA']);
+      const currentWeights = { BBCA: 100, RDPT: 0, BTC: 0 };
+
+      const solved = solveRiskBudgetingWeights(
+        assets,
+        'risk-parity',
+        undefined,
+        70,
+        'calibrated-video',
+        lockedAssetIds,
+        currentWeights
+      );
+
+      expect(solved['BBCA']).toBe(100);
+      expect(solved['RDPT']).toBe(0);
+      expect(solved['BTC']).toBe(0);
+    });
+
+    it('safely ignores lockedAssetIds that do not exist in currentWeights', () => {
+      const assets = CORE_AND_EXPANDED_ASSETS.filter((a) =>
+        ['RDPT', 'BBCA'].includes(a.id)
+      );
+      // Ghost asset in lockedAssetIds that has no weight in currentWeights
+      const lockedAssetIds = new Set(['GHOST_ASSET']);
+      const currentWeights = { RDPT: 50, BBCA: 50 };
+
+      const solved = solveRiskBudgetingWeights(
+        assets,
+        'risk-parity',
+        undefined,
+        70,
+        'calibrated-video',
+        lockedAssetIds,
+        currentWeights
+      );
+
+      // Should solve normally without error or NaN
+      const total = Object.values(solved).reduce((sum, w) => sum + w, 0);
+      expect(Math.round(total)).toBe(100);
+    });
+  });
+
+  describe('Feature 1 & Broker Slip: BEI Price Tick Size Integration', () => {
+    it('ensures post-shock prices in broker order pad align with BEI tick tiers', () => {
+      // E.g., BBCA normal price Rp 9.800 with -10% market crash scenario
+      const normalPrice = 9800;
+      const shockedPrice = normalPrice * 0.9; // 8820 IDR
+      // In Tier 5 (>= Rp 5000), tick is 25. 8820 rounded to nearest tick is 8825.
+      const roundedSlipPrice = roundToIdxTick(shockedPrice, 'nearest');
+      expect(roundedSlipPrice).toBe(8825);
+      expect(roundedSlipPrice % 25).toBe(0);
+
+      // E.g., GOTO normal price Rp 65 with -15% drop = Rp 55.25 -> tick 1 -> Rp 55
+      expect(roundToIdxTick(65 * 0.85, 'nearest')).toBe(55);
+
+      // E.g., BUMI normal price Rp 140 with +65% rally = Rp 231 -> tick 2 (Tier 2: 200-500) -> Rp 232
+      expect(roundToIdxTick(140 * 1.65, 'nearest')).toBe(232);
+    });
+  });
 });
+

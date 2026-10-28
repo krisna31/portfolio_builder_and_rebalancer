@@ -310,6 +310,12 @@ export interface MonteCarloYearPoint {
   p50: number; // Median 50th percentile
   p75: number;
   p90: number; // Bull 90th percentile
+  p10Real?: number;
+  p25Real?: number;
+  p50Real?: number;
+  p75Real?: number;
+  p90Real?: number;
+  principalReal?: number;
 }
 
 export interface MonteCarloSimulationResult {
@@ -396,6 +402,10 @@ export function simulateMonteCarloPaths(params: {
     { length: maxYears + 1 },
     () => new Array(numSimulations)
   );
+  const yearlyRealWealthDistribution: number[][] = Array.from(
+    { length: maxYears + 1 },
+    () => new Array(numSimulations)
+  );
 
   const goalReachedMonths: (number | null)[] = new Array(numSimulations).fill(null);
 
@@ -403,6 +413,7 @@ export function simulateMonteCarloPaths(params: {
     let wealth = Math.max(0, initialCapitalIdr);
     let currentMonthlyPmt = Math.max(0, monthlyContributionIdr);
     yearlyWealthDistribution[0][s] = wealth;
+    yearlyRealWealthDistribution[0][s] = wealth;
 
     if (wealth >= targetGoalIdr) {
       goalReachedMonths[s] = 0;
@@ -429,6 +440,7 @@ export function simulateMonteCarloPaths(params: {
       if (m % 12 === 0) {
         const yr = m / 12;
         yearlyWealthDistribution[yr][s] = wealth;
+        yearlyRealWealthDistribution[yr][s] = realWealth;
       }
     }
   }
@@ -452,15 +464,25 @@ export function simulateMonteCarloPaths(params: {
       runningPrincipal += runningMonthlyPmt * 12;
     }
 
+    const yrInflationDiscount =
+      monthlyInflationRate > 0 ? Math.pow(1 + monthlyInflationRate, yr * 12) : 1;
     const sortedVals = [...yearlyWealthDistribution[yr]].sort((a, b) => a - b);
+    const sortedRealVals = [...yearlyRealWealthDistribution[yr]].sort((a, b) => a - b);
+
     series.push({
       year: yr,
       principal: Math.round(runningPrincipal),
+      principalReal: Math.round(runningPrincipal / yrInflationDiscount),
       p10: Math.round(getQuantile(sortedVals, 0.1)),
       p25: Math.round(getQuantile(sortedVals, 0.25)),
       p50: Math.round(getQuantile(sortedVals, 0.5)),
       p75: Math.round(getQuantile(sortedVals, 0.75)),
       p90: Math.round(getQuantile(sortedVals, 0.9)),
+      p10Real: Math.round(getQuantile(sortedRealVals, 0.1)),
+      p25Real: Math.round(getQuantile(sortedRealVals, 0.25)),
+      p50Real: Math.round(getQuantile(sortedRealVals, 0.5)),
+      p75Real: Math.round(getQuantile(sortedRealVals, 0.75)),
+      p90Real: Math.round(getQuantile(sortedRealVals, 0.9)),
     });
   }
 
@@ -531,7 +553,8 @@ export function solveRequiredMonthlySavings(params: {
 
   // 1. Solve Deterministic monthly DCA using bisection
   let low = 0;
-  let high = Math.max(1_000_000, targetGoalIdr);
+  // Set generous upper bound to prevent clipping on short horizons or high inflation
+  let high = Math.max(1_000_000, targetGoalIdr * Math.max(1, inflationDiscount) * 2);
   let bestPmt = high;
 
   for (let iter = 0; iter < 40; iter++) {
@@ -566,7 +589,7 @@ export function solveRequiredMonthlySavings(params: {
   const conservativeMonthlyRate = Math.pow(1 + conservativeAnnualRate, 1 / 12) - 1;
 
   low = 0;
-  high = Math.max(1_000_000, targetGoalIdr * 1.5);
+  high = Math.max(1_000_000, targetGoalIdr * Math.max(1, inflationDiscount) * 3);
   let mc75Pmt = high;
   for (let iter = 0; iter < 40; iter++) {
     const mid = (low + high) / 2;
