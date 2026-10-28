@@ -105,10 +105,14 @@ export function getAssetPairwiseCorrelation(
 ): number {
   if (assetA.id === assetB.id) return 1.0;
 
-  // Check specific overrides
-  const pairKey = `${assetA.id}:${assetB.id}`;
-  if (SPECIFIC_ASSET_CORRELATIONS[pairKey] !== undefined) {
-    return SPECIFIC_ASSET_CORRELATIONS[pairKey];
+  // Check specific overrides (guaranteeing mathematical bidirectional symmetry Corr(A, B) === Corr(B, A))
+  const pairKey1 = `${assetA.id}:${assetB.id}`;
+  const pairKey2 = `${assetB.id}:${assetA.id}`;
+  if (SPECIFIC_ASSET_CORRELATIONS[pairKey1] !== undefined) {
+    return SPECIFIC_ASSET_CORRELATIONS[pairKey1];
+  }
+  if (SPECIFIC_ASSET_CORRELATIONS[pairKey2] !== undefined) {
+    return SPECIFIC_ASSET_CORRELATIONS[pairKey2];
   }
 
   // Category correlation

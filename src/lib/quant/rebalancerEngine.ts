@@ -94,7 +94,16 @@ export function calculateRebalancePlan(params: {
     // Apply market crash / bull run shock multiplier: e.g., +200% shock = 3.0x value, -50% shock = 0.5x value
     const shockMultiplier = Math.max(0, 1 + (h.shockPercent ?? 0) / 100);
     const postShockValIdr = initialValIdr * shockMultiplier;
-    const postShockUnitPriceIdr = Math.max(1e-6, unitPriceIdr * shockMultiplier);
+
+    // For IDX equity stocks (100 shares per lot), ensure unit price conforms to BEI official tick sizes
+    const isIdxStock =
+      asset.category === 'idx-equity' &&
+      asset.lotSize === 100 &&
+      !asset.isNominalOnly;
+    const rawPostShockUnitPrice = unitPriceIdr * shockMultiplier;
+    const postShockUnitPriceIdr = isIdxStock
+      ? roundToIdxTick(rawPostShockUnitPrice, 'nearest')
+      : Math.max(1e-6, rawPostShockUnitPrice);
 
     initialTotalIdr += initialValIdr;
     postShockTotalIdr += postShockValIdr;

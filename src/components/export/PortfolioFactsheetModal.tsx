@@ -35,6 +35,9 @@ export interface PortfolioFactsheetModalProps {
   monthlySavingsIdr: number;
   targetGoalIdr: number;
   usdIdrRate: number;
+  annualInflationPercent?: number;
+  annualStepUpPercent?: number;
+  netDividendYieldPercent?: number;
 }
 
 export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = ({
@@ -48,6 +51,9 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   monthlySavingsIdr,
   targetGoalIdr,
   usdIdrRate,
+  annualInflationPercent = 0,
+  annualStepUpPercent = 0,
+  netDividendYieldPercent = 0,
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [isExportingPng, setIsExportingPng] = useState(false);
@@ -75,36 +81,48 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     })
     .sort((a, b) => b.weightPct - a.weightPct);
 
-  // Wealth Simulation for milestones
+  // Wealth Simulation for milestones with inflation & step-up forward
   const simulation = simulateWealthToGoal({
     initialCapitalIdr,
     monthlyContributionIdr: monthlySavingsIdr,
     annualCagrPercent: solvedMetrics.cagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
     targetWealthIdr: targetGoalIdr,
+    annualInflationPercent,
+    annualStepUpPercent,
+    netDividendYieldPercent,
   });
 
   // Calculate milestone projections for 1, 3, 5, 10, 15, 20 years
   const annualRate = Math.max(0, solvedMetrics.cagr) / 100;
   const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+  const inflationDec = Math.max(0, annualInflationPercent) / 100;
+  const monthlyInflationRate = Math.pow(1 + inflationDec, 1 / 12) - 1;
 
   const milestoneYears = [1, 3, 5, 10, 15, 20];
   const milestoneRows = milestoneYears.map((yr) => {
     const totalMonths = yr * 12;
     let wealth = initialCapitalIdr;
     let principal = initialCapitalIdr;
+    let currentMonthlyPmt = monthlySavingsIdr;
 
     for (let m = 1; m <= totalMonths; m++) {
-      wealth = wealth * (1 + monthlyRate) + monthlySavingsIdr;
-      principal += monthlySavingsIdr;
+      if (m > 1 && (m - 1) % 12 === 0 && annualStepUpPercent > 0) {
+        currentMonthlyPmt *= 1 + annualStepUpPercent / 100;
+      }
+      wealth = wealth * (1 + monthlyRate) + currentMonthlyPmt;
+      principal += currentMonthlyPmt;
     }
 
+    const inflationDiscount = Math.pow(1 + monthlyInflationRate, totalMonths);
+    const realPurchasingPower = wealth / inflationDiscount;
     const gain = wealth - principal;
     return {
       year: yr,
-      principal,
-      wealth,
-      gain,
+      principal: Math.round(principal),
+      wealth: Math.round(wealth),
+      realPurchasingPower: Math.round(realPurchasingPower),
+      gain: Math.round(gain),
     };
   });
 
@@ -603,6 +621,11 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                         </td>
                         <td className={`py-1 px-3 text-right font-bold font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>
                           {formatIdr(row.wealth)}
+                          {annualInflationPercent > 0 && (
+                            <span className={`block text-[9px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                              Riil: {formatIdr(row.realPurchasingPower, true)}
+                            </span>
+                          )}
                         </td>
                         <td className="py-1 px-3 text-right font-semibold font-mono text-emerald-600 dark:text-emerald-400">
                           +{formatIdr(row.gain)}

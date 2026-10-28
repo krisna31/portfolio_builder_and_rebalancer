@@ -42,6 +42,11 @@ export interface SmartDcaAdvisorPanelProps {
   filterDustTrades?: boolean;
   dustTradeThresholdIdr?: number;
   tacticalConfig?: ValuationSentimentConfig;
+  cashInjectionIdr?: number;
+  smartDcaMonthlyBudgetIdr?: number;
+  onUpdateSmartDcaMonthlyBudgetIdr?: (val: number) => void;
+  smartDcaOverflowMode?: SmartDcaOverflowMode;
+  onUpdateSmartDcaOverflowMode?: (mode: SmartDcaOverflowMode) => void;
   onOpenOrderSlip?: (planOverride?: RebalanceSummaryResult) => void;
   onCommitRebalanceToHoldings?: (
     note?: string,
@@ -61,25 +66,42 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   filterDustTrades = true,
   dustTradeThresholdIdr = 25_000,
   tacticalConfig,
+  cashInjectionIdr = 0,
+  smartDcaMonthlyBudgetIdr,
+  onUpdateSmartDcaMonthlyBudgetIdr,
+  smartDcaOverflowMode,
+  onUpdateSmartDcaOverflowMode,
   onOpenOrderSlip,
   onCommitRebalanceToHoldings,
   onSwitchToStandardRebalancer,
 }) => {
-  // Monthly DCA budget state
-  const [monthlyBudgetIdr, setMonthlyBudgetIdr] = useState<number>(
-    monthlySavingsMenu1Idr > 0 ? monthlySavingsMenu1Idr : 3_000_000
+  // Monthly DCA budget state (synchronized with App persistence)
+  const [localMonthlyBudgetIdr, setLocalMonthlyBudgetIdr] = useState<number>(
+    smartDcaMonthlyBudgetIdr ?? (monthlySavingsMenu1Idr > 0 ? monthlySavingsMenu1Idr : 3_000_000)
   );
+  const monthlyBudgetIdr = smartDcaMonthlyBudgetIdr ?? localMonthlyBudgetIdr;
 
-  // Bug 11 fix: Synchronize DCA monthly budget whenever Menu 1 savings change
+  const handleSetMonthlyBudgetIdr = (val: number) => {
+    setLocalMonthlyBudgetIdr(val);
+    onUpdateSmartDcaMonthlyBudgetIdr?.(val);
+  };
+
+  // Bug 11 fix: Synchronize DCA monthly budget whenever Menu 1 savings change if no explicit custom override
   useEffect(() => {
-    if (monthlySavingsMenu1Idr > 0) {
-      setMonthlyBudgetIdr(monthlySavingsMenu1Idr);
+    if (monthlySavingsMenu1Idr > 0 && smartDcaMonthlyBudgetIdr === undefined) {
+      setLocalMonthlyBudgetIdr(monthlySavingsMenu1Idr);
     }
-  }, [monthlySavingsMenu1Idr]);
+  }, [monthlySavingsMenu1Idr, smartDcaMonthlyBudgetIdr]);
 
   // Overflow parking mode: 'park-rdpu' (default) vs 'boost-discount'
-  const [overflowMode, setOverflowMode] =
-    useState<SmartDcaOverflowMode>('park-rdpu');
+  const [localOverflowMode, setLocalOverflowMode] =
+    useState<SmartDcaOverflowMode>(smartDcaOverflowMode ?? 'park-rdpu');
+  const overflowMode = smartDcaOverflowMode ?? localOverflowMode;
+
+  const handleSetOverflowMode = (mode: SmartDcaOverflowMode) => {
+    setLocalOverflowMode(mode);
+    onUpdateSmartDcaOverflowMode?.(mode);
+  };
 
   // Modal / Drawer state for "Mengapa Direkomendasikan?"
   const [selectedAssetForWhy, setSelectedAssetForWhy] =
@@ -100,6 +122,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
   // Copy status
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [copiedWhyExplanation, setCopiedWhyExplanation] = useState(false);
   const [commitSuccessMessage, setCommitSuccessMessage] = useState<string | null>(
     null
   );
@@ -326,7 +349,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   step={500_000}
                   min={0}
                   value={monthlyBudgetIdr}
-                  onChange={(val) => setMonthlyBudgetIdr(val)}
+                  onChange={(val) => handleSetMonthlyBudgetIdr(val)}
                   className="ui-text-main w-full bg-transparent font-mono text-sm font-bold focus:outline-none"
                   ariaLabel="Monthly DCA Budget in IDR"
                 />
@@ -338,7 +361,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               {monthlySavingsMenu1Idr > 0 && (
                 <button
                   type="button"
-                  onClick={() => setMonthlyBudgetIdr(monthlySavingsMenu1Idr)}
+                  onClick={() => handleSetMonthlyBudgetIdr(monthlySavingsMenu1Idr)}
                   className={`rounded px-2 py-1 text-[11px] font-mono font-semibold transition ${
                     monthlyBudgetIdr === monthlySavingsMenu1Idr
                       ? 'bg-emerald-600 text-white'
@@ -349,11 +372,21 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
                 </button>
               )}
+              {cashInjectionIdr > 0 && cashInjectionIdr !== monthlyBudgetIdr && (
+                <button
+                  type="button"
+                  onClick={() => handleSetMonthlyBudgetIdr(cashInjectionIdr)}
+                  className="rounded px-2 py-1 text-[11px] font-mono font-semibold border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition"
+                  title="Gunakan nominal kas masuk / cash injection dari Rebalancer"
+                >
+                  Kas Rebalance ({formatIdr(cashInjectionIdr, true)})
+                </button>
+              )}
               {[1_000_000, 3_000_000, 5_000_000, 10_000_000].map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setMonthlyBudgetIdr(preset)}
+                  onClick={() => handleSetMonthlyBudgetIdr(preset)}
                   className={`ui-subtle rounded px-2 py-1 text-[11px] font-mono transition hover:ui-text-main ${
                     monthlyBudgetIdr === preset
                       ? 'bg-zinc-300 dark:bg-zinc-700 font-bold ui-text-main'
@@ -378,7 +411,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setOverflowMode('park-rdpu')}
+                onClick={() => handleSetOverflowMode('park-rdpu')}
                 className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                   overflowMode === 'park-rdpu'
                     ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
@@ -398,7 +431,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
               <button
                 type="button"
-                onClick={() => setOverflowMode('boost-discount')}
+                onClick={() => handleSetOverflowMode('boost-discount')}
                 className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                   overflowMode === 'boost-discount'
                     ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
@@ -547,8 +580,8 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           </div>
         )}
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table View (Desktop & Tablet) */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b ui-border text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -696,6 +729,134 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Responsive Cards (Screens < 768px) */}
+        <div className="space-y-3 md:hidden">
+          {smartDcaResult.items.map((item) => {
+            const isHold = item.action === 'HOLD_SKIP';
+            const isAggressive = item.action === 'AGGRESSIVE_BUY';
+            const isModerate = item.action === 'MODERATE_BUY';
+            const deficitPct = item.explanation.driftBreakdown.relativeDeficitPercent;
+
+            return (
+              <div
+                key={item.assetId}
+                className="rounded-xl border ui-border p-3.5 space-y-3 ui-subtle"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-3 w-3 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <div>
+                      <div className="font-bold ui-text-main text-xs flex items-center gap-1.5">
+                        <span>{item.symbol}</span>
+                        <span className="text-[10px] font-normal text-slate-400 truncate max-w-[120px]">
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span>Target {item.targetWeightPercent.toFixed(1)}%</span>
+                        <span>•</span>
+                        <span
+                          className={
+                            item.currentWeightPercent < item.targetWeightPercent
+                              ? 'text-amber-500 font-semibold'
+                              : 'text-slate-400'
+                          }
+                        >
+                          Saat ini {item.currentWeightPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                        isAggressive
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          : isModerate
+                            ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30'
+                            : isHold
+                              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                              : item.action === 'SMALL_BUY'
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                      }`}
+                    >
+                      {item.actionLabel} ({item.multiplier}x)
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2-Pillar Score Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="ui-text-muted">Skor Komposit 2-Pilar:</span>
+                    <span className="font-mono font-bold ui-text-main">
+                      {item.explanation.compositeScore}/100
+                    </span>
+                  </div>
+                  <div className="w-full bg-black/10 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        item.explanation.compositeScore >= 80
+                          ? 'bg-emerald-500'
+                          : item.explanation.compositeScore >= 60
+                            ? 'bg-teal-500'
+                            : item.explanation.compositeScore < 30
+                              ? 'bg-rose-500'
+                              : 'bg-blue-500'
+                      }`}
+                      style={{
+                        width: `${Math.min(100, Math.max(5, item.explanation.compositeScore))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Weight & Allocation Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t ui-border">
+                  <div>
+                    <span className="text-[10px] ui-text-muted block">Alokasi Smart DCA</span>
+                    <span className="font-mono font-bold ui-text-main text-xs">
+                      {formatIdr(item.recommendedAmountIdr)}
+                    </span>
+                    <span className="text-[10px] ui-text-muted block">
+                      Base: {formatIdr(item.baseAllocationIdr, true)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] ui-text-muted block">Estimasi Lot/Unit</span>
+                    <span className="font-mono font-semibold ui-text-secondary text-xs">
+                      {formatUnitDisplay(item)}
+                    </span>
+                    <span
+                      className={`text-[10px] font-semibold block ${
+                        deficitPct > 0 ? 'text-amber-500' : 'text-slate-400'
+                      }`}
+                    >
+                      {deficitPct > 0 ? `Defisit ${deficitPct}%` : 'Sesuai Target'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Button: Mengapa? */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedAssetForWhy(item)}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold border ui-border ui-card hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 transition shadow-2xs"
+                >
+                  <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Lihat Analisis &amp; Rumus Mengapa Direkomendasikan</span>
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Remainder Cash Notice */}
@@ -902,11 +1063,67 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-3 border-t ui-border">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!selectedAssetForWhy) return;
+                  const unitsLabel =
+                    selectedAssetForWhy.recommendedLotsInteger !== undefined
+                      ? `${selectedAssetForWhy.recommendedLotsInteger} Lot (${selectedAssetForWhy.recommendedUnits} lembar)`
+                      : selectedAssetForWhy.isNominalOnly
+                      ? formatIdr(selectedAssetForWhy.recommendedAmountIdr)
+                      : `${selectedAssetForWhy.recommendedUnits} unit`;
+
+                  const text = [
+                    `=== RATIONALE SMART DCA: ${selectedAssetForWhy.symbol} ===`,
+                    `Keputusan: ${selectedAssetForWhy.actionLabel} (${selectedAssetForWhy.multiplier}x Multiplier)`,
+                    `Alokasi: ${formatIdr(selectedAssetForWhy.recommendedAmountIdr)} (${unitsLabel})`,
+                    ``,
+                    `[1] Analisis Rationale:`,
+                    selectedAssetForWhy.explanation.narrativeWhy,
+                    ``,
+                    `[2] Pilar 1 - Diskon Valuasi Pasar:`,
+                    `- Skor Valuasi: ${selectedAssetForWhy.explanation.valuationScore}/100`,
+                    ...selectedAssetForWhy.explanation.valuationBreakdown.metrics.map(
+                      (m) => `  * ${m.name}: ${m.value} (Skor: ${m.score}/100)`
+                    ),
+                    ``,
+                    `[3] Pilar 2 - Defisit & Drift Portofolio:`,
+                    `- Skor Drift: ${selectedAssetForWhy.explanation.driftScore}/100`,
+                    `- Status: ${selectedAssetForWhy.explanation.driftBreakdown.summary}`,
+                    ``,
+                    `[4] Matematika Alokasi Rupiah:`,
+                    `- Base DCA: ${formatIdr(selectedAssetForWhy.explanation.budgetMath.baseAllocationIdr)}`,
+                    `- Multiplier: ${selectedAssetForWhy.multiplier}x`,
+                    `- Alokasi Final: ${formatIdr(selectedAssetForWhy.recommendedAmountIdr)}`,
+                    `- War Chest / Parkir: ${formatIdr(selectedAssetForWhy.explanation.budgetMath.warChestShareIdr)}`,
+                    ``,
+                    `[5] Rumus Perhitungan Step-by-Step:`,
+                    selectedAssetForWhy.explanation.formulaHow,
+                  ].join('\n');
+                  navigator.clipboard.writeText(text);
+                  setCopiedWhyExplanation(true);
+                  setTimeout(() => setCopiedWhyExplanation(false), 2500);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border ui-border px-3.5 py-2 text-xs font-semibold ui-text-main hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                {copiedWhyExplanation ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-emerald-500 font-medium">Tersalin ke Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 ui-text-muted" />
+                    <span>Salin Analisis Lengkap</span>
+                  </>
+                )}
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedAssetForWhy(null)}
-                className="rounded-lg bg-zinc-200 dark:bg-zinc-800 px-4 py-2 text-xs font-semibold ui-text-main hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+                className="rounded-lg bg-zinc-200 dark:bg-zinc-800 px-4 py-2 text-xs font-semibold ui-text-main hover:bg-zinc-300 dark:hover:bg-zinc-700 transition text-center"
               >
                 Tutup
               </button>

@@ -12,7 +12,10 @@ import {
   getSentimentDescription,
   fetchLiveCryptoFearAndGreed,
 } from '../../lib/quant/tacticalValuationEngine';
-import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
+import {
+  generateCrashBuyingLadder,
+  roundToIdxTick,
+} from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { HoldingsTextImportModal } from './HoldingsTextImportModal';
 import { RebalanceExecutionGuideModal } from './RebalanceExecutionGuideModal';
@@ -123,6 +126,10 @@ interface PortfolioRebalancerViewProps {
   onBatchUpdateHoldings?: (items: ParsedHoldingItem[], strategy: 'merge' | 'replace') => void;
   tacticalConfig?: ValuationSentimentConfig;
   setTacticalConfig?: React.Dispatch<React.SetStateAction<ValuationSentimentConfig>>;
+  smartDcaMonthlyBudgetIdr?: number;
+  setSmartDcaMonthlyBudgetIdr?: (val: number) => void;
+  smartDcaOverflowMode?: 'park-rdpu' | 'boost-discount';
+  setSmartDcaOverflowMode?: (mode: 'park-rdpu' | 'boost-discount') => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -170,6 +177,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   onBatchUpdateHoldings,
   tacticalConfig,
   setTacticalConfig,
+  smartDcaMonthlyBudgetIdr,
+  setSmartDcaMonthlyBudgetIdr,
+  smartDcaOverflowMode,
+  setSmartDcaOverflowMode,
 }) => {
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
@@ -288,7 +299,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       const rawPrice =
         h?.currentPrice && h.currentPrice > 0 ? h.currentPrice : (assetDef?.defaultPrice ?? 1);
       const shockMultiplier = Math.max(0, 1 + (h?.shockPercent ?? 0) / 100);
-      const postShockPrice = Math.round(rawPrice * shockMultiplier) || 1;
+      const isIdxStock =
+        assetDef?.category === 'idx-equity' &&
+        assetDef?.lotSize === 100 &&
+        !assetDef?.isNominalOnly;
+      const rawSpot = rawPrice * shockMultiplier;
+      const postShockPrice = isIdxStock
+        ? roundToIdxTick(rawSpot, 'nearest')
+        : (Math.round(rawSpot) || 1);
 
       const newTradeAmount = newLotsMagnitude * 100 * postShockPrice;
       const signedNewTradeAmount = isBuy ? newTradeAmount : -newTradeAmount;
@@ -751,6 +769,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           filterDustTrades={filterDustTrades}
           dustTradeThresholdIdr={25_000}
           tacticalConfig={tacticalConfig}
+          cashInjectionIdr={cashInjectionIdr}
+          smartDcaMonthlyBudgetIdr={smartDcaMonthlyBudgetIdr}
+          onUpdateSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
+          smartDcaOverflowMode={smartDcaOverflowMode}
+          onUpdateSmartDcaOverflowMode={setSmartDcaOverflowMode}
           onOpenOrderSlip={onOpenOrderSlip}
           onCommitRebalanceToHoldings={onCommitRebalanceToHoldings}
           onSwitchToStandardRebalancer={() => setRebalancerSubMode('rebalance')}

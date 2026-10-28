@@ -128,6 +128,20 @@ export const Header: React.FC<HeaderProps> = ({
   const [hasBiometric, setHasBiometric] = useState(() => hasRegisteredBiometric());
   const [biometricFeedback, setBiometricFeedback] = useState<string | null>(null);
   const [isRegisteringBiometric, setIsRegisteringBiometric] = useState(false);
+  const [biometricToast, setBiometricToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+
+  // Auto-dismiss biometric feedback toast
+  useEffect(() => {
+    if (biometricToast) {
+      const timer = setTimeout(() => {
+        setBiometricToast(null);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [biometricToast]);
 
   // Detect platform biometric authenticator support on mount
   useEffect(() => {
@@ -171,12 +185,17 @@ export const Header: React.FC<HeaderProps> = ({
       if (res.success) {
         setHasBiometric(true);
         setIsBiometricSupported(true);
-        setBiometricFeedback('Sidik jari berhasil didaftarkan di perangkat ini!');
+        const msg = 'Sidik jari berhasil didaftarkan di perangkat ini!';
+        setBiometricFeedback(msg);
+        setBiometricToast({ message: msg, type: 'success' });
       } else if (res.error) {
         setBiometricFeedback(res.error);
+        setBiometricToast({ message: res.error, type: 'error' });
       }
     } catch {
-      setBiometricFeedback('Gagal mendaftarkan sidik jari.');
+      const errMsg = 'Gagal mendaftarkan sidik jari.';
+      setBiometricFeedback(errMsg);
+      setBiometricToast({ message: errMsg, type: 'error' });
     } finally {
       setIsRegisteringBiometric(false);
     }
@@ -191,7 +210,9 @@ export const Header: React.FC<HeaderProps> = ({
     if (shouldRevoke) {
       clearBiometricCredential();
       setHasBiometric(false);
-      setBiometricFeedback('Pendaftaran sidik jari telah dihapus.');
+      const msg = 'Pendaftaran sidik jari telah dihapus dari perangkat ini.';
+      setBiometricFeedback(msg);
+      setBiometricToast({ message: msg, type: 'info' });
       const avail = await isPlatformAuthenticatorAvailable();
       setIsBiometricSupported(avail);
     }
@@ -327,6 +348,40 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
+      {/* Floating Biometric Toast Notification */}
+      {biometricToast && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md text-xs font-semibold transition max-w-sm ${
+            biometricToast.type === 'success'
+              ? 'border-emerald-500/40 bg-emerald-950/95 text-emerald-200'
+              : biometricToast.type === 'error'
+              ? 'border-rose-500/40 bg-rose-950/95 text-rose-200'
+              : 'border-zinc-500/40 bg-zinc-900/95 text-zinc-200'
+          }`}
+        >
+          <Fingerprint
+            className={`h-4 w-4 shrink-0 ${
+              biometricToast.type === 'success'
+                ? 'text-emerald-400'
+                : biometricToast.type === 'error'
+                ? 'text-rose-400'
+                : 'text-zinc-400'
+            }`}
+          />
+          <span className="flex-1 leading-snug">{biometricToast.message}</span>
+          <button
+            type="button"
+            onClick={() => setBiometricToast(null)}
+            className="rounded p-1 hover:bg-white/10 transition"
+            aria-label="Tutup notifikasi"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </aside>
+      )}
+
       <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-2.5">
           <div className="flex items-center justify-between gap-2">

@@ -38,6 +38,7 @@ import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetM
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { ResetConfirmationModal } from './components/ResetConfirmationModal';
 import { DataTransferModal } from './components/export/DataTransferModal';
+import { SmartDcaOverflowMode } from './lib/quant/smartDcaEngine';
 import { ParsedHoldingItem, utf8ToBase64, base64ToUtf8 } from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
@@ -84,6 +85,8 @@ interface PersistedAppState {
   cashInjectionIdr?: number;
   isFixedBudgetMode?: boolean;
   fixedTotalBudgetIdr?: number;
+  smartDcaMonthlyBudgetIdr?: number;
+  smartDcaOverflowMode?: SmartDcaOverflowMode;
   driftThresholdPercent?: number;
   isHoldingsSyncedWithMenu1?: boolean;
   enableIdxLotRounding?: boolean;
@@ -371,6 +374,13 @@ export function App() {
       idxEquityScore: 50,
       goldScore: 50,
     }
+  );
+
+  const [smartDcaMonthlyBudgetIdr, setSmartDcaMonthlyBudgetIdr] = useState<number>(
+    () => Number(initialSaved?.smartDcaMonthlyBudgetIdr ?? (initialSaved?.monthlySavingsIdr ?? 3_000_000))
+  );
+  const [smartDcaOverflowMode, setSmartDcaOverflowMode] = useState<SmartDcaOverflowMode>(
+    () => initialSaved?.smartDcaOverflowMode ?? 'park-rdpu'
   );
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
@@ -682,6 +692,8 @@ export function App() {
           pinnedPresetIds,
           lockedAssetIds,
           tacticalConfig,
+          smartDcaMonthlyBudgetIdr,
+          smartDcaOverflowMode,
         })
       );
     } catch {
@@ -719,6 +731,8 @@ export function App() {
     pinnedPresetIds,
     lockedAssetIds,
     tacticalConfig,
+    smartDcaMonthlyBudgetIdr,
+    smartDcaOverflowMode,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -1911,6 +1925,8 @@ export function App() {
           isFixedBudgetMode,
           fixedTotalBudgetIdr,
           tacticalConfig,
+          smartDcaMonthlyBudgetIdr,
+          smartDcaOverflowMode,
         },
         menu3_simulator: {
           initialCapitalIdr,
@@ -1920,6 +1936,7 @@ export function App() {
           annualStepUpPct: roadmapSettings?.annualStepUpPct,
           monthlyLivingCostTargetIdr: roadmapSettings?.monthlyLivingCostTargetIdr,
           simulationViewMode: roadmapSettings?.simulationViewMode,
+          monteCarloDisplayMode: roadmapSettings?.monteCarloDisplayMode,
           taxMode: roadmapSettings?.taxMode,
           dividendUsageMode: roadmapSettings?.dividendUsageMode,
           customYieldOverrides: roadmapSettings?.customYieldOverrides,
@@ -2144,6 +2161,12 @@ export function App() {
       if (d2.tacticalConfig && typeof d2.tacticalConfig === 'object') {
         setTacticalConfig(d2.tacticalConfig);
       }
+      if (typeof d2.smartDcaMonthlyBudgetIdr === 'number' && d2.smartDcaMonthlyBudgetIdr > 0) {
+        setSmartDcaMonthlyBudgetIdr(d2.smartDcaMonthlyBudgetIdr);
+      }
+      if (d2.smartDcaOverflowMode === 'park-rdpu' || d2.smartDcaOverflowMode === 'boost-discount') {
+        setSmartDcaOverflowMode(d2.smartDcaOverflowMode);
+      }
 
       // 3. Menu 3: Simulator & Goals
       if (
@@ -2175,6 +2198,7 @@ export function App() {
           ...(d3.annualStepUpPct !== undefined ? { annualStepUpPct: d3.annualStepUpPct } : {}),
           ...(d3.monthlyLivingCostTargetIdr !== undefined ? { monthlyLivingCostTargetIdr: d3.monthlyLivingCostTargetIdr } : {}),
           ...(d3.simulationViewMode !== undefined ? { simulationViewMode: d3.simulationViewMode } : {}),
+          ...(d3.monteCarloDisplayMode !== undefined ? { monteCarloDisplayMode: d3.monteCarloDisplayMode } : {}),
           ...(d3.taxMode !== undefined ? { taxMode: d3.taxMode } : {}),
           ...(d3.dividendUsageMode !== undefined ? { dividendUsageMode: d3.dividendUsageMode } : {}),
           ...(d3.customYieldOverrides !== undefined ? { customYieldOverrides: d3.customYieldOverrides } : {}),
@@ -2308,6 +2332,8 @@ export function App() {
           rebalanceHistory: mergedRebalanceHistory,
           pinnedPresetIds: d1.pinnedPresetIds ?? pinnedPresetIds,
           allAssets: mergedAllAssets,
+          smartDcaMonthlyBudgetIdr: d2.smartDcaMonthlyBudgetIdr ?? smartDcaMonthlyBudgetIdr,
+          smartDcaOverflowMode: d2.smartDcaOverflowMode ?? smartDcaOverflowMode,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
       } catch {
@@ -2656,6 +2682,10 @@ export function App() {
             onBatchUpdateHoldings={handleBatchUpdateHoldings}
             tacticalConfig={tacticalConfig}
             setTacticalConfig={setTacticalConfig}
+            smartDcaMonthlyBudgetIdr={smartDcaMonthlyBudgetIdr}
+            setSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
+            smartDcaOverflowMode={smartDcaOverflowMode}
+            setSmartDcaOverflowMode={setSmartDcaOverflowMode}
           />
         )}
 
@@ -2676,28 +2706,39 @@ export function App() {
       </main>
 
       {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
-      {isFactsheetOpen && (
-        <PortfolioFactsheetModal
-          isOpen={isFactsheetOpen}
-          onClose={() => setIsFactsheetOpen(false)}
-          portfolioName={
-            exactPresetMatch
-              ? exactPresetMatch.name
-              : allocationMethod === 'risk-parity'
-                ? 'Custom Equal Risk Parity'
-                : allocationMethod === 'risk-budgeting'
-                  ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
-                  : 'Portfolio Custom Anda'
-          }
-          activeWeights={activeWeights}
-          allAssets={allAssets}
-          solvedMetrics={solvedMetrics}
-          initialCapitalIdr={initialCapitalIdr}
-          monthlySavingsIdr={monthlySavingsIdr}
-          targetGoalIdr={targetGoalIdr}
-          usdIdrRate={usdIdrRate}
-        />
-      )}
+      {isFactsheetOpen && (() => {
+        let roadmapSettings: any = null;
+        try {
+          const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
+          if (raw) roadmapSettings = JSON.parse(raw);
+        } catch {
+          // Ignore
+        }
+        return (
+          <PortfolioFactsheetModal
+            isOpen={isFactsheetOpen}
+            onClose={() => setIsFactsheetOpen(false)}
+            portfolioName={
+              exactPresetMatch
+                ? exactPresetMatch.name
+                : allocationMethod === 'risk-parity'
+                  ? 'Custom Equal Risk Parity'
+                  : allocationMethod === 'risk-budgeting'
+                    ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                    : 'Portfolio Custom Anda'
+            }
+            activeWeights={activeWeights}
+            allAssets={allAssets}
+            solvedMetrics={solvedMetrics}
+            initialCapitalIdr={initialCapitalIdr}
+            monthlySavingsIdr={monthlySavingsIdr}
+            targetGoalIdr={targetGoalIdr}
+            usdIdrRate={usdIdrRate}
+            annualInflationPercent={roadmapSettings?.annualInflationPercent}
+            annualStepUpPercent={roadmapSettings?.annualStepUpPct}
+          />
+        );
+      })()}
 
       {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
       {isOrderSlipOpen && (

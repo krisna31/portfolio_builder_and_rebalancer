@@ -117,8 +117,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Reksa Dana & Pasar Uang / Nominal',
         apps: 'Makmur / Bibit / Bareksa',
         icon: <Building2 className="w-4 h-4 text-emerald-400" />,
-        colorClass: 'border-emerald-500/30 bg-emerald-950/20',
-        badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+        colorClass: 'border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20',
+        badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
         note: 'Makmur memiliki promo +3% p.a. untuk RDPT. Bibit/Bareksa ideal untuk likuiditas instan RDPU.',
         items: groups.mutual_funds,
       });
@@ -130,8 +130,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Saham Bursa Efek Indonesia (IDX)',
         apps: 'Stockbit / Ajaib / IPOT / Mirae',
         icon: <TrendingUp className="w-4 h-4 text-indigo-400" />,
-        colorClass: 'border-indigo-500/30 bg-indigo-950/20',
-        badgeClass: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
+        colorClass: 'border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20',
+        badgeClass: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
         note: '1 Lot = 100 lembar saham. Gunakan fitur Order Pad / Limit Order pada jam bursa (09:00 - 15:50 WIB).',
         items: groups.idx_stocks,
       });
@@ -143,8 +143,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'US Tech & Global ETFs',
         apps: 'Pluang / Gotrade Indonesia / Nanovest',
         icon: <Globe className="w-4 h-4 text-sky-400" />,
-        colorClass: 'border-sky-500/30 bg-sky-950/20',
-        badgeClass: 'bg-sky-500/10 text-sky-400 border-sky-500/30',
+        colorClass: 'border-sky-500/30 bg-sky-500/5 dark:bg-sky-950/20',
+        badgeClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
         note: 'Mendukung unit fraksional (pembelian mulai dari $1 / Rp 15.000). Jam pasar US: 20:30 - 03:00 WIB.',
         items: groups.us_etfs,
       });
@@ -156,8 +156,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Aset Kripto Terdaftar Bappebti',
         apps: 'Indodax / Reku / Tokocrypto / Pintu',
         icon: <Coins className="w-4 h-4 text-amber-400" />,
-        colorClass: 'border-amber-500/30 bg-amber-950/20',
-        badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+        colorClass: 'border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20',
+        badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
         note: 'Pasar beroperasi 24/7. Dapat dibeli langsung dalam nominal Rupiah atau fraksi Satoshi.',
         items: groups.crypto,
       });
@@ -169,8 +169,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Emas Digital & Fisik',
         apps: 'Pluang Emas / Pegadaian / Antam',
         icon: <Sparkles className="w-4 h-4 text-yellow-400" />,
-        colorClass: 'border-yellow-500/30 bg-yellow-950/20',
-        badgeClass: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+        colorClass: 'border-yellow-500/30 bg-yellow-500/5 dark:bg-yellow-950/20',
+        badgeClass: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
         note: 'Instrumen lindung nilai (safe haven) dengan volatilitas rendah.',
         items: groups.gold,
       });
@@ -182,8 +182,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Aset Kustom Lainnya',
         apps: 'Platform Terkait',
         icon: <ShieldAlert className="w-4 h-4 text-purple-400" />,
-        colorClass: 'border-purple-500/30 bg-purple-950/20',
-        badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+        colorClass: 'border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20',
+        badgeClass: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
         note: 'Aset kustom yang ditambahkan secara manual.',
         items: groups.custom,
       });
@@ -331,31 +331,32 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-4xl my-auto bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in">
+      <div className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-slate-900 border-b border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-500 border border-indigo-500/30 flex items-center justify-center shadow-xs">
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+              <h2 className="text-base font-bold ui-text-main flex items-center gap-2">
                 <span>Multi-Platform Broker Order Slips</span>
-                <span className="text-[11px] font-normal px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border">
                   {platformGroups.length} Platform
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Panduan eksekusi beli & jual dikelompokkan sesuai aplikasi broker di Indonesia
+              <p className="text-xs ui-text-muted mt-0.5">
+                Panduan eksekusi beli &amp; jual dikelompokkan sesuai aplikasi broker di Indonesia
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => handleSendWhatsApp()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all shadow-emerald-500/20"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-xs transition-all"
               title="Kirim seluruh instruksi order rebalance langsung via WhatsApp"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -363,8 +364,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => handleCopySlip()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-all shadow-indigo-500/20"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-xs transition-all"
               title="Salin seluruh instruksi transaksi ke clipboard"
             >
               {copiedGroupId === 'all' ? (
@@ -381,8 +383,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Tutup modal"
             >
               <X className="w-5 h-5" />
@@ -391,12 +394,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         </div>
 
         {/* Sub-header / Progress Bar */}
-        <div className="px-6 py-3 bg-slate-900/60 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="px-6 py-3 border-b ui-border flex flex-wrap items-center justify-between gap-3 text-xs bg-black/5 dark:bg-white/5">
           <div className="flex items-center gap-3">
-            <span className="text-slate-400">
-              Progres Eksekusi: <strong className="text-white">{executedActionCount} / {totalActionCount}</strong> ({progressPercent}%)
+            <span className="ui-text-muted">
+              Progres Eksekusi: <strong className="ui-text-main">{executedActionCount} / {totalActionCount}</strong> ({progressPercent}%)
             </span>
-            <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-32 h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-indigo-500 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -406,26 +409,29 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowAllItems((v) => !v)}
-              className="text-[11px] text-slate-400 hover:text-slate-200 underline decoration-dotted"
+              className="text-[11px] ui-text-muted hover:ui-text-main underline decoration-dotted"
             >
               {showAllItems ? 'Hanya Tampilkan Transaksi Aktif' : 'Tampilkan Semua Aset'}
             </button>
 
-            <span className="text-slate-700">|</span>
+            <span className="ui-text-muted opacity-40">|</span>
 
             <button
+              type="button"
               onClick={handleMarkAllExecuted}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium"
+              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
             >
               Tandai Semua Selesai
             </button>
 
-            <span className="text-slate-700">|</span>
+            <span className="ui-text-muted opacity-40">|</span>
 
             <button
+              type="button"
               onClick={handleResetChecklist}
-              className="text-[11px] text-slate-400 hover:text-rose-400 flex items-center gap-1"
+              className="text-[11px] ui-text-muted hover:text-rose-500 flex items-center gap-1"
               title="Reset centang checklist"
             >
               <RotateCcw className="w-3 h-3" />
@@ -435,14 +441,14 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         </div>
 
         {/* Content Body: Platform Cards */}
-        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-950">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 bg-zinc-50/70 dark:bg-zinc-950/60">
           {platformGroups.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 bg-slate-900/40 rounded-xl border border-slate-800">
-              <Check className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-              <div className="text-sm font-medium text-slate-200">
+            <div className="p-8 text-center ui-text-muted ui-card rounded-xl border ui-border">
+              <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+              <div className="text-sm font-semibold ui-text-main">
                 Portofolio Sudah Seimbang Sesuai Target!
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs ui-text-muted mt-1">
                 Tidak ada pesanan beli atau jual yang melampaui batas toleransi drift.
               </p>
             </div>
@@ -453,19 +459,19 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                 className={`rounded-xl border p-4 sm:p-5 transition-all ${group.colorClass}`}
               >
                 {/* Platform Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b ui-border">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <div className="p-1.5 rounded-lg ui-card border ui-border shadow-2xs">
                       {group.icon}
                     </div>
                     <div>
-                      <div className="font-semibold text-sm text-slate-100 flex items-center gap-2">
+                      <div className="font-bold text-sm ui-text-main flex items-center gap-2">
                         <span>{group.name}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${group.badgeClass}`}>
                           {group.apps}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
+                      <p className="text-[11px] ui-text-muted mt-0.5">
                         {group.note}
                       </p>
                     </div>
@@ -473,23 +479,25 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
+                      type="button"
                       onClick={() => handleSendWhatsApp(group.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/50 hover:text-emerald-200 rounded border border-emerald-700/50 transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded border border-emerald-500/30 transition-colors"
                       title={`Kirim slip ${group.apps} ke WhatsApp`}
                     >
-                      <Share2 className="w-3 h-3 text-emerald-400" />
+                      <Share2 className="w-3 h-3 text-emerald-500" />
                       <span>WhatsApp</span>
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => handleCopySlip(group.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white rounded border border-slate-700 transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold ui-text-main ui-card hover:bg-black/5 dark:hover:bg-white/5 rounded border ui-border transition-colors shadow-2xs"
                       title={`Salin slip pesanan ${group.apps} saja`}
                     >
                       {copiedGroupId === group.id ? (
                         <>
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          <span className="text-emerald-400">Slip Disalin!</span>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span className="text-emerald-500">Slip Disalin!</span>
                         </>
                       ) : (
                         <>
@@ -502,7 +510,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                 </div>
 
                 {/* Items in Platform */}
-                <div className="divide-y divide-slate-800/60 mt-2">
+                <div className="divide-y ui-border mt-2">
                   {group.items.map((item) => {
                     const def = assetDefMap.get(item.assetId);
                     const isDone = Boolean(executedMap[item.assetId]);
@@ -528,21 +536,21 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                         onClick={() => handleToggleExecuted(item.assetId)}
                         className={`py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer rounded-lg px-2 transition-colors ${
                           isDone
-                            ? 'bg-emerald-950/20 opacity-65'
-                            : 'hover:bg-slate-900/50'
+                            ? 'bg-emerald-500/10 opacity-70'
+                            : 'hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                       >
                         {/* Left: Checkbox + Asset symbol + Action */}
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            className="text-slate-400 hover:text-indigo-400 transition-colors flex-shrink-0"
+                            className="ui-text-muted hover:text-indigo-500 transition-colors flex-shrink-0"
                             aria-label={isDone ? 'Batal tandai selesai' : 'Tandai selesai'}
                           >
                             {isDone ? (
-                              <CheckSquare className="w-5 h-5 text-emerald-400" />
+                              <CheckSquare className="w-5 h-5 text-emerald-500" />
                             ) : (
-                              <Square className="w-5 h-5 text-slate-600" />
+                              <Square className="w-5 h-5 text-slate-400 dark:text-slate-600" />
                             )}
                           </button>
 
@@ -553,16 +561,16 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                             />
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className={`font-bold text-sm ${isDone ? 'line-through text-slate-400' : 'text-white'}`}>
+                                <span className={`font-bold text-sm ${isDone ? 'line-through ui-text-muted' : 'ui-text-main'}`}>
                                   {item.symbol}
                                 </span>
                                 <span
                                   className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                     isBuy
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                       : isSell
-                                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                      : 'bg-zinc-200 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border ui-border'
                                   }`}
                                 >
                                   {isBuy && <ArrowUpRight className="w-3 h-3" />}
@@ -571,7 +579,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                                   <span>{isBuy ? 'BELI' : isSell ? 'JUAL' : 'HOLD'}</span>
                                 </span>
                               </div>
-                              <div className="text-[11px] text-slate-400">
+                              <div className="text-[11px] ui-text-muted mt-0.5">
                                 {item.name}
                               </div>
                             </div>
@@ -582,68 +590,68 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                         <div className="text-left sm:text-right pl-8 sm:pl-0">
                           {item.isNominalOnly || def?.isNominalOnly ? (
                             <div>
-                              <div className="text-sm font-bold text-slate-100 flex items-center sm:justify-end gap-1.5">
-                                <span className="text-emerald-300">
+                              <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">
+                                <span className="text-emerald-600 dark:text-emerald-400">
                                   {formatIdr(Math.abs(item.tradeAmountIdr))}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-400">
+                              <div className="text-xs ui-text-muted">
                                 Reksa Dana / Nominal Bebas Lot
                               </div>
                             </div>
                           ) : isIdx ? (
                             <div>
-                              <div className="text-sm font-bold text-slate-100 flex items-center sm:justify-end gap-1.5">
-                                <span className="text-indigo-300">
+                              <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">
+                                <span className="text-indigo-600 dark:text-indigo-400">
                                   {lots} Lot
                                 </span>
-                                <span className="text-xs font-normal text-slate-400">
+                                <span className="text-xs font-normal ui-text-muted">
                                   ({shares.toLocaleString('id-ID')} lbr @ Rp {spotPrice.toLocaleString('id-ID')})
                                 </span>
                               </div>
-                              <div className="text-xs font-semibold text-emerald-400">
+                              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                                 Nilai Order: {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
                               {item.tradeLotsRemainderIdr && Math.abs(item.tradeLotsRemainderIdr) > 0 ? (
-                                <div className="text-[10px] text-slate-500">
+                                <div className="text-[10px] ui-text-muted">
                                   Sisa fraksional: {formatIdr(Math.abs(item.tradeLotsRemainderIdr))}
                                 </div>
                               ) : null}
                             </div>
                           ) : group.id === 'us_etfs' ? (
                             <div>
-                              <div className="text-sm font-bold text-slate-100">
+                              <div className="text-sm font-bold ui-text-main">
                                 {formatUsd(Math.abs(item.tradeAmountUsd))}
                               </div>
-                              <div className="text-xs font-semibold text-emerald-400">
+                              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                                 Ekuivalen {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
-                              <div className="text-[10px] text-slate-400">
+                              <div className="text-[10px] ui-text-muted">
                                 Estimasi ~{Math.abs(item.tradeUnits).toFixed(4)} unit
                               </div>
                             </div>
                           ) : group.id === 'crypto' ? (
                             <div>
-                              <div className="text-sm font-bold text-slate-100">
+                              <div className="text-sm font-bold ui-text-main">
                                 {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
-                              <div className="text-xs text-amber-400 font-medium">
+                              <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                                 ~{Math.abs(item.tradeUnits).toFixed(8)} {item.symbol}
                               </div>
                             </div>
                           ) : (
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-bold text-slate-100">
+                                <span className="text-sm font-bold ui-text-main">
                                   {formatIdr(Math.abs(item.tradeAmountIdr))}
                                 </span>
                                 {item.isNominalOnly && (
-                                  <span className="rounded bg-sky-500/20 px-1 py-0.2 font-mono text-[9px] text-sky-400">
+                                  <span className="rounded bg-sky-500/15 border border-sky-500/30 px-1 py-0.2 font-mono text-[9px] text-sky-600 dark:text-sky-400">
                                     Nominal Murni
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[10px] text-slate-400">
+                              <div className="text-[10px] ui-text-muted">
                                 Bobot Target: {formatPercent(item.targetWeightPercent)} (Drift: {formatPercent(item.absoluteDriftPercent)})
                               </div>
                             </div>
@@ -659,19 +667,20 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         </div>
 
         {/* Bottom Action Footer */}
-        <div className="px-6 py-4 bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="text-slate-400 flex items-center gap-4">
+        <div className="px-6 py-4 ui-subtle border-t ui-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="ui-text-muted flex items-center gap-4">
             <div>
-              Total Beli: <strong className="text-emerald-400">{formatIdr(rebalanceResult.totalBuyIdr)}</strong>
+              Total Beli: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatIdr(rebalanceResult.totalBuyIdr)}</strong>
             </div>
             <div>
-              Total Jual: <strong className="text-rose-400">{formatIdr(rebalanceResult.totalSellIdr)}</strong>
+              Total Jual: <strong className="text-rose-600 dark:text-rose-400 font-mono">{formatIdr(rebalanceResult.totalSellIdr)}</strong>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700"
+            className="w-full sm:w-auto px-5 py-2 text-xs font-semibold ui-text-main ui-card hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors border ui-border shadow-2xs"
           >
             Selesai Meninjau Slip
           </button>

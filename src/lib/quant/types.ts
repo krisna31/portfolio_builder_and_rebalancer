@@ -333,6 +333,8 @@ export interface QuantPortoBackupPayload {
       filterDustTrades?: boolean;
       isFixedBudgetMode?: boolean;
       fixedTotalBudgetIdr?: number;
+      smartDcaMonthlyBudgetIdr?: number;
+      smartDcaOverflowMode?: 'park-rdpu' | 'boost-discount';
       tacticalConfig?: ValuationSentimentConfig;
     };
     menu3_simulator: {
@@ -343,6 +345,7 @@ export interface QuantPortoBackupPayload {
       annualStepUpPct?: number;
       monthlyLivingCostTargetIdr?: number;
       simulationViewMode?: 'deterministic' | 'monte-carlo';
+      monteCarloDisplayMode?: 'nominal' | 'real';
       taxMode?: 'standard-net' | 'idx-tax-exempt-reinvest' | 'gross';
       dividendUsageMode?: 'reinvest-drip' | 'cashout-passive';
       customYieldOverrides?: Record<string, number>;
