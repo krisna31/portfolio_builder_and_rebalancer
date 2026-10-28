@@ -16,6 +16,7 @@ import { generateCrashBuyingLadder } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { HoldingsTextImportModal } from './HoldingsTextImportModal';
 import { RebalanceExecutionGuideModal } from './RebalanceExecutionGuideModal';
+import { SmartDcaAdvisorPanel } from './SmartDcaAdvisorPanel';
 import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
@@ -167,6 +168,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   tacticalConfig,
   setTacticalConfig,
 }) => {
+  const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
   const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -668,8 +670,59 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
   return (
     <div className="space-y-6">
-      {/* SMART WELCOME BANNER (For New Users with Rp 0 Portfolio and no Cash Injected yet) */}
-      {rebalanceResult.initialTotalIdr === 0 &&
+      {/* SUB-MODE SWITCHER TABS: STANDARD REBALANCER vs SMART DCA ADVISOR */}
+      <div className="flex items-center justify-between flex-wrap gap-2 border-b ui-border pb-3">
+        <div className="ui-subtle inline-flex rounded-xl p-1 border ui-border shadow-xs">
+          <button
+            type="button"
+            onClick={() => setRebalancerSubMode('rebalance')}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              rebalancerSubMode === 'rebalance'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'ui-text-secondary hover:ui-text-main'
+            }`}
+          >
+            <Scale className="h-3.5 w-3.5" />
+            <span>Rebalancer Portofolio</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRebalancerSubMode('smart-dca')}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+              rebalancerSubMode === 'smart-dca'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'ui-text-secondary hover:ui-text-main'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <span>Smart DCA Advisor</span>
+            <span className="rounded bg-amber-400/20 text-amber-300 text-[10px] px-1.5 py-0.5 font-mono font-semibold">
+              2-Pillar
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {rebalancerSubMode === 'smart-dca' ? (
+        <SmartDcaAdvisorPanel
+          allAssets={allAssets}
+          targetWeights={targetWeights}
+          holdings={holdings}
+          inputMode={inputMode}
+          usdIdrRate={usdIdrRate}
+          monthlySavingsMenu1Idr={monthlySavingsMenu1Idr}
+          enableIdxLotRounding={enableIdxLotRounding}
+          filterDustTrades={filterDustTrades}
+          dustTradeThresholdIdr={25_000}
+          tacticalConfig={tacticalConfig}
+          onOpenOrderSlip={onOpenOrderSlip}
+          onCommitRebalanceToHoldings={onCommitRebalanceToHoldings}
+          onSwitchToStandardRebalancer={() => setRebalancerSubMode('rebalance')}
+        />
+      ) : (
+        <>
+          {/* SMART WELCOME BANNER (For New Users with Rp 0 Portfolio and no Cash Injected yet) */}
+          {rebalanceResult.initialTotalIdr === 0 &&
         cashInjectionIdr === 0 &&
         !isFixedBudgetMode &&
         !isWelcomeBannerDismissed && (
@@ -1567,6 +1620,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               {rebalanceMode === 'buy-only-dca' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               )}
+            </button>
+
+            {/* Smart DCA Shortcut Button */}
+            <button
+              type="button"
+              onClick={() => setRebalancerSubMode('smart-dca')}
+              className="col-span-2 flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition mt-0.5"
+              title="Buka Smart DCA Advisor: Akumulasi cerdas berbasis metrik valuasi pasar & defisit bobot"
+            >
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span>Beralih ke Smart DCA Advisor (2-Pillar Akumulasi)</span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 px-1.5 py-0.5 rounded">
+                Buka ➔
+              </span>
             </button>
           </div>
 
@@ -3246,6 +3315,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </div>
         )}
       </section>
+        </>
+      )}
 
       {/* Holdings Text Import & Export Modal */}
       <HoldingsTextImportModal

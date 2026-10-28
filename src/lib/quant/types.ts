@@ -347,4 +347,11 @@ export interface QuantPortoBackupPayload {
   };
 }
 
-
+export type {
+  SmartDcaAction,
+  SmartDcaOverflowMode,
+  SmartDcaResult,
+  SmartDcaItemResult,
+  SmartDcaExplanation,
+  SmartDcaInputParams,
+} from './smartDcaEngine';
