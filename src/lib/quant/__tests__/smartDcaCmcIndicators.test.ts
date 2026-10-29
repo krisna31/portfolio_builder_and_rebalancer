@@ -4,6 +4,8 @@ import {
   getConfluenceActionTier,
   getAssetIndicatorConfluence,
   CRYPTO_CYCLE_INDICATORS,
+  MASTER_CYCLE_INDICATORS,
+  getSourceTypeBadge,
 } from '../smartDcaIndicators';
 import {
   calculateSmartDcaPlan,
@@ -327,5 +329,100 @@ describe('Smart DCA 100% Indicator-Driven Engine (Zero Drift Interference)', () 
       // recommendedUnits must be lots * 100
       expect(bbcaItem.recommendedUnits).toBe(bbcaItem.recommendedLotsInteger * 100);
     }
+  });
+
+  it('validates that all cycle indicators across all categories include source transparency metadata', () => {
+    const categories = Object.keys(MASTER_CYCLE_INDICATORS) as Array<
+      keyof typeof MASTER_CYCLE_INDICATORS
+    >;
+
+    for (const cat of categories) {
+      const indicators = MASTER_CYCLE_INDICATORS[cat];
+      expect(indicators.length).toBeGreaterThan(0);
+
+      for (const ind of indicators) {
+        expect(ind.sourceName).toBeDefined();
+        expect(ind.sourceName.trim().length).toBeGreaterThan(0);
+        expect(ind.sourceUrl).toBeDefined();
+        expect(ind.sourceUrl.startsWith('http')).toBe(true);
+        expect(['live-api', 'exchange-feed', 'on-chain-benchmark', 'macro-official']).toContain(
+          ind.sourceType
+        );
+      }
+    }
+  });
+
+  it('formats source type badges with appropriate styling classes', () => {
+    const liveApi = getSourceTypeBadge('live-api');
+    expect(liveApi.label).toBe('Live API');
+    expect(liveApi.colorClass).toContain('emerald');
+
+    const feed = getSourceTypeBadge('exchange-feed');
+    expect(feed.label).toBe('Bursa / Feed');
+    expect(feed.colorClass).toContain('blue');
+
+    const onChain = getSourceTypeBadge('on-chain-benchmark');
+    expect(onChain.label).toBe('On-Chain / Model');
+    expect(onChain.colorClass).toContain('purple');
+
+    const macro = getSourceTypeBadge('macro-official');
+    expect(macro.label).toBe('Data Resmi / Makro');
+    expect(macro.colorClass).toContain('amber');
+  });
+
+  it('propagates latest refresh timestamp and unique data sources into confluence & Smart DCA plan', () => {
+    const mockTimestamp = '29 Okt 2026, 09:40:00 WIB';
+
+    const btcAsset: AssetDefinition = {
+      id: 'btc',
+      symbol: 'BTC',
+      name: 'Bitcoin',
+      shortName: 'BTC',
+      category: 'crypto',
+      currency: 'USD',
+      cagr: 45,
+      maxDrawdown: 70,
+      volatility: 60,
+      riskScale: 12,
+      defaultPrice: 90000,
+      lotSize: 1,
+      allowFractional: true,
+      isCoreBenchmark: true,
+      color: '#f97316',
+      description: 'Crypto',
+    };
+
+    const confluence = getAssetIndicatorConfluence({
+      asset: btcAsset,
+      lastRefreshSuccessAt: mockTimestamp,
+    });
+
+    expect(confluence.lastRefreshSuccessAt).toBe(mockTimestamp);
+    expect(confluence.dataSources.length).toBeGreaterThan(0);
+    expect(confluence.dataSources.some((s) => s.sourceName.includes('CoinMarketCap'))).toBe(true);
+    expect(confluence.dataSources.some((s) => s.sourceName.includes('Alternative.me'))).toBe(true);
+
+    // Each indicator should receive the latest refresh success timestamp
+    for (const ind of confluence.indicators) {
+      expect(ind.lastSuccessTimestamp).toBe(mockTimestamp);
+      expect(ind.sourceName).toBeDefined();
+      expect(ind.sourceUrl).toBeDefined();
+      expect(ind.sourceType).toBeDefined();
+    }
+
+    // Verify propagation inside calculateSmartDcaPlan
+    const plan = calculateSmartDcaPlan({
+      assets: [btcAsset],
+      targetWeights: { btc: 100 },
+      holdings: {
+        btc: { assetId: 'btc', units: 0.1, currentValueIdr: 1000000, currentPrice: 90000, shockPercent: 0 },
+      },
+      monthlyBudgetIdr: 5_000_000,
+      usdIdrRate: 16000,
+      lastRefreshSuccessAt: mockTimestamp,
+    });
+
+    expect(plan.items[0].explanation.indicatorConfluence.lastRefreshSuccessAt).toBe(mockTimestamp);
+    expect(plan.items[0].explanation.indicatorConfluence.dataSources.length).toBeGreaterThan(0);
   });
 });

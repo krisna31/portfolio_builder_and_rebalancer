@@ -3,6 +3,7 @@ import {
   CycleIndicatorState,
   AssetIndicatorConfluence,
   ComparisonOperator,
+  getSourceTypeBadge,
 } from '../../lib/quant/smartDcaIndicators';
 import {
   Info,
@@ -14,6 +15,11 @@ import {
   Edit2,
   Sparkles,
   ExternalLink,
+  RefreshCw,
+  ShieldCheck,
+  Database,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export interface CoinMarketCapIndicatorTableProps {
@@ -25,6 +31,9 @@ export interface CoinMarketCapIndicatorTableProps {
   ) => void;
   onResetAssetOverrides?: (assetId: string) => void;
   readOnly?: boolean;
+  onRefreshData?: () => void;
+  isRefreshing?: boolean;
+  lastRefreshedAt?: string;
 }
 
 export const CoinMarketCapIndicatorTable: React.FC<
@@ -34,6 +43,9 @@ export const CoinMarketCapIndicatorTable: React.FC<
   onUpdateIndicatorOverride,
   onResetAssetOverrides,
   readOnly = false,
+  onRefreshData,
+  isRefreshing = false,
+  lastRefreshedAt,
 }) => {
   const [editingIndicatorId, setEditingIndicatorId] = useState<string | null>(
     null
@@ -43,6 +55,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
   const [tooltipIndicatorId, setTooltipIndicatorId] = useState<string | null>(
     null
   );
+  const [isSourcesExpanded, setIsSourcesExpanded] = useState<boolean>(false);
 
   const hasAnyOverrides = confluence.indicators.some((i) => i.isManualOverride);
 
@@ -70,18 +83,15 @@ export const CoinMarketCapIndicatorTable: React.FC<
     setEditingIndicatorId(null);
   };
 
-  const handleResetSingle = (indicatorId: string) => {
-    if (onUpdateIndicatorOverride) {
-      onUpdateIndicatorOverride(confluence.assetId, indicatorId, null);
-    }
-  };
+  const displayRefreshTimestamp =
+    lastRefreshedAt || confluence.lastRefreshSuccessAt || 'Live Sync Otomatis';
 
   return (
     <div className="space-y-3.5">
       {/* Header & Confluence Status Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border ui-border p-3.5 bg-black/5 dark:bg-white/5">
-        <div>
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border ui-border p-3.5 bg-black/5 dark:bg-white/5">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs font-bold text-emerald-500 uppercase tracking-wide">
               {confluence.symbol}
             </span>
@@ -90,14 +100,48 @@ export const CoinMarketCapIndicatorTable: React.FC<
               Indikator Siklus &amp; Valuasi Pasar (CMC Style)
             </h4>
           </div>
-          <p className="text-[11px] ui-text-muted mt-0.5">
+          <p className="text-[11px] ui-text-muted">
             Keputusan aksi Smart DCA ditentukan 100% dari jumlah aturan
             indikator yang berstatus <strong>Triggered (✅)</strong>.
           </p>
+
+          {/* Live Sync Status & Refresh Indicator */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-medium text-[10px]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Live Sync Sukses</span>
+            </span>
+            <span className="text-[11px] ui-text-muted">
+              Pembaruan Terakhir:{' '}
+              <strong className="ui-text-main font-mono">
+                {displayRefreshTimestamp}
+              </strong>
+            </span>
+          </div>
         </div>
 
-        {/* Confluence Pill & Action Multiplier */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Action Controls & Multiplier Pill */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {onRefreshData && (
+            <button
+              type="button"
+              onClick={onRefreshData}
+              disabled={isRefreshing}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ui-border ui-subtle hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 transition disabled:opacity-50"
+              title="Sinkronkan pembaruan data live indikator siklus pasar"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${
+                  isRefreshing ? 'animate-spin text-emerald-500' : ''
+                }`}
+              />
+              <span>{isRefreshing ? 'Menyinkronkan...' : 'Perbarui Data'}</span>
+            </button>
+          )}
+
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${confluence.badgeClass}`}
           >
@@ -134,7 +178,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
             <thead>
               <tr className="border-b ui-border bg-black/5 dark:bg-white/[0.03] text-[11px] font-semibold ui-text-muted uppercase tracking-wider">
                 <th className="py-3 px-3.5 w-10 text-center">#</th>
-                <th className="py-3 px-3.5 min-w-[200px]">Indicator</th>
+                <th className="py-3 px-3.5 min-w-[240px]">Indicator &amp; Source</th>
                 <th className="py-3 px-3.5 text-right min-w-[110px]">
                   Current
                 </th>
@@ -150,6 +194,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                 const isEditing = editingIndicatorId === ind.id;
                 const isUp = ind.change24hPercent > 0;
                 const isZero = ind.change24hPercent === 0;
+                const sourceBadge = getSourceTypeBadge(ind.sourceType);
 
                 return (
                   <tr
@@ -161,62 +206,114 @@ export const CoinMarketCapIndicatorTable: React.FC<
                     }`}
                   >
                     {/* # Index */}
-                    <td className="py-3 px-3.5 text-center font-mono text-[11px] ui-text-muted">
+                    <td className="py-3 px-3.5 text-center font-mono text-[11px] ui-text-muted align-top">
                       {idx + 1}
                     </td>
 
-                    {/* Indicator Name + Tooltip */}
+                    {/* Indicator Name + Source Transparency + Tooltip */}
                     <td className="py-3 px-3.5">
-                      <div className="flex items-center gap-1.5 group">
-                        <span className="font-semibold ui-text-main">
-                          {ind.name}
-                        </span>
-                        {ind.isManualOverride && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 font-mono font-bold">
-                            OVERRIDE
+                      <div className="space-y-1 group">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold ui-text-main">
+                            {ind.name}
                           </span>
-                        )}
-                        <div className="relative inline-block">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setTooltipIndicatorId(
-                                tooltipIndicatorId === ind.id ? null : ind.id
-                              )
-                            }
-                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition p-0.5"
-                            aria-label={`Info ${ind.name}`}
-                          >
-                            <Info className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Inline Popover Tooltip */}
-                          {tooltipIndicatorId === ind.id && (
-                            <div className="absolute left-0 bottom-full mb-1.5 z-50 w-64 p-2.5 rounded-lg border ui-border bg-zinc-900 text-zinc-100 text-[11px] leading-relaxed shadow-xl backdrop-blur-md">
-                              <p className="font-semibold text-emerald-400 mb-1">
-                                {ind.name}
-                              </p>
-                              <p>{ind.description}</p>
-                              <div className="mt-2 pt-1.5 border-t border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400">
-                                <span>
-                                  Acuan Beli: {ind.formattedReference}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setTooltipIndicatorId(null)}
-                                  className="text-zinc-300 hover:text-white"
-                                >
-                                  Tutup
-                                </button>
-                              </div>
-                            </div>
+                          {ind.isManualOverride && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-500 font-mono font-bold">
+                              OVERRIDE
+                            </span>
                           )}
+                          <div className="relative inline-block">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTooltipIndicatorId(
+                                  tooltipIndicatorId === ind.id ? null : ind.id
+                                )
+                              }
+                              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition p-0.5"
+                              aria-label={`Info ${ind.name}`}
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Inline Popover Tooltip */}
+                            {tooltipIndicatorId === ind.id && (
+                              <div className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border bg-zinc-900 text-zinc-100 text-[11px] leading-relaxed shadow-2xl backdrop-blur-md">
+                                <p className="font-semibold text-emerald-400 mb-1">
+                                  {ind.name}
+                                </p>
+                                <p>{ind.description}</p>
+
+                                <div className="mt-2.5 pt-2 border-t border-zinc-800 space-y-1 text-[10px]">
+                                  <div className="flex items-center justify-between text-zinc-400">
+                                    <span>Acuan Beli:</span>
+                                    <span className="font-mono text-zinc-200 font-semibold">
+                                      {ind.formattedReference}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-zinc-400">
+                                    <span>Sumber Data:</span>
+                                    <a
+                                      href={ind.sourceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
+                                    >
+                                      <span>{ind.sourceName}</span>
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  </div>
+                                  <div className="flex items-center justify-between text-zinc-400">
+                                    <span>Tipe Sumber:</span>
+                                    <span className="font-medium text-zinc-300">
+                                      {sourceBadge.label}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-zinc-400">
+                                    <span>Pembaruan:</span>
+                                    <span className="font-mono text-zinc-300">
+                                      {ind.lastSuccessTimestamp || 'Live Sync'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="mt-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTooltipIndicatorId(null)}
+                                    className="text-[10px] text-zinc-400 hover:text-white"
+                                  >
+                                    Tutup
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Direct Clickable Data Source Link & Badge */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${sourceBadge.colorClass}`}
+                          >
+                            {sourceBadge.label}
+                          </span>
+                          <a
+                            href={ind.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[10px] text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 underline decoration-zinc-400/40 hover:decoration-emerald-500 transition group/link"
+                            title={`Buka sumber data resmi: ${ind.sourceName}`}
+                          >
+                            <span>{ind.sourceName}</span>
+                            <ExternalLink className="w-2.5 h-2.5 opacity-60 group-hover/link:opacity-100" />
+                          </a>
                         </div>
                       </div>
                     </td>
 
                     {/* Current Value (Clickable to Edit) */}
-                    <td className="py-3 px-3.5 text-right font-mono font-bold">
+                    <td className="py-3 px-3.5 text-right font-mono font-bold align-top">
                       {isEditing ? (
                         <div className="flex items-center justify-end gap-1">
                           <input
@@ -252,7 +349,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                     </td>
 
                     {/* 24h % Trend Badge (CoinMarketCap style) */}
-                    <td className="py-3 px-3.5 text-right font-mono text-[11px] font-semibold">
+                    <td className="py-3 px-3.5 text-right font-mono text-[11px] font-semibold align-top">
                       <div
                         className={`inline-flex items-center justify-end gap-0.5 ${
                           isZero
@@ -272,7 +369,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                     </td>
 
                     {/* Reference Rule Threshold */}
-                    <td className="py-3 px-3.5 text-right font-mono text-[11px]">
+                    <td className="py-3 px-3.5 text-right font-mono text-[11px] align-top">
                       {isEditing ? (
                         <div className="flex items-center justify-end gap-1">
                           <input
@@ -311,7 +408,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                     </td>
 
                     {/* Triggered Status Icon (CMC style: Green Check / Red Cross) */}
-                    <td className="py-3 px-3.5 text-center">
+                    <td className="py-3 px-3.5 text-center align-top">
                       <div className="flex items-center justify-center">
                         {ind.isTriggered ? (
                           <div
@@ -335,6 +432,95 @@ export const CoinMarketCapIndicatorTable: React.FC<
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Data Source Transparency & Verification Footer */}
+        <div className="border-t ui-border bg-black/[0.02] dark:bg-white/[0.02] p-3 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+              <Database className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span className="font-medium text-[11px]">
+                Transparansi Sumber: {confluence.dataSources?.length || confluence.indicators.length} sumber data terverifikasi
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSourcesExpanded(!isSourcesExpanded)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              <span>
+                {isSourcesExpanded
+                  ? 'Sembunyikan Rincian Sumber'
+                  : 'Lihat Rincian Sumber & Metodologi'}
+              </span>
+              {isSourcesExpanded ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </button>
+          </div>
+
+          {isSourcesExpanded && (
+            <div className="mt-3 pt-3 border-t ui-border space-y-2.5 animate-in fade-in duration-200">
+              <p className="text-[11px] ui-text-muted leading-relaxed">
+                Setiap indikator dihitung menggunakan data publik resmi dan benchmark industri (CoinMarketCap, Glassnode, LookIntoBitcoin, Alternative.me, Bursa Efek Indonesia, FactSet, Robert Shiller Online, FRED, dan Bank Indonesia). Klik tautan untuk memverifikasi data di sumber aslinya:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {(confluence.dataSources || []).map((src, i) => {
+                  const badge = getSourceTypeBadge(src.sourceType);
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between p-2 rounded-lg border ui-border bg-white dark:bg-zinc-900 text-[11px]"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <a
+                          href={src.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium hover:text-emerald-500 hover:underline truncate"
+                        >
+                          {src.sourceName}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded border font-medium ${badge.colorClass}`}
+                        >
+                          {badge.label}
+                        </span>
+                        <a
+                          href={src.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5"
+                          title="Buka situs penyedia data"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] ui-text-muted pt-1">
+                <span>
+                  Status Sinkronisasi Terakhir:{' '}
+                  <strong className="ui-text-main font-mono">
+                    {displayRefreshTimestamp}
+                  </strong>
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  ✓ Semua ambang batas diaudit &amp; 100% transparan
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

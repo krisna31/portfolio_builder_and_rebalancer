@@ -135,6 +135,7 @@ export interface SmartDcaInputParams {
   tacticalConfig?: ValuationSentimentConfig;
   marketDataOverrides?: Record<string, MarketDataOverride>;
   indicatorOverrides?: Record<string, Record<string, Partial<CycleIndicatorState>>>;
+  lastRefreshSuccessAt?: string;
 }
 
 /**
@@ -794,6 +795,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     tacticalConfig,
     marketDataOverrides,
     indicatorOverrides,
+    lastRefreshSuccessAt,
   } = params;
 
   // 1. Identify defensive cash / War Chest asset (e.g. RDPU or RDPT)
@@ -890,6 +892,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       tacticalConfig,
       currentPriceNative: unitPriceNative,
       usdIdrRate,
+      lastRefreshSuccessAt,
     });
 
     const compositeScore = indicatorConfluence.confluencePercent;
@@ -1241,6 +1244,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
             asset: warChestAsset,
             tacticalConfig,
             usdIdrRate,
+            lastRefreshSuccessAt,
           });
 
           const warChestItem: SmartDcaItemResult = {

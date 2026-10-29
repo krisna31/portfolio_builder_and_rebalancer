@@ -7,6 +7,19 @@ import { getSentimentZone } from './tacticalValuationEngine';
 
 export type ComparisonOperator = '<=' | '>=' | '<' | '>';
 
+export type IndicatorSourceType =
+  | 'live-api'
+  | 'exchange-feed'
+  | 'on-chain-benchmark'
+  | 'macro-official';
+
+export interface IndicatorSourceInfo {
+  sourceName: string;
+  sourceUrl: string;
+  sourceType: IndicatorSourceType;
+  lastSuccessTimestamp?: string;
+}
+
 export interface CycleIndicatorDefinition {
   id: string;
   name: string;
@@ -21,6 +34,11 @@ export interface CycleIndicatorDefinition {
   description: string;
   infoUrl?: string;
   isTriggeredByDefault?: boolean;
+  // Data source transparency
+  sourceName: string;
+  sourceUrl: string;
+  sourceType: IndicatorSourceType;
+  lastUpdatedLabel?: string;
 }
 
 export interface CycleIndicatorState {
@@ -36,6 +54,11 @@ export interface CycleIndicatorState {
   isTriggered: boolean;
   description: string;
   isManualOverride?: boolean;
+  // Data source transparency
+  sourceName: string;
+  sourceUrl: string;
+  sourceType: IndicatorSourceType;
+  lastSuccessTimestamp?: string;
 }
 
 export interface AssetIndicatorConfluence {
@@ -57,6 +80,50 @@ export interface AssetIndicatorConfluence {
   multiplier: number;
   badgeClass: string;
   summary: string;
+  // Data source transparency & verification status
+  dataSources: IndicatorSourceInfo[];
+  lastRefreshSuccessAt?: string;
+}
+
+/**
+ * Returns badge label and color styling for an indicator data source type
+ */
+export function getSourceTypeBadge(type: IndicatorSourceType): {
+  label: string;
+  colorClass: string;
+} {
+  switch (type) {
+    case 'live-api':
+      return {
+        label: 'Live API',
+        colorClass:
+          'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+      };
+    case 'exchange-feed':
+      return {
+        label: 'Bursa / Feed',
+        colorClass:
+          'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+      };
+    case 'on-chain-benchmark':
+      return {
+        label: 'On-Chain / Model',
+        colorClass:
+          'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+      };
+    case 'macro-official':
+      return {
+        label: 'Data Resmi / Makro',
+        colorClass:
+          'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+      };
+    default:
+      return {
+        label: 'Terverifikasi',
+        colorClass:
+          'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 border-zinc-500/30',
+      };
+  }
 }
 
 /**
@@ -174,6 +241,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       description:
         'Indikator akumulasi DCA matematis berbasis rasio harga terhadap biaya produksi & moving average 200 hari. Nilai < 0.45 adalah zona serok dasar siklus.',
       infoUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceName: 'CoinMarketCap / Glassnode',
+      sourceUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceType: 'on-chain-benchmark',
     },
     {
       id: 'mvrv_zscore',
@@ -189,6 +259,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       description:
         'Mengukur deviasi nilai pasar terhadap modal terealisasi (realized cap). Nilai mendekati 0 atau negatif menandakan valuasi sangat murah di bawah modal investor rata-rata.',
       infoUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceName: 'CoinMarketCap / LookIntoBitcoin',
+      sourceUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceType: 'on-chain-benchmark',
     },
     {
       id: 'fear_greed_crypto',
@@ -204,6 +277,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       description:
         'Indeks ketakutan dan keserakahan pasar kripto (Alternative.me). Skor <= 25 menandakan kepanikan ekstrem yang historisnya adalah titik balik akumulasi terbaik.',
       infoUrl: 'https://alternative.me/crypto/fear-and-greed-index/',
+      sourceName: 'Alternative.me Crypto API',
+      sourceUrl: 'https://api.alternative.me/fng/',
+      sourceType: 'live-api',
     },
     {
       id: 'puell_multiple',
@@ -219,6 +295,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       description:
         'Rasio nilai penerbitan koin harian terhadap moving average 365 hari. Nilai <= 0.5 menandakan pendapatan penambang anjlok ekstrem (kapitulasi penambang).',
       infoUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceName: 'CoinMarketCap / LookIntoBitcoin',
+      sourceUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceType: 'on-chain-benchmark',
     },
     {
       id: 'ma_2y_multiplier',
@@ -234,6 +313,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       description:
         'Membandingkan harga spot dengan moving average 2 tahun (730 hari). Harga di bawah 1.0x menandakan pasar berada di zona akumulasi dasar siklus 4 tahunan.',
       infoUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceName: 'CoinMarketCap / TradingView',
+      sourceUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'ath_drawdown_crypto',
@@ -248,6 +330,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Kedalaman koreksi harga saat ini dari titik rekor tertinggi sepanjang sejarah (All-Time High). Koreksi >= 35% memberikan margin of safety tinggi untuk DCA.',
+      sourceName: 'CoinGecko / Yahoo Finance Feed',
+      sourceUrl: 'https://www.coingecko.com/en/coins/bitcoin',
+      sourceType: 'live-api',
     },
     {
       id: 'rsi_22d_crypto',
@@ -262,6 +347,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '',
       description:
         'Indikator momentum kejenuhan jual (oversold). Nilai <= 35 mengindikasikan tekanan jual sudah mendekati titik jenuh.',
+      sourceName: 'CoinMarketCap Index Feed',
+      sourceUrl: 'https://coinmarketcap.com/charts/crypto-market-cycle-indicators/',
+      sourceType: 'exchange-feed',
     },
   ],
 
@@ -279,6 +367,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Rasio Price-to-Earnings saham saat ini dibandingkan dengan rata-rata historis 5 tahunnya. Nilai minus menandakan harga diperdagangkan diskon dari valuasi laba normalnya.',
+      sourceName: 'Bursa Efek Indonesia (IDX) / Stockbit',
+      sourceUrl: 'https://www.idx.co.id',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'pbv_vs_5y_idx',
@@ -293,6 +384,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Price-to-Book Value saham dibandingkan rata-rata 5 tahun. Diskon >= 8% menandakan saham blue chip berada di area akumulasi institusi.',
+      sourceName: 'Bursa Efek Indonesia (IDX) / RTI',
+      sourceUrl: 'https://www.idx.co.id',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'drawdown_52w_idx',
@@ -307,6 +401,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Koreksi harga dari titik tertinggi 52 minggu terakhir di Bursa Efek Indonesia. Koreksi >= 12% menyajikan peluang serok dividen lebih tinggi.',
+      sourceName: 'Bursa Efek Indonesia (IDX) / Yahoo Finance',
+      sourceUrl: 'https://finance.yahoo.com',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'dividend_yield_spread',
@@ -321,6 +418,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Estimasi imbal hasil dividen tunai tahunan. Nilai >= 5.0% menawarkan cashflow pasif yang kompetitif terhadap kupon obligasi negara.',
+      sourceName: 'IDX & Kemenkeu SBN Yield Feed',
+      sourceUrl: 'https://www.djppr.kemenkeu.go.id',
+      sourceType: 'macro-official',
     },
     {
       id: 'ihsg_sentiment',
@@ -335,6 +435,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '/100',
       description:
         'Indeks sentimen agregat pasar saham domestik. Wilayah Fear (<= 45) adalah momen terbaik melakukan DCA saham-saham perbankan/unggulan.',
+      sourceName: 'IDX Market Capital Flow & Sentimen',
+      sourceUrl: 'https://www.idx.co.id',
+      sourceType: 'exchange-feed',
     },
   ],
 
@@ -352,6 +455,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Forward Price-to-Earnings 12 bulan ke depan dibandingkan rerata 5 tahun S&P 500 / Nasdaq. Di bawah rata-rata menandakan valuasi pertumbuhan masih wajar.',
+      sourceName: 'FactSet / S&P Global / Yahoo Finance',
+      sourceUrl: 'https://finance.yahoo.com',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'shiller_cape_us',
@@ -366,6 +472,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: 'x',
       description:
         'Cyclically Adjusted Price-to-Earnings Robert Shiller yang disesuaikan inflasi 10 tahun. Nilai di bawah 30x mengurangi risiko bubble pasar saham AS.',
+      sourceName: 'Robert Shiller Online / Yale Data',
+      sourceUrl: 'https://www.multpl.com/shiller-pe',
+      sourceType: 'macro-official',
     },
     {
       id: 'drawdown_52w_us',
@@ -380,6 +489,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Koreksi indeks Wall Street dari puncak 52 minggu. Saham indeks AS jarang terkoreksi dalam, sehingga koreksi >= 7.5% adalah sinyal DCA teruji.',
+      sourceName: 'S&P Global / CBOE',
+      sourceUrl: 'https://www.spglobal.com',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'cnn_fear_greed_us',
@@ -394,6 +506,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '/100',
       description:
         'Indeks sentimen pasar saham AS yang menggabungkan Market Momentum, Stock Price Breadth, Put/Call Ratio, dan Junk Bond Demand.',
+      sourceName: 'CNN Business Fear & Greed Index',
+      sourceUrl: 'https://edition.cnn.com/markets/fear-and-greed',
+      sourceType: 'live-api',
     },
     {
       id: 'ma_200d_us',
@@ -408,6 +523,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: 'x',
       description:
         'Harga relatif terhadap Simple Moving Average 200 hari. Berada di bawah garis 200 hari menandakan peluang diskon tren primer.',
+      sourceName: 'TradingView / S&P 500 SMA',
+      sourceUrl: 'https://www.tradingview.com',
+      sourceType: 'exchange-feed',
     },
   ],
 
@@ -425,6 +543,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Yield obligasi AS 10 tahun dikurangi inflasi tersirat (TIPS). Suku bunga riil yang rendah atau melandai memperkuat daya tarik emas fisik.',
+      sourceName: 'Federal Reserve Economic Data (FRED TIPS)',
+      sourceUrl: 'https://fred.stlouisfed.org/series/DFII10',
+      sourceType: 'macro-official',
     },
     {
       id: 'ath_drawdown_gold',
@@ -439,6 +560,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Koreksi harga emas dunia dari level puncak rekor sepanjang masa. Sebagai aset safe haven, koreksi >= 4.5% merupakan peluang beli bertahap.',
+      sourceName: 'London Bullion Market (LBMA) / Yahoo Finance',
+      sourceUrl: 'https://finance.yahoo.com/quote/GC=F',
+      sourceType: 'exchange-feed',
     },
     {
       id: 'gold_sp500_ratio',
@@ -453,6 +577,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: 'x',
       description:
         'Rasio komparasi harga emas terhadap indeks saham global. Nilai rendah mengindikasikan emas relatif murah sebagai diversifikasi lindung nilai.',
+      sourceName: 'MacroTrends / World Gold Council',
+      sourceUrl: 'https://www.macrotrends.net/gold-to-sp500-ratio',
+      sourceType: 'on-chain-benchmark',
     },
   ],
 
@@ -470,6 +597,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Imbal hasil bersih Reksa Dana Pasar Uang bebas pajak dibandingkan bunga deposito bank buku besar.',
+      sourceName: 'Bank Indonesia (BI 7-Day RR)',
+      sourceUrl: 'https://www.bi.go.id',
+      sourceType: 'macro-official',
     },
     {
       id: 'war_chest_anchor_rdpu',
@@ -484,6 +614,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Instrumen pelindung nilai pokok (drawdown 0%) yang siap ditarik kapan saja untuk menyerok aset berisiko saat market crash.',
+      sourceName: 'OJK Reksa Dana / KSEI',
+      sourceUrl: 'https://www.ksei.co.id',
+      sourceType: 'macro-official',
     },
   ],
 
@@ -501,6 +634,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Kupon obligasi negara Indonesia tenor 10 tahun (FR/ORI). Yield di atas 6.25% menawarkan imbal hasil tetap prima dengan risiko gagal bayar nol.',
+      sourceName: 'Kemenkeu DJPPR & Bank Indonesia',
+      sourceUrl: 'https://www.djppr.kemenkeu.go.id',
+      sourceType: 'macro-official',
     },
     {
       id: 'rdpt_duration_risk',
@@ -515,6 +651,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '/100',
       description:
         'Stabilitas kupon dan durasi portofolio obligasi korporasi & negara berperingkat AAA/AA.',
+      sourceName: 'IBPA (Indonesia Bond Pricing Agency)',
+      sourceUrl: 'https://www.phei.co.id',
+      sourceType: 'macro-official',
     },
   ],
 
@@ -531,6 +670,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       formattedReference: '≥ 10.0% (Diskon Wajar)',
       unit: '%',
       description: 'Estimasi diskon nilai intrinsik wajar aset kustom.',
+      sourceName: 'QuantPorto Internal Valuation Engine',
+      sourceUrl: 'https://coinmarketcap.com',
+      sourceType: 'macro-official',
     },
   ],
 
@@ -548,6 +690,9 @@ export const MASTER_CYCLE_INDICATORS: Record<
       unit: '%',
       description:
         'Estimasi diskon nilai intrinsik wajar aset terhadap rata-rata pasar.',
+      sourceName: 'QuantPorto Valuation Benchmark',
+      sourceUrl: 'https://coinmarketcap.com',
+      sourceType: 'macro-official',
     },
   ],
 };
@@ -579,6 +724,7 @@ export function getAssetIndicatorConfluence(params: {
   tacticalConfig?: ValuationSentimentConfig;
   currentPriceNative?: number;
   usdIdrRate?: number;
+  lastRefreshSuccessAt?: string;
 }): AssetIndicatorConfluence {
   const {
     asset,
@@ -587,6 +733,7 @@ export function getAssetIndicatorConfluence(params: {
     tacticalConfig,
     currentPriceNative,
     usdIdrRate = 16000,
+    lastRefreshSuccessAt,
   } = params;
 
   // Resolve category template
@@ -763,7 +910,14 @@ export function getAssetIndicatorConfluence(params: {
       unit: def.unit,
       isTriggered,
       description: def.description,
-      isManualOverride: Boolean(override?.currentValue !== undefined || override?.referenceThreshold !== undefined),
+      isManualOverride: Boolean(
+        override?.currentValue !== undefined || override?.referenceThreshold !== undefined
+      ),
+      sourceName: def.sourceName,
+      sourceUrl: def.sourceUrl,
+      sourceType: def.sourceType,
+      lastSuccessTimestamp:
+        lastRefreshSuccessAt || def.lastUpdatedLabel || 'Live Sync Otomatis',
     };
   });
 
@@ -775,6 +929,21 @@ export function getAssetIndicatorConfluence(params: {
   const tier = getConfluenceActionTier(confluencePercent);
 
   const summary = `${triggeredCount} dari ${totalIndicators} indikator siklus Triggered (${confluencePercent}%). Rekomendasi: ${tier.actionLabel} (${tier.multiplier}x Multiplier).`;
+
+  // Unique data sources across this asset's indicators
+  const dataSources: IndicatorSourceInfo[] = Array.from(
+    new Map(
+      indicatorStates.map((s) => [
+        s.sourceName,
+        {
+          sourceName: s.sourceName,
+          sourceUrl: s.sourceUrl,
+          sourceType: s.sourceType,
+          lastSuccessTimestamp: s.lastSuccessTimestamp,
+        },
+      ])
+    ).values()
+  );
 
   return {
     assetId: asset.id,
@@ -790,5 +959,7 @@ export function getAssetIndicatorConfluence(params: {
     multiplier: tier.multiplier,
     badgeClass: tier.badgeClass,
     summary,
+    dataSources,
+    lastRefreshSuccessAt,
   };
 }
