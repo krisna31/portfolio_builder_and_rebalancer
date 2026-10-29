@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import html2canvas from 'html2canvas-pro';
 import {
   AssetDefinition,
@@ -38,6 +38,7 @@ export interface PortfolioFactsheetModalProps {
   annualInflationPercent?: number;
   annualStepUpPercent?: number;
   netDividendYieldPercent?: number;
+  dividendUsageMode?: 'reinvest-drip' | 'cashout-passive';
 }
 
 export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = ({
@@ -54,6 +55,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   annualInflationPercent = 0,
   annualStepUpPercent = 0,
   netDividendYieldPercent = 0,
+  dividendUsageMode = 'reinvest-drip',
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [isExportingPng, setIsExportingPng] = useState(false);
@@ -81,20 +83,46 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     })
     .sort((a, b) => b.weightPct - a.weightPct);
 
+  // Weighted net dividend yield calculation (fallback if not supplied explicitly)
+  const effectiveNetDividendYieldPercent = useMemo(() => {
+    if (netDividendYieldPercent && netDividendYieldPercent > 0) return netDividendYieldPercent;
+    let weighted = 0;
+    for (const a of activeAssetList) {
+      const grossYield = a.dividendYield ?? 0;
+      const taxRate =
+        a.dividendTaxPercent !== undefined
+          ? a.dividendTaxPercent / 100
+          : a.category === 'idx-equity'
+            ? 0.1
+            : a.category === 'bonds'
+              ? 0.1
+              : 0;
+      const netYield = grossYield * (1 - taxRate);
+      weighted += (a.weightPct / 100) * netYield;
+    }
+    return Number(weighted.toFixed(2));
+  }, [activeAssetList, netDividendYieldPercent]);
+
+  // If user selected "Cashout Passive Income", total return compounding reduces by the cashout dividend yield
+  const effectiveCompoundingCagr =
+    dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0
+      ? Math.max(2, solvedMetrics.cagr - effectiveNetDividendYieldPercent)
+      : solvedMetrics.cagr;
+
   // Wealth Simulation for milestones with inflation & step-up forward
   const simulation = simulateWealthToGoal({
     initialCapitalIdr,
     monthlyContributionIdr: monthlySavingsIdr,
-    annualCagrPercent: solvedMetrics.cagr,
+    annualCagrPercent: effectiveCompoundingCagr,
     maxDrawdownPercent: solvedMetrics.maxDrawdown,
     targetWealthIdr: targetGoalIdr,
     annualInflationPercent,
     annualStepUpPercent,
-    netDividendYieldPercent,
+    netDividendYieldPercent: effectiveNetDividendYieldPercent,
   });
 
   // Calculate milestone projections for 1, 3, 5, 10, 15, 20 years
-  const annualRate = Math.max(0, solvedMetrics.cagr) / 100;
+  const annualRate = Math.max(0, effectiveCompoundingCagr) / 100;
   const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
   const inflationDec = Math.max(0, annualInflationPercent) / 100;
   const monthlyInflationRate = Math.pow(1 + inflationDec, 1 / 12) - 1;
@@ -181,7 +209,11 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       `Profil Risiko: ${riskTierBadge.label}`,
       ``,
       `📈 *METRIK UTAMA 5 TAHUN:*`,
-      `• CAGR (Return Tahunan): +${formatPercent(solvedMetrics.cagr)}`,
+      `• CAGR (Return Tahunan): +${formatPercent(solvedMetrics.cagr)}${
+        dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0
+          ? ` (Cashout Yield: ${effectiveNetDividendYieldPercent.toFixed(1)}%, CAGR Modal: +${formatPercent(effectiveCompoundingCagr)})`
+          : ''
+      }`,
       `• Max Drawdown (Penurunan Terbesar): -${formatPercent(solvedMetrics.maxDrawdown)}`,
       `• Calmar Ratio: ${calmarRatio}x`,
       `• Volatilitas Tahunan: ${formatPercent(solvedMetrics.volatility)}`,
@@ -584,11 +616,16 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
             {/* Wealth Accumulation Milestones Table */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                 <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
                   <Coins className="w-3.5 h-3.5 text-indigo-500" />
                   <span>Proyeksi Akumulasi Kekayaan (DCA {formatIdr(monthlySavingsIdr, true)}/Bulan)</span>
                 </span>
+                {dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0 && (
+                  <span className="text-[10px] text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                    Mode Cashout Dividen ({effectiveNetDividendYieldPercent.toFixed(1)}%/thn ditarik tunai, CAGR modal: +{formatPercent(effectiveCompoundingCagr)})
+                  </span>
+                )}
               </div>
 
               <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>

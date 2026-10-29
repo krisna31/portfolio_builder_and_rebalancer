@@ -690,6 +690,47 @@ export function App() {
               });
             });
           }
+
+          // Restore Smart DCA Settings if available in shared hash
+          if (
+            typeof hashParsed?.smartDcaMonthlyBudgetIdr === 'number' &&
+            hashParsed.smartDcaMonthlyBudgetIdr > 0
+          ) {
+            setSmartDcaMonthlyBudgetIdr(hashParsed.smartDcaMonthlyBudgetIdr);
+          }
+          if (
+            hashParsed?.smartDcaOverflowMode === 'park-rdpu' ||
+            hashParsed?.smartDcaOverflowMode === 'boost-discount'
+          ) {
+            setSmartDcaOverflowMode(hashParsed.smartDcaOverflowMode);
+          }
+          if (
+            hashParsed?.smartDcaAllocationMode === 'target-weight-multiplier' ||
+            hashParsed?.smartDcaAllocationMode === 'pure-confluence-rank'
+          ) {
+            setSmartDcaAllocationMode(hashParsed.smartDcaAllocationMode);
+          }
+          if (
+            hashParsed?.smartDcaIndicatorOverrides &&
+            typeof hashParsed.smartDcaIndicatorOverrides === 'object'
+          ) {
+            setSmartDcaIndicatorOverrides(hashParsed.smartDcaIndicatorOverrides);
+          }
+
+          // Clean URL hash so refreshing or navigating doesn't clobber future user modifications
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            const cleanUrl = window.location.pathname + window.location.search;
+            window.history.replaceState(null, '', cleanUrl);
+          }
+
+          // Display welcome confirmation toast
+          setBackupToast({
+            message: 'Portofolio Bersama Berhasil Dimuat!',
+            details: [
+              'Konfigurasi bobot, target, dan strategi Smart DCA telah diterapkan.',
+              'Tautan hash telah dibersihkan agar sesi peramban tetap aman saat di-refresh.',
+            ],
+          });
         } catch {
           // Ignore malformed URL hash
         }
@@ -2506,12 +2547,15 @@ export function App() {
         customAssets,
         renamedAssets,
         roadmap: roadmapSettings,
+        smartDcaMonthlyBudgetIdr,
+        smartDcaOverflowMode,
+        smartDcaAllocationMode,
+        smartDcaIndicatorOverrides,
       })
     );
     const url = `${window.location.origin}${window.location.pathname}#porto=${encodeURIComponent(
       shareData
     )}`;
-    window.history.replaceState(null, '', `#porto=${encodeURIComponent(shareData)}`);
     navigator.clipboard?.writeText(url);
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
@@ -2847,6 +2891,7 @@ export function App() {
               usdIdrRate={usdIdrRate}
               annualInflationPercent={roadmapSettings?.annualInflationPercent}
               annualStepUpPercent={roadmapSettings?.annualStepUpPct}
+              dividendUsageMode={roadmapSettings?.dividendUsageMode ?? 'reinvest-drip'}
             />
           );
         })()}

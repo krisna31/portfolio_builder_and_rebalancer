@@ -287,7 +287,32 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const handleAdjustLotOverride = (assetId: string, delta: number) => {
     setLotOverrides((prev) => {
       const current = prev[assetId] ?? 0;
-      return { ...prev, [assetId]: current + delta };
+      const baseItem = baseRebalanceResult.items.find((i) => i.assetId === assetId);
+      const baseLots = Math.abs(baseItem?.tradeLotsInteger ?? 0);
+      const isBaseSell = baseItem?.action === 'SELL';
+      const holdingUnits = holdings[assetId]?.units ?? 0;
+      const maxSellLots = Math.floor(holdingUnits / 100);
+
+      let nextDelta = current + delta;
+      const candidateLots = baseLots + nextDelta;
+
+      // Prevent negative lots (dead-zone clicks when repeatedly clicking -)
+      if (candidateLots < 0) {
+        nextDelta = -baseLots;
+      }
+
+      // Prevent selling more lots than held physically (anti short-selling)
+      if (isBaseSell && candidateLots > maxSellLots) {
+        nextDelta = maxSellLots - baseLots;
+      }
+
+      if (nextDelta === 0) {
+        const next = { ...prev };
+        delete next[assetId];
+        return next;
+      }
+
+      return { ...prev, [assetId]: nextDelta };
     });
   };
 
