@@ -8,6 +8,11 @@ import {
   ValuationSentimentConfig,
 } from './types';
 import { getSentimentZone } from './tacticalValuationEngine';
+import {
+  AssetIndicatorConfluence,
+  CycleIndicatorState,
+  getAssetIndicatorConfluence,
+} from './smartDcaIndicators';
 
 export type SmartDcaAction =
   | 'AGGRESSIVE_BUY'
@@ -17,6 +22,10 @@ export type SmartDcaAction =
   | 'HOLD_SKIP';
 
 export type SmartDcaOverflowMode = 'park-rdpu' | 'boost-discount';
+
+export type SmartDcaAllocationMode =
+  | 'target-weight-multiplier'
+  | 'pure-confluence-rank';
 
 export interface ValuationMetricItem {
   name: string;
@@ -53,6 +62,7 @@ export interface SmartDcaExplanation {
   multiplier: number;
   valuationBreakdown: ValuationMetricBreakdown;
   driftBreakdown: DriftMetricBreakdown;
+  indicatorConfluence: AssetIndicatorConfluence;
   narrativeWhy: string;
   formulaHow: string;
   budgetMath: {
@@ -93,6 +103,7 @@ export interface SmartDcaResult {
   warChestParkedIdr: number;
   unallocatedCashRemainderIdr: number;
   overflowMode: SmartDcaOverflowMode;
+  allocationMode: SmartDcaAllocationMode;
   items: SmartDcaItemResult[];
   warChestAssetId?: string;
   asRebalanceSummary: RebalanceSummaryResult;
@@ -117,11 +128,13 @@ export interface SmartDcaInputParams {
   inputMode?: 'nominal' | 'units';
   usdIdrRate: number;
   overflowMode?: SmartDcaOverflowMode;
+  allocationMode?: SmartDcaAllocationMode;
   enableIdxLotRounding?: boolean;
   filterDustTrades?: boolean;
   dustTradeThresholdIdr?: number;
   tacticalConfig?: ValuationSentimentConfig;
   marketDataOverrides?: Record<string, MarketDataOverride>;
+  indicatorOverrides?: Record<string, Record<string, Partial<CycleIndicatorState>>>;
 }
 
 /**
@@ -639,41 +652,40 @@ function buildNarrativeWhy(
   driftBreakdown: DriftMetricBreakdown,
   action: SmartDcaAction,
   actionLabel: string,
-  multiplier: number
+  multiplier: number,
+  confluence?: AssetIndicatorConfluence
 ): string {
   const parts: string[] = [];
 
-  parts.push(
-    `Berdasarkan analisis 2-Pilar Smart DCA, **${asset.shortName} (${asset.name})** memperoleh **Skor Komposit ${compositeScore}/100**, menghasilkan rekomendasi **${actionLabel} (${multiplier}x)**.`
-  );
+  if (confluence && confluence.indicators.length > 0) {
+    parts.push(
+      `Berdasarkan analisis Indikator Siklus & Valuasi Pasar (CMC Rulebook), **${asset.shortName} (${asset.name})** memiliki **${confluence.triggeredCount} dari ${confluence.totalIndicators} indikator Triggered (${confluence.confluencePercent}%)**, menghasilkan keputusan rekomendasi **${actionLabel} (${multiplier}x Multiplier)**.`
+    );
 
-  // Valuation rationale
-  if (valuationBreakdown.score >= 70) {
-    parts.push(
-      `Di sisi pasar, aset sedang mengalami diskon yang sangat menarik (Skor Valuasi ${valuationBreakdown.score}/100): ${valuationBreakdown.summary}`
-    );
-  } else if (valuationBreakdown.score <= 35) {
-    parts.push(
-      `Di sisi pasar, harga aset saat ini relatif tinggi / overbought (Skor Valuasi ${valuationBreakdown.score}/100): ${valuationBreakdown.summary}`
-    );
+    const triggeredIndicators = confluence.indicators.filter((i) => i.isTriggered);
+    if (triggeredIndicators.length > 0) {
+      parts.push(
+        `Indikator sinyal diskon aktif: ${triggeredIndicators.map((i) => i.name).join(', ')}.`
+      );
+    } else {
+      parts.push(
+        `Belum ada indikator siklus yang memicu batas acuan diskon akumulasi.`
+      );
+    }
   } else {
     parts.push(
-      `Kondisi pasar saat ini berada di rentang wajar (Skor Valuasi ${valuationBreakdown.score}/100).`
+      `Berdasarkan analisis Smart DCA, **${asset.shortName} (${asset.name})** memperoleh **Skor Konfluensi ${compositeScore}/100**, menghasilkan rekomendasi **${actionLabel} (${multiplier}x)**.`
     );
   }
 
-  // Drift rationale
+  // Drift rationale as informative context (0% weight on action decision)
   if (driftBreakdown.relativeDeficitPercent >= 20) {
     parts.push(
-      `Secara portofolio, posisinya masih tertinggal (${driftBreakdown.currentWeightPercent.toFixed(1)}% vs target ${driftBreakdown.targetWeightPercent.toFixed(1)}%), sehingga membutuhkan akumulasi lebih agresif untuk mengejar target.`
+      `Konteks Portofolio: Posisi saat ini defisit -${driftBreakdown.relativeDeficitPercent}% dari target (${driftBreakdown.currentWeightPercent.toFixed(1)}% vs target ${driftBreakdown.targetWeightPercent.toFixed(1)}%).`
     );
   } else if (driftBreakdown.relativeDeficitPercent < -10) {
     parts.push(
-      `Secara portofolio, porsi aset ini sudah melampaui target alokasi (${driftBreakdown.currentWeightPercent.toFixed(1)}% vs target ${driftBreakdown.targetWeightPercent.toFixed(1)}%), sehingga DCA bulan ini diringankan atau dialihkan ke instrumen kas siaga.`
-    );
-  } else {
-    parts.push(
-      `Porsi portofolio berada cukup dekat dengan target alokasi (${driftBreakdown.currentWeightPercent.toFixed(1)}% vs target ${driftBreakdown.targetWeightPercent.toFixed(1)}%).`
+      `Konteks Portofolio: Porsi saat ini surplus +${Math.abs(driftBreakdown.relativeDeficitPercent)}% di atas target (${driftBreakdown.currentWeightPercent.toFixed(1)}% vs target ${driftBreakdown.targetWeightPercent.toFixed(1)}%).`
     );
   }
 
@@ -691,6 +703,8 @@ function buildFormulaHow(
   multiplier: number,
   baseAllocationIdr: number,
   finalAllocationIdr: number,
+  confluence?: AssetIndicatorConfluence,
+  allocationMode: SmartDcaAllocationMode = 'target-weight-multiplier',
   lotDetails?: {
     isIdxStock: boolean;
     recommendedLots?: number;
@@ -703,18 +717,37 @@ function buildFormulaHow(
     warChestAddIdr?: number;
   }
 ): string {
-  const steps: string[] = [
-    `1. Pilar 1 (Valuasi Pasar): Skor = ${valuationBreakdown.score}/100`,
-    `   ${valuationBreakdown.metrics.map((m) => `• ${m.name}: ${m.formulaSnippet} (Bobot ${m.weightPercent}%)`).join('\n   ')}`,
-    `2. Pilar 2 (Defisit Portofolio): Skor = ${driftBreakdown.score}/100`,
-    `   • Rumus: 50 + ((${driftBreakdown.targetWeightPercent.toFixed(1)}% - ${driftBreakdown.currentWeightPercent.toFixed(1)}%) / ${driftBreakdown.targetWeightPercent.toFixed(1)}%) × 50 = ${driftBreakdown.score}`,
-    `3. Skor Komposit:`,
-    `   • (50% × ${valuationBreakdown.score}) + (50% × ${driftBreakdown.score}) = ${compositeScore}/100`,
-    `4. Rekomendasi & Multiplier:`,
-    `   • Skor ${compositeScore} ➔ ${actionLabel} (Multiplier: ${multiplier}x)`,
-    `5. Alokasi Dana:`,
-    `   • Base Alokasi Target: Rp ${baseAllocationIdr.toLocaleString('id-ID')}`,
-  ];
+  const steps: string[] = [];
+
+  if (confluence && confluence.indicators.length > 0) {
+    steps.push(
+      `1. Checklist Indikator Siklus & Valuasi Pasar (Pilar 1 CMC Rulebook):`,
+      ...confluence.indicators.map(
+        (ind, idx) =>
+          `   [${idx + 1}] ${ind.name}: ${ind.formattedCurrent} vs ${ind.formattedReference} ➔ ${
+            ind.isTriggered ? 'TRIGGERED (Sinyal Beli Aktif ✅)' : 'BELUM TRIGGERED ❌'
+          }`
+      ),
+      `2. Tingkat Konfluensi Siklus (100% Penentu Keputusan):`,
+      `   • (${confluence.triggeredCount} / ${confluence.totalIndicators}) × 100% = ${confluence.confluencePercent}%`,
+      `   • Konfluensi ${confluence.confluencePercent}% ➔ ${actionLabel} (Multiplier: ${multiplier}x)`,
+      `   • Konteks Defisit Portofolio (Pilar 2 Informasional): Defisit ${driftBreakdown.relativeDeficitPercent}% (Skor ${driftBreakdown.score}/100)`
+    );
+  } else {
+    steps.push(
+      `1. Skor Konfluensi Indikator: ${compositeScore}/100`,
+      `2. Rekomendasi & Multiplier: ${actionLabel} (${multiplier}x)`
+    );
+  }
+
+  steps.push(
+    `3. Mode Alokasi Dana: ${
+      allocationMode === 'pure-confluence-rank'
+        ? 'Murni Ranking Konfluensi Indikator'
+        : 'Bobot Target Portofolio × Multiplier Indikator'
+    }`,
+    `   • Base Alokasi Target: Rp ${baseAllocationIdr.toLocaleString('id-ID')}`
+  );
 
   if (overflowDetails?.mode === 'boost-discount' && overflowDetails.sharePercent !== undefined) {
     steps.push(`   • Mode Sisa Dana: Perbesar Aset Diskon (Porsi ${overflowDetails.sharePercent.toFixed(1)}%)`);
@@ -754,11 +787,13 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     inputMode = 'nominal',
     usdIdrRate,
     overflowMode = 'park-rdpu',
+    allocationMode = 'target-weight-multiplier',
     enableIdxLotRounding = true,
     filterDustTrades = true,
     dustTradeThresholdIdr = 25_000,
     tacticalConfig,
     marketDataOverrides,
+    indicatorOverrides,
   } = params;
 
   // 1. Identify defensive cash / War Chest asset (e.g. RDPU or RDPT)
@@ -796,7 +831,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     0
   );
 
-  // 4. Initial pass: Calculate 2-pillar scores and raw multipliers per asset
+  // 4. Initial pass: Calculate 100% Indicator Confluence and Multipliers per asset
   interface IntermediateAssetPlan {
     asset: AssetDefinition;
     targetWeight: number;
@@ -805,8 +840,14 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     unitPriceIdr: number;
     valuationBreakdown: ValuationMetricBreakdown;
     driftBreakdown: DriftMetricBreakdown;
+    indicatorConfluence: AssetIndicatorConfluence;
     compositeScore: number;
-    tier: ReturnType<typeof getActionTier>;
+    tier: {
+      action: SmartDcaAction;
+      actionLabel: string;
+      badgeClass: string;
+      multiplier: number;
+    };
     baseAllocIdr: number;
     rawAllocIdr: number;
   }
@@ -829,7 +870,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
 
     const override = marketDataOverrides?.[asset.id];
 
-    // Pillar 1: Valuation Score
+    // Valuation Breakdown (for background analytics)
     const valuationBreakdown = calculateValuationScore(
       asset,
       tacticalConfig,
@@ -838,19 +879,26 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       usdIdrRate
     );
 
-    // Pillar 2: Drift Score
+    // Drift Breakdown (for portfolio context analytics)
     const driftBreakdown = calculateDriftScore(targetW, currentW);
 
-    // Composite 50% / 50% Score
-    const compositeScore = Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round(0.5 * valuationBreakdown.score + 0.5 * driftBreakdown.score)
-      )
-    );
+    // 100% Indicator-Driven Confluence Calculation (CMC Rulebook)
+    const indicatorConfluence = getAssetIndicatorConfluence({
+      asset,
+      overrides: indicatorOverrides?.[asset.id],
+      marketDataOverride: override,
+      tacticalConfig,
+      currentPriceNative: unitPriceNative,
+      usdIdrRate,
+    });
 
-    const tier = getActionTier(compositeScore);
+    const compositeScore = indicatorConfluence.confluencePercent;
+    const tier = {
+      action: indicatorConfluence.action,
+      actionLabel: indicatorConfluence.actionLabel,
+      badgeClass: indicatorConfluence.badgeClass,
+      multiplier: indicatorConfluence.multiplier,
+    };
 
     // Base allocation without multiplier
     const normTargetW = totalTargetWeight > 0 ? targetW / totalTargetWeight : 0;
@@ -865,6 +913,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       unitPriceIdr,
       valuationBreakdown,
       driftBreakdown,
+      indicatorConfluence,
       compositeScore,
       tier,
       baseAllocIdr,
@@ -872,7 +921,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     });
   }
 
-  // 5. Handle budget distribution according to overflowMode
+  // 5. Handle budget distribution according to allocationMode and overflowMode
   const finalAllocationsIdr: Record<string, number> = {};
   const totalRawBuys = intermediatePlans.reduce(
     (sum, p) => sum + p.rawAllocIdr,
@@ -880,9 +929,42 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
   );
   let warChestParkedIdr = 0;
 
-  if (overflowMode === 'boost-discount') {
-    // Mode B: Boost discounted assets with all unallocated budget
-    // Active buy assets are those with multiplier > 0
+  if (allocationMode === 'pure-confluence-rank') {
+    // Mode B: Murni Ranking Konfluensi Indikator
+    const buyingPlans = intermediatePlans.filter((p) => p.tier.multiplier > 0);
+    const totalConfluenceScore = buyingPlans.reduce(
+      (sum, p) => sum + (p.indicatorConfluence.confluencePercent * p.tier.multiplier),
+      0
+    );
+
+    if (totalConfluenceScore > 0) {
+      let sumAlloc = 0;
+      for (const p of intermediatePlans) {
+        if (p.tier.multiplier > 0) {
+          const score = p.indicatorConfluence.confluencePercent * p.tier.multiplier;
+          const share = score / totalConfluenceScore;
+          const alloc = Math.round(monthlyBudgetIdr * share);
+          finalAllocationsIdr[p.asset.id] = alloc;
+          sumAlloc += alloc;
+        } else {
+          finalAllocationsIdr[p.asset.id] = 0;
+        }
+      }
+      const roundingDiff = monthlyBudgetIdr - sumAlloc;
+      if (roundingDiff !== 0 && buyingPlans.length > 0) {
+        finalAllocationsIdr[buyingPlans[0].asset.id] = Math.max(
+          0,
+          (finalAllocationsIdr[buyingPlans[0].asset.id] ?? 0) + roundingDiff
+        );
+      }
+    } else {
+      warChestParkedIdr = monthlyBudgetIdr;
+      for (const p of intermediatePlans) {
+        finalAllocationsIdr[p.asset.id] = 0;
+      }
+    }
+  } else if (overflowMode === 'boost-discount') {
+    // Mode A.2: Target Weight x Multiplier with Boost Discount Overflow
     const buyingPlans = intermediatePlans.filter((p) => p.tier.multiplier > 0);
     const totalMultiplierWeightedBase = buyingPlans.reduce(
       (sum, p) => sum + p.rawAllocIdr,
@@ -917,7 +999,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       }
     }
   } else {
-    // Mode A (Default): 'park-rdpu' (War Chest Accumulation)
+    // Mode A.1 (Default): Target Weight x Multiplier with 'park-rdpu' (War Chest Accumulation)
     if (totalRawBuys <= monthlyBudgetIdr) {
       // Unallocated funds are parked in RDPU / War Chest
       for (const p of intermediatePlans) {
@@ -1007,7 +1089,8 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       p.driftBreakdown,
       p.tier.action,
       p.tier.actionLabel,
-      p.tier.multiplier
+      p.tier.multiplier,
+      p.indicatorConfluence
     );
 
     const sharePercent =
@@ -1021,6 +1104,8 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       p.tier.multiplier,
       p.baseAllocIdr,
       allocatedIdr,
+      p.indicatorConfluence,
+      allocationMode,
       isIdxStock && enableIdxLotRounding
         ? {
             isIdxStock: true,
@@ -1044,6 +1129,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
       multiplier: p.tier.multiplier,
       valuationBreakdown: p.valuationBreakdown,
       driftBreakdown: p.driftBreakdown,
+      indicatorConfluence: p.indicatorConfluence,
       narrativeWhy,
       formulaHow,
       budgetMath: {
@@ -1151,6 +1237,12 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
           unallocatedCashRemainderIdr += warChestParkedIdr;
           warChestParkedIdr = 0;
         } else {
+          const warChestConfluence = getAssetIndicatorConfluence({
+            asset: warChestAsset,
+            tacticalConfig,
+            usdIdrRate,
+          });
+
           const warChestItem: SmartDcaItemResult = {
             assetId: warChestAsset.id,
             symbol: warChestAsset.symbol,
@@ -1183,6 +1275,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
                 usdIdrRate
               ),
               driftBreakdown: calculateDriftScore(0, currentW),
+              indicatorConfluence: warChestConfluence,
               narrativeWhy: `Aset ini menerima alokasi Rp ${warChestParkedIdr.toLocaleString('id-ID')} sebagai kas siaga (War Chest) dari sisa budget aset yang di-Hold/Skip untuk persiapan serok crash.`,
               formulaHow: `1. Pengalihan Sisa Dana Aset Hold/Skip: Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n2. Alokasi ke Kas Siaga (${warChestAsset.symbol}): Rp ${warChestParkedIdr.toLocaleString('id-ID')}\n   • Total Alokasi Smart DCA Final: Rp ${warChestParkedIdr.toLocaleString('id-ID')}`,
               budgetMath: {
@@ -1290,6 +1383,7 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     warChestParkedIdr,
     unallocatedCashRemainderIdr,
     overflowMode,
+    allocationMode,
     items: finalItems,
     warChestAssetId,
     asRebalanceSummary,

@@ -9,7 +9,10 @@ import {
   calculateSmartDcaPlan,
   SmartDcaItemResult,
   SmartDcaOverflowMode,
+  SmartDcaAllocationMode,
 } from '../../lib/quant/smartDcaEngine';
+import { CycleIndicatorState } from '../../lib/quant/smartDcaIndicators';
+import { CoinMarketCapIndicatorTable } from './CoinMarketCapIndicatorTable';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
@@ -29,6 +32,8 @@ import {
   Coins,
   Scale,
   Percent,
+  Table2,
+  Layers,
 } from 'lucide-react';
 
 export interface SmartDcaAdvisorPanelProps {
@@ -47,6 +52,12 @@ export interface SmartDcaAdvisorPanelProps {
   onUpdateSmartDcaMonthlyBudgetIdr?: (val: number) => void;
   smartDcaOverflowMode?: SmartDcaOverflowMode;
   onUpdateSmartDcaOverflowMode?: (mode: SmartDcaOverflowMode) => void;
+  smartDcaAllocationMode?: SmartDcaAllocationMode;
+  onUpdateSmartDcaAllocationMode?: (mode: SmartDcaAllocationMode) => void;
+  smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
+  onUpdateSmartDcaIndicatorOverrides?: (
+    overrides: Record<string, Record<string, any>>
+  ) => void;
   onOpenOrderSlip?: (planOverride?: RebalanceSummaryResult) => void;
   onCommitRebalanceToHoldings?: (
     note?: string,
@@ -71,6 +82,10 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   onUpdateSmartDcaMonthlyBudgetIdr,
   smartDcaOverflowMode,
   onUpdateSmartDcaOverflowMode,
+  smartDcaAllocationMode,
+  onUpdateSmartDcaAllocationMode,
+  smartDcaIndicatorOverrides,
+  onUpdateSmartDcaIndicatorOverrides,
   onOpenOrderSlip,
   onCommitRebalanceToHoldings,
   onSwitchToStandardRebalancer,
@@ -103,6 +118,55 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
     onUpdateSmartDcaOverflowMode?.(mode);
   };
 
+  // Allocation mode: 'target-weight-multiplier' (default) vs 'pure-confluence-rank'
+  const [localAllocationMode, setLocalAllocationMode] =
+    useState<SmartDcaAllocationMode>(
+      smartDcaAllocationMode ?? 'target-weight-multiplier'
+    );
+  const allocationMode = smartDcaAllocationMode ?? localAllocationMode;
+
+  const handleSetAllocationMode = (mode: SmartDcaAllocationMode) => {
+    setLocalAllocationMode(mode);
+    onUpdateSmartDcaAllocationMode?.(mode);
+  };
+
+  // Indicator overrides state
+  const [localIndicatorOverrides, setLocalIndicatorOverrides] = useState<
+    Record<string, Record<string, any>>
+  >(smartDcaIndicatorOverrides ?? {});
+  const indicatorOverrides =
+    smartDcaIndicatorOverrides ?? localIndicatorOverrides;
+
+  const handleUpdateIndicatorOverride = (
+    assetId: string,
+    indicatorId: string,
+    override: { currentValue?: number; referenceThreshold?: number } | null
+  ) => {
+    const next = { ...indicatorOverrides };
+    if (!next[assetId]) next[assetId] = {};
+    if (override === null) {
+      delete next[assetId][indicatorId];
+      if (Object.keys(next[assetId]).length === 0) delete next[assetId];
+    } else {
+      next[assetId][indicatorId] = {
+        ...next[assetId][indicatorId],
+        ...override,
+      };
+    }
+    setLocalIndicatorOverrides(next);
+    onUpdateSmartDcaIndicatorOverrides?.(next);
+  };
+
+  const handleResetAssetOverrides = (assetId: string) => {
+    const next = { ...indicatorOverrides };
+    delete next[assetId];
+    setLocalIndicatorOverrides(next);
+    onUpdateSmartDcaIndicatorOverrides?.(next);
+  };
+
+  // Selected tab for CoinMarketCap Indicators Board
+  const [activeCmcAssetId, setActiveCmcAssetId] = useState<string | null>(null);
+
   // Modal / Drawer state for "Mengapa Direkomendasikan?"
   const [selectedAssetForWhy, setSelectedAssetForWhy] =
     useState<SmartDcaItemResult | null>(null);
@@ -127,7 +191,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
     null
   );
 
-  // Calculate Smart DCA Plan
+  // Calculate Smart DCA Plan (100% Indicator-Driven CMC Rules)
   const smartDcaResult = useMemo(() => {
     return calculateSmartDcaPlan({
       assets: allAssets,
@@ -137,10 +201,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
       inputMode,
       usdIdrRate,
       overflowMode,
+      allocationMode,
       enableIdxLotRounding,
       filterDustTrades,
       dustTradeThresholdIdr,
       tacticalConfig,
+      indicatorOverrides,
     });
   }, [
     allAssets,
@@ -150,11 +216,23 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
     inputMode,
     usdIdrRate,
     overflowMode,
+    allocationMode,
     enableIdxLotRounding,
     filterDustTrades,
     dustTradeThresholdIdr,
     tacticalConfig,
+    indicatorOverrides,
   ]);
+
+  // Active item for CMC Indicator Table board
+  const activeCmcItem = useMemo(() => {
+    if (smartDcaResult.items.length === 0) return null;
+    if (activeCmcAssetId) {
+      const found = smartDcaResult.items.find((i) => i.assetId === activeCmcAssetId);
+      if (found) return found;
+    }
+    return smartDcaResult.items[0];
+  }, [smartDcaResult.items, activeCmcAssetId]);
 
   // Copy summary to clipboard
   const handleCopySummary = () => {
@@ -251,12 +329,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <h3 className="text-sm sm:text-base font-bold ui-text-main flex items-center gap-1.5">
                   <span>Smart DCA Advisor</span>
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    2-Pillar Engine
+                    CMC Cycle Rules (100% Indicator Driven)
                   </span>
                 </h3>
               </div>
               <p className="text-xs ui-text-muted max-w-3xl leading-relaxed">
-                Akumulasi cerdas bukan sekadar DCA buta. Mesin menghitung skor kuantitatif 2-pilar (<strong>Diskon Valuasi Pasar</strong> + <strong>Defisit Portofolio</strong>) untuk menentukan apakah aset harus dibeli agresif (1.75x–2.0x), normal (1.0x), minimal (0.5x), atau di-skip dan dananya dialihkan ke kas siaga (War Chest).
+                Akumulasi cerdas berbasis aturan konfluensi indikator siklus pasar ala <strong>CoinMarketCap Market Cycle Indicators</strong>. Multiplier belanja (0.0x–2.0x) ditentukan 100% oleh sinyal teknikal &amp; valuasi pasar murni tanpa intervensi defisit portofolio.
               </p>
             </div>
           </div>
@@ -399,55 +477,107 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             </div>
           </div>
 
-          {/* Overflow Handling Strategy Switcher */}
-          <div className="md:col-span-6 space-y-2 border-t md:border-t-0 md:border-l ui-border pt-4 md:pt-0 md:pl-5">
-            <div className="flex items-center justify-between">
+          {/* Overflow Handling Strategy Switcher & Allocation Mode */}
+          <div className="md:col-span-6 space-y-3.5 border-t md:border-t-0 md:border-l ui-border pt-4 md:pt-0 md:pl-5">
+            {/* Mode 1: Sisa Dana Aset Hold */}
+            <div className="space-y-1.5">
               <span className="text-xs font-bold ui-text-main flex items-center gap-1.5">
-                <SlidersHorizontal className="h-4 w-4 text-indigo-500" />
-                <span>Strategi Sisa Dana Aset yang di-Hold / Diskon</span>
+                <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-500" />
+                <span>Strategi Sisa Dana Aset yang di-Hold / Diskon:</span>
               </span>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSetOverflowMode('park-rdpu')}
+                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
+                    overflowMode === 'park-rdpu'
+                      ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
+                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="text-xs font-bold ui-text-main">
+                      Parkir War Chest
+                    </span>
+                  </div>
+                  <p className="text-[10px] ui-text-muted mt-0.5 leading-tight">
+                    Sisa dana diparkir ke RDPU kas siaga untuk serok crash.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetOverflowMode('boost-discount')}
+                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
+                    overflowMode === 'boost-discount'
+                      ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
+                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+                    <span className="text-xs font-bold ui-text-main">
+                      Perbesar Diskon
+                    </span>
+                  </div>
+                  <p className="text-[10px] ui-text-muted mt-0.5 leading-tight">
+                    Sisa dana mendongkrak porsi belanja aset terdiskon.
+                  </p>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSetOverflowMode('park-rdpu')}
-                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
-                  overflowMode === 'park-rdpu'
-                    ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                    : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Shield className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-xs font-bold ui-text-main">
-                    Parkir ke RDPU (War Chest)
-                  </span>
-                </div>
-                <p className="text-[10px] ui-text-muted mt-1 leading-tight">
-                  Sisa budget dari aset mahal dialihkan ke kas siaga untuk persiapan serok crash.
-                </p>
-              </button>
+            {/* Mode 2: Toggle Alokasi Rupiah (Bobot Target vs Murni Ranking Konfluensi) */}
+            <div className="space-y-1.5 pt-2 border-t ui-border">
+              <span className="text-xs font-bold ui-text-main flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Scale className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>Mode Alokasi Budget DCA:</span>
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-slate-400">
+                  {allocationMode === 'pure-confluence-rank'
+                    ? 'Murni Ranking Konfluensi'
+                    : 'Target Weight × Multiplier'}
+                </span>
+              </span>
 
-              <button
-                type="button"
-                onClick={() => handleSetOverflowMode('boost-discount')}
-                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
-                  overflowMode === 'boost-discount'
-                    ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
-                    : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSetAllocationMode('target-weight-multiplier')}
+                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
+                    allocationMode === 'target-weight-multiplier'
+                      ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
+                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                  }`}
+                >
                   <span className="text-xs font-bold ui-text-main">
-                    Perbesar Aset Diskon
+                    Target Weight × Multiplier
                   </span>
-                </div>
-                <p className="text-[10px] ui-text-muted mt-1 leading-tight">
-                  Seluruh sisa dana didistribusikan untuk mendongkrak porsi belanja aset yang diskon.
-                </p>
-              </button>
+                  <p className="text-[10px] ui-text-muted mt-0.5 leading-tight">
+                    Mengikuti bobot racikan Menu 1, diskalakan murni oleh konfluensi indikator.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetAllocationMode('pure-confluence-rank')}
+                  className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
+                    allocationMode === 'pure-confluence-rank'
+                      ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
+                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <span className="text-xs font-bold ui-text-main">
+                    Murni Ranking Konfluensi
+                  </span>
+                  <p className="text-[10px] ui-text-muted mt-0.5 leading-tight">
+                    100% budget difokuskan hanya ke aset dengan sinyal serok tertinggi.
+                  </p>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -504,6 +634,96 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           </p>
         </div>
       </section>
+
+      {/* COINMARKETCAP-STYLE MARKET CYCLE INDICATORS BOARD */}
+      {smartDcaResult.items.length > 0 && activeCmcItem && (
+        <section className="ui-card rounded-xl border ui-border p-4 sm:p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ui-border pb-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Table2 className="h-4 w-4 text-emerald-500" />
+                <h4 className="text-sm font-bold ui-text-main">
+                  Market Cycle Indicators Board (CMC Style)
+                </h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                  100% Indicator Driven
+                </span>
+              </div>
+              <p className="text-xs ui-text-muted">
+                Pilih aset untuk memeriksa daftar indikator siklus pasar. Klik nilai Current atau Reference untuk melakukan override simulasi.
+              </p>
+            </div>
+
+            {/* Indicator Overrides status */}
+            {Object.keys(indicatorOverrides).length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalIndicatorOverrides({});
+                  onUpdateSmartDcaIndicatorOverrides?.({});
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition self-start sm:self-auto"
+                title="Reset seluruh simulasi override indikator ke nilai default pasar"
+              >
+                <span>Reset Semua Override</span>
+              </button>
+            )}
+          </div>
+
+          {/* Asset Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {smartDcaResult.items.map((item) => {
+              const isActive = (activeCmcAssetId ?? smartDcaResult.items[0]?.assetId) === item.assetId;
+              const conf = item.explanation.indicatorConfluence;
+              const hasOverride = Boolean(indicatorOverrides[item.assetId] && Object.keys(indicatorOverrides[item.assetId]).length > 0);
+
+              return (
+                <button
+                  key={item.assetId}
+                  type="button"
+                  onClick={() => setActiveCmcAssetId(item.assetId)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition border ${
+                    isActive
+                      ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 shadow-2xs'
+                      : 'ui-subtle border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 ui-text-secondary'
+                  }`}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span>{item.symbol}</span>
+                  <span
+                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full ${
+                      conf.confluencePercent >= 80
+                        ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                        : conf.confluencePercent >= 60
+                          ? 'bg-teal-500/20 text-teal-600 dark:text-teal-400'
+                          : conf.confluencePercent < 20
+                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-slate-400'
+                    }`}
+                  >
+                    {conf.triggeredCount}/{conf.totalIndicators} ({conf.confluencePercent}%)
+                  </span>
+                  {hasOverride && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Ada nilai override manual" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Table for active item */}
+          <div className="pt-1">
+            <CoinMarketCapIndicatorTable
+              confluence={activeCmcItem.explanation.indicatorConfluence}
+              onUpdateIndicatorOverride={handleUpdateIndicatorOverride}
+              onResetAssetOverrides={handleResetAssetOverrides}
+            />
+          </div>
+        </section>
+      )}
 
       {/* MAIN ALLOCATION TABLE */}
       <section className="ui-card rounded-xl border ui-border p-4 sm:p-5 space-y-4">
@@ -587,7 +807,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               <tr className="border-b ui-border text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 <th className="py-2.5 px-3">Aset &amp; Bobot</th>
                 <th className="py-2.5 px-3">Rekomendasi Tindakan</th>
-                <th className="py-2.5 px-3 text-center">Skor 2-Pilar</th>
+                <th className="py-2.5 px-3 text-center">Konfluensi Indikator</th>
                 <th className="py-2.5 px-3 text-right">Rekomendasi Alokasi</th>
                 <th className="py-2.5 px-3 text-right">Estimasi Unit / Lot</th>
                 <th className="py-2.5 px-3 text-center">Transparansi</th>
@@ -659,37 +879,38 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       </div>
                     </td>
 
-                    {/* 2-Pillar Score */}
+                    {/* CMC Indicator Confluence */}
                     <td className="py-3 px-3 text-center">
                       <div className="inline-flex flex-col items-center">
                         <span
                           className={`font-mono font-bold text-xs ${
-                            item.explanation.compositeScore >= 80
+                            item.explanation.indicatorConfluence.confluencePercent >= 80
                               ? 'text-emerald-600 dark:text-emerald-400'
-                              : item.explanation.compositeScore >= 60
+                              : item.explanation.indicatorConfluence.confluencePercent >= 60
                                 ? 'text-teal-600 dark:text-teal-400'
-                                : item.explanation.compositeScore < 30
+                                : item.explanation.indicatorConfluence.confluencePercent < 20
                                   ? 'text-rose-600 dark:text-rose-400'
                                   : 'ui-text-main'
                           }`}
                         >
-                          {item.explanation.compositeScore}/100
+                          {item.explanation.indicatorConfluence.triggeredCount}/
+                          {item.explanation.indicatorConfluence.totalIndicators} Triggered ({item.explanation.indicatorConfluence.confluencePercent}%)
                         </span>
-                        <div className="w-16 bg-black/10 dark:bg-white/10 h-1.5 rounded-full overflow-hidden mt-1">
+                        <div className="w-20 bg-black/10 dark:bg-white/10 h-1.5 rounded-full overflow-hidden mt-1">
                           <div
                             className={`h-full rounded-full ${
-                              item.explanation.compositeScore >= 80
+                              item.explanation.indicatorConfluence.confluencePercent >= 80
                                 ? 'bg-emerald-500'
-                                : item.explanation.compositeScore >= 60
+                                : item.explanation.indicatorConfluence.confluencePercent >= 60
                                   ? 'bg-teal-500'
-                                  : item.explanation.compositeScore < 30
+                                  : item.explanation.indicatorConfluence.confluencePercent < 20
                                     ? 'bg-rose-500'
                                     : 'bg-blue-500'
                             }`}
                             style={{
-                              width: `${Math.min(
-                                100,
-                                Math.max(5, item.explanation.compositeScore)
+                              width: `${Math.max(
+                                5,
+                                item.explanation.indicatorConfluence.confluencePercent
                               )}%`,
                             }}
                           />
@@ -792,27 +1013,32 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   </div>
                 </div>
 
-                {/* 2-Pillar Score Bar */}
+                {/* Indicator Confluence Score Bar */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="ui-text-muted">Skor Komposit 2-Pilar:</span>
+                    <span className="ui-text-muted">Konfluensi Indikator Siklus:</span>
                     <span className="font-mono font-bold ui-text-main">
-                      {item.explanation.compositeScore}/100
+                      {item.explanation.indicatorConfluence.triggeredCount}/
+                      {item.explanation.indicatorConfluence.totalIndicators} (
+                      {item.explanation.indicatorConfluence.confluencePercent}%)
                     </span>
                   </div>
                   <div className="w-full bg-black/10 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
-                        item.explanation.compositeScore >= 80
+                        item.explanation.indicatorConfluence.confluencePercent >= 80
                           ? 'bg-emerald-500'
-                          : item.explanation.compositeScore >= 60
+                          : item.explanation.indicatorConfluence.confluencePercent >= 60
                             ? 'bg-teal-500'
-                            : item.explanation.compositeScore < 30
+                            : item.explanation.indicatorConfluence.confluencePercent < 20
                               ? 'bg-rose-500'
                               : 'bg-blue-500'
                       }`}
                       style={{
-                        width: `${Math.min(100, Math.max(5, item.explanation.compositeScore))}%`,
+                        width: `${Math.max(
+                          5,
+                          item.explanation.indicatorConfluence.confluencePercent
+                        )}%`,
                       }}
                     />
                   </div>
@@ -932,6 +1158,21 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <span>Analisis Rationale:</span>
               </div>
               <p>{selectedAssetForWhy.explanation.narrativeWhy}</p>
+            </div>
+
+            {/* CMC Market Cycle Indicators Checklist Table */}
+            <div className="space-y-2 border-t ui-border pt-3">
+              <div className="flex items-center gap-2">
+                <Table2 className="h-4 w-4 text-emerald-500" />
+                <h4 className="text-xs font-bold ui-text-main">
+                  Daftar Indikator Siklus Pasar (CoinMarketCap Table):
+                </h4>
+              </div>
+              <CoinMarketCapIndicatorTable
+                confluence={selectedAssetForWhy.explanation.indicatorConfluence}
+                onUpdateIndicatorOverride={handleUpdateIndicatorOverride}
+                onResetAssetOverrides={handleResetAssetOverrides}
+              />
             </div>
 
             {/* 2-Pillar Metrics Breakdown Grid */}
@@ -1075,23 +1316,29 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       ? formatIdr(selectedAssetForWhy.recommendedAmountIdr)
                       : `${selectedAssetForWhy.recommendedUnits} unit`;
 
+                  const conf = selectedAssetForWhy.explanation.indicatorConfluence;
+                  const indicatorLines = conf.indicators.map(
+                    (ind, idx) =>
+                      `  ${ind.isTriggered ? '✅' : '❌'} #${idx + 1} ${ind.name}: ${ind.formattedCurrent} (Ref: ${ind.comparisonOperator} ${ind.formattedReference}) [${ind.isTriggered ? 'TRIGGERED' : 'UNTRIGGERED'}]`
+                  );
+
                   const text = [
                     `=== RATIONALE SMART DCA: ${selectedAssetForWhy.symbol} ===`,
                     `Keputusan: ${selectedAssetForWhy.actionLabel} (${selectedAssetForWhy.multiplier}x Multiplier)`,
+                    `Konfluensi Indikator: ${conf.triggeredCount}/${conf.totalIndicators} Triggered (${conf.confluencePercent}%)`,
                     `Alokasi: ${formatIdr(selectedAssetForWhy.recommendedAmountIdr)} (${unitsLabel})`,
                     ``,
                     `[1] Analisis Rationale:`,
                     selectedAssetForWhy.explanation.narrativeWhy,
                     ``,
-                    `[2] Pilar 1 - Diskon Valuasi Pasar:`,
-                    `- Skor Valuasi: ${selectedAssetForWhy.explanation.valuationScore}/100`,
-                    ...selectedAssetForWhy.explanation.valuationBreakdown.metrics.map(
-                      (m) => `  * ${m.name}: ${m.value} (Skor: ${m.score}/100)`
-                    ),
+                    `[2] Konfluensi Indikator Siklus Pasar (CMC Style Table):`,
+                    `- Rasio Terpicu: ${conf.triggeredCount} dari ${conf.totalIndicators} (${conf.confluencePercent}%)`,
+                    ...indicatorLines,
                     ``,
-                    `[3] Pilar 2 - Defisit & Drift Portofolio:`,
-                    `- Skor Drift: ${selectedAssetForWhy.explanation.driftScore}/100`,
-                    `- Status: ${selectedAssetForWhy.explanation.driftBreakdown.summary}`,
+                    `[3] Diskon Valuasi Pasar & Defisit Portofolio (Konteks Informasional):`,
+                    `- Skor Valuasi Pasar: ${selectedAssetForWhy.explanation.valuationScore}/100`,
+                    `- Skor Defisit Portofolio: ${selectedAssetForWhy.explanation.driftScore}/100`,
+                    `- Status Bobot: ${selectedAssetForWhy.explanation.driftBreakdown.summary}`,
                     ``,
                     `[4] Matematika Alokasi Rupiah:`,
                     `- Base DCA: ${formatIdr(selectedAssetForWhy.explanation.budgetMath.baseAllocationIdr)}`,

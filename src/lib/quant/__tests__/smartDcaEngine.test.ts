@@ -386,6 +386,14 @@ describe('smartDcaEngine', () => {
         holdings: {},
         monthlyBudgetIdr: 1_000_000,
         usdIdrRate: 16000,
+        overflowMode: 'boost-discount',
+        tacticalConfig: {
+          enabled: true,
+          aggressiveness: 0.2,
+          cryptoScore: 20,
+          usEquityScore: 50,
+          idxEquityScore: 50,
+        },
       });
 
       const btc = result.items[0];
@@ -447,17 +455,17 @@ describe('smartDcaEngine', () => {
         },
       });
 
-      // 6.9M to BTC (1.38x Moderate Buy due to underweight drift), 3.1M to RDPU War Chest
-      expect(result.warChestParkedIdr).toBe(3_100_000);
+      // Both BTC & BBCA are in Hold/Skip cycle (0x), so 100% of budget (10M) is safely parked to RDPU War Chest
+      expect(result.warChestParkedIdr).toBe(10_000_000);
       const rdpuItem = result.items.find((i) => i.assetId === 'RDPU');
       expect(rdpuItem).toBeDefined();
-      expect(rdpuItem?.recommendedAmountIdr).toBe(3_100_000);
+      expect(rdpuItem?.recommendedAmountIdr).toBe(10_000_000);
       expect(rdpuItem?.actionLabel).toBe('Parkir War Chest');
 
       // Crucial: check that asRebalanceSummary contains BUY RDPU so broker slip and execution don't lose the War Chest cash
       const summaryItem = result.asRebalanceSummary.items.find((i) => i.assetId === 'RDPU');
       expect(summaryItem).toBeDefined();
-      expect(summaryItem?.tradeAmountIdr).toBe(3_100_000);
+      expect(summaryItem?.tradeAmountIdr).toBe(10_000_000);
       expect(summaryItem?.action).toBe('BUY');
       expect(result.asRebalanceSummary.totalBuyIdr).toBe(10_000_000);
     });
@@ -482,10 +490,10 @@ describe('smartDcaEngine', () => {
         },
       });
 
-      // Since no War Chest asset exists, the 3.1M goes into unallocatedCashRemainderIdr
-      expect(result.unallocatedCashRemainderIdr).toBe(3_100_000);
-      expect(result.totalAllocatedAssetsIdr).toBe(6_900_000);
-      expect(result.asRebalanceSummary.unallocatedCashRemainderIdr).toBe(3_100_000);
+      // Since no War Chest asset exists, the 10M goes into unallocatedCashRemainderIdr
+      expect(result.unallocatedCashRemainderIdr).toBe(10_000_000);
+      expect(result.totalAllocatedAssetsIdr).toBe(0);
+      expect(result.asRebalanceSummary.unallocatedCashRemainderIdr).toBe(10_000_000);
       expect(result.totalAllocatedAssetsIdr + result.unallocatedCashRemainderIdr).toBe(10_000_000);
     });
 
@@ -528,6 +536,13 @@ describe('smartDcaEngine', () => {
         monthlyBudgetIdr: 10_000_000,
         usdIdrRate: 16000,
         overflowMode: 'boost-discount',
+        tacticalConfig: {
+          enabled: true,
+          aggressiveness: 0.2,
+          cryptoScore: 20,
+          usEquityScore: 30,
+          idxEquityScore: 50,
+        },
         enableIdxLotRounding: false,
         filterDustTrades: false,
       });

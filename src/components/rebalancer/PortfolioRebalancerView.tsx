@@ -20,6 +20,7 @@ import { formatIdr, formatUsd } from '../../lib/formatters';
 import { HoldingsTextImportModal } from './HoldingsTextImportModal';
 import { RebalanceExecutionGuideModal } from './RebalanceExecutionGuideModal';
 import { SmartDcaAdvisorPanel } from './SmartDcaAdvisorPanel';
+import { SmartDcaAllocationMode } from '../../lib/quant/smartDcaEngine';
 import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
@@ -130,6 +131,12 @@ interface PortfolioRebalancerViewProps {
   setSmartDcaMonthlyBudgetIdr?: (val: number) => void;
   smartDcaOverflowMode?: 'park-rdpu' | 'boost-discount';
   setSmartDcaOverflowMode?: (mode: 'park-rdpu' | 'boost-discount') => void;
+  smartDcaAllocationMode?: SmartDcaAllocationMode;
+  setSmartDcaAllocationMode?: (mode: SmartDcaAllocationMode) => void;
+  smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
+  setSmartDcaIndicatorOverrides?: (
+    overrides: Record<string, Record<string, any>>
+  ) => void;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -181,6 +188,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   setSmartDcaMonthlyBudgetIdr,
   smartDcaOverflowMode,
   setSmartDcaOverflowMode,
+  smartDcaAllocationMode,
+  setSmartDcaAllocationMode,
+  smartDcaIndicatorOverrides,
+  setSmartDcaIndicatorOverrides,
 }) => {
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
@@ -774,6 +785,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           onUpdateSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
           smartDcaOverflowMode={smartDcaOverflowMode}
           onUpdateSmartDcaOverflowMode={setSmartDcaOverflowMode}
+          smartDcaAllocationMode={smartDcaAllocationMode}
+          onUpdateSmartDcaAllocationMode={setSmartDcaAllocationMode}
+          smartDcaIndicatorOverrides={smartDcaIndicatorOverrides}
+          onUpdateSmartDcaIndicatorOverrides={setSmartDcaIndicatorOverrides}
           onOpenOrderSlip={onOpenOrderSlip}
           onCommitRebalanceToHoldings={onCommitRebalanceToHoldings}
           onSwitchToStandardRebalancer={() => setRebalancerSubMode('rebalance')}

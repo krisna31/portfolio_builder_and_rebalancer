@@ -335,6 +335,8 @@ export interface QuantPortoBackupPayload {
       fixedTotalBudgetIdr?: number;
       smartDcaMonthlyBudgetIdr?: number;
       smartDcaOverflowMode?: 'park-rdpu' | 'boost-discount';
+      smartDcaAllocationMode?: SmartDcaAllocationMode;
+      smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
       tacticalConfig?: ValuationSentimentConfig;
     };
     menu3_simulator: {
@@ -357,6 +359,8 @@ export interface QuantPortoBackupPayload {
     };
   };
 }
+
+export type SmartDcaAllocationMode = 'target-weight-multiplier' | 'pure-confluence-rank';
 
 export type {
   SmartDcaAction,

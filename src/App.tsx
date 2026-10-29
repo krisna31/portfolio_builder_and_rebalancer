@@ -38,7 +38,10 @@ import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetM
 import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { ResetConfirmationModal } from './components/ResetConfirmationModal';
 import { DataTransferModal } from './components/export/DataTransferModal';
-import { SmartDcaOverflowMode } from './lib/quant/smartDcaEngine';
+import {
+  SmartDcaOverflowMode,
+  SmartDcaAllocationMode,
+} from './lib/quant/smartDcaEngine';
 import { ParsedHoldingItem, utf8ToBase64, base64ToUtf8 } from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
@@ -87,6 +90,8 @@ interface PersistedAppState {
   fixedTotalBudgetIdr?: number;
   smartDcaMonthlyBudgetIdr?: number;
   smartDcaOverflowMode?: SmartDcaOverflowMode;
+  smartDcaAllocationMode?: SmartDcaAllocationMode;
+  smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
   driftThresholdPercent?: number;
   isHoldingsSyncedWithMenu1?: boolean;
   enableIdxLotRounding?: boolean;
@@ -382,6 +387,12 @@ export function App() {
   const [smartDcaOverflowMode, setSmartDcaOverflowMode] = useState<SmartDcaOverflowMode>(
     () => initialSaved?.smartDcaOverflowMode ?? 'park-rdpu'
   );
+  const [smartDcaAllocationMode, setSmartDcaAllocationMode] = useState<SmartDcaAllocationMode>(
+    () => initialSaved?.smartDcaAllocationMode ?? 'target-weight-multiplier'
+  );
+  const [smartDcaIndicatorOverrides, setSmartDcaIndicatorOverrides] = useState<
+    Record<string, Record<string, any>>
+  >(() => initialSaved?.smartDcaIndicatorOverrides ?? {});
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     if (initialSaved?.holdings && Object.keys(initialSaved.holdings).length > 0) {
@@ -694,6 +705,8 @@ export function App() {
           tacticalConfig,
           smartDcaMonthlyBudgetIdr,
           smartDcaOverflowMode,
+          smartDcaAllocationMode,
+          smartDcaIndicatorOverrides,
         })
       );
     } catch {
@@ -733,6 +746,8 @@ export function App() {
     tacticalConfig,
     smartDcaMonthlyBudgetIdr,
     smartDcaOverflowMode,
+    smartDcaAllocationMode,
+    smartDcaIndicatorOverrides,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -1927,6 +1942,8 @@ export function App() {
           tacticalConfig,
           smartDcaMonthlyBudgetIdr,
           smartDcaOverflowMode,
+          smartDcaAllocationMode,
+          smartDcaIndicatorOverrides,
         },
         menu3_simulator: {
           initialCapitalIdr,
@@ -2167,6 +2184,15 @@ export function App() {
       if (d2.smartDcaOverflowMode === 'park-rdpu' || d2.smartDcaOverflowMode === 'boost-discount') {
         setSmartDcaOverflowMode(d2.smartDcaOverflowMode);
       }
+      if (
+        d2.smartDcaAllocationMode === 'target-weight-multiplier' ||
+        d2.smartDcaAllocationMode === 'pure-confluence-rank'
+      ) {
+        setSmartDcaAllocationMode(d2.smartDcaAllocationMode);
+      }
+      if (d2.smartDcaIndicatorOverrides && typeof d2.smartDcaIndicatorOverrides === 'object') {
+        setSmartDcaIndicatorOverrides(d2.smartDcaIndicatorOverrides);
+      }
 
       // 3. Menu 3: Simulator & Goals
       if (
@@ -2334,6 +2360,8 @@ export function App() {
           allAssets: mergedAllAssets,
           smartDcaMonthlyBudgetIdr: d2.smartDcaMonthlyBudgetIdr ?? smartDcaMonthlyBudgetIdr,
           smartDcaOverflowMode: d2.smartDcaOverflowMode ?? smartDcaOverflowMode,
+          smartDcaAllocationMode: d2.smartDcaAllocationMode ?? smartDcaAllocationMode,
+          smartDcaIndicatorOverrides: d2.smartDcaIndicatorOverrides ?? smartDcaIndicatorOverrides,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotToStore));
       } catch {
@@ -2686,6 +2714,10 @@ export function App() {
             setSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
             smartDcaOverflowMode={smartDcaOverflowMode}
             setSmartDcaOverflowMode={setSmartDcaOverflowMode}
+            smartDcaAllocationMode={smartDcaAllocationMode}
+            setSmartDcaAllocationMode={setSmartDcaAllocationMode}
+            smartDcaIndicatorOverrides={smartDcaIndicatorOverrides}
+            setSmartDcaIndicatorOverrides={setSmartDcaIndicatorOverrides}
           />
         )}
 
