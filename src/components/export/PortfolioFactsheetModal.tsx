@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import html2canvas from 'html2canvas-pro';
 import {
   AssetDefinition,
@@ -61,6 +61,18 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [sheetTheme, setSheetTheme] = useState<'light' | 'dark'>('light');
+
+  // Accessibility: Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -266,7 +278,12 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   };
 
   return (
-    <div className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto"
+    >
       <div className="factsheet-modal-container relative w-full max-w-5xl my-auto bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         {/* Top Control Bar (Hidden on print) */}
         <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-slate-900 border-b border-slate-800">

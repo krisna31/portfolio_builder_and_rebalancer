@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   HelpCircle,
@@ -45,6 +45,18 @@ export const RebalanceExecutionGuideModal: React.FC<
 }) => {
   const [activeTab, setActiveTab] = useState<GuideTab>('initial-buy');
 
+  // Accessibility: Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleActionSetupInitialBuy = () => {
@@ -64,6 +76,9 @@ export const RebalanceExecutionGuideModal: React.FC<
 
   return (
     <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"

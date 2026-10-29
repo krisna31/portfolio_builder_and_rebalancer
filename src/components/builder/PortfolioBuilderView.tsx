@@ -1755,7 +1755,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         ) : (
           /* Mode 2: Zero-Horizontal-Scroll Responsive Card View */
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {sortedCombinedRows.map((preset) => {
+            {sortedCombinedRows.map((preset, index) => {
               const isSelected = activePresetId === preset.id;
               const badge = getRiskTierBadge(preset.riskTier);
               const nonZeroWeights = Object.entries(preset.weights)
@@ -1785,6 +1785,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               e.stopPropagation();
                               onTogglePinPreset(preset.id);
                             }}
+                            id={index === 0 ? 'tour-table-pin' : undefined}
                             title={
                               isPinned
                                 ? 'Lepas sematan (unpin) kartu ini'

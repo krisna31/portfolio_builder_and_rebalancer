@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   AssetDefinition,
   HoldingEntry,
@@ -61,6 +61,18 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
   const [showAllItems, setShowAllItems] = useState<boolean>(false);
   // Bug 15 fix: Track which specific platform slip (or 'all') was copied
   const [copiedGroupId, setCopiedGroupId] = useState<string | 'all' | null>(null);
+
+  // Accessibility: Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const assetDefMap = useMemo(() => {
     const map = new Map<string, AssetDefinition>();
@@ -331,7 +343,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in"
+    >
       <div className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">

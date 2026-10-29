@@ -73,6 +73,18 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
     }
   }, [isOpen]);
 
+  // Accessibility: Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleCopyExport = async () => {
@@ -123,7 +135,12 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+    >
       <div className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl border shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="ui-border flex items-center justify-between border-b px-5 py-4">
