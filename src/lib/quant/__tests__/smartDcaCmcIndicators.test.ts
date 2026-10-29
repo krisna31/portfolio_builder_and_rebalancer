@@ -425,4 +425,97 @@ describe('Smart DCA 100% Indicator-Driven Engine (Zero Drift Interference)', () 
     expect(plan.items[0].explanation.indicatorConfluence.lastRefreshSuccessAt).toBe(mockTimestamp);
     expect(plan.items[0].explanation.indicatorConfluence.dataSources.length).toBeGreaterThan(0);
   });
+
+  it('enforces BEI fractional tick size rounding on idx-equity stock prices in smart DCA calculations', () => {
+    const bbcaAsset: AssetDefinition = {
+      id: 'bbca',
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      shortName: 'BBCA',
+      category: 'idx-equity',
+      currency: 'IDR',
+      cagr: 15,
+      maxDrawdown: 25,
+      volatility: 20,
+      riskScale: 3,
+      defaultPrice: 10250,
+      lotSize: 100,
+      allowFractional: false,
+      isCoreBenchmark: true,
+      description: 'Saham perbankan blue chip IDX',
+      color: '#3b82f6',
+    };
+
+    // User provides an off-tick unrounded price: 10253 (not valid in BEI >= 5000 tick size 25)
+    // Snapped to nearest tick: 10250
+    const plan = calculateSmartDcaPlan({
+      assets: [bbcaAsset],
+      targetWeights: { bbca: 100 },
+      holdings: {
+        bbca: { assetId: 'bbca', units: 100, currentValueIdr: 1025300, currentPrice: 10253, shockPercent: 0 },
+      },
+      monthlyBudgetIdr: 2_500_000,
+      usdIdrRate: 16000,
+      enableIdxLotRounding: true,
+      allocationMode: 'target-weight-multiplier',
+    });
+
+    const item = plan.items.find((i) => i.assetId === 'bbca')!;
+    // unitPriceIdr must be rounded to tick 10250
+    expect(item.unitPriceIdr).toBe(10250);
+    // Price per lot is 10,250 * 100 = 1,025,000
+    // With 2.5M budget, Math.floor(2,500,000 / 1,025,000) = 2 lots
+    if (item.recommendedLotsInteger !== undefined && item.recommendedLotsInteger > 0) {
+      expect(item.recommendedLotsInteger).toBe(2);
+      expect(item.recommendedAmountIdr).toBe(2 * 10250 * 100); // 2,050,000
+    }
+  });
+
+  it('evaluates multi-factor cycle indicators for custom assets with granular confluence tiers', () => {
+    const customAsset: AssetDefinition = {
+      id: 'custom_land',
+      symbol: 'LAND',
+      name: 'Properti Tanah Komersial',
+      shortName: 'LAND',
+      category: 'custom',
+      currency: 'IDR',
+      cagr: 12,
+      maxDrawdown: 10,
+      volatility: 12,
+      riskScale: 2,
+      defaultPrice: 500000000,
+      lotSize: 1,
+      allowFractional: true,
+      isCoreBenchmark: false,
+      description: 'Aset rill properti tanah',
+      color: '#10b981',
+    };
+
+    // Verify custom category has 4 distinct multi-factor indicators
+    const confluence = getAssetIndicatorConfluence({ asset: customAsset });
+    expect(confluence.totalIndicators).toBe(4);
+    expect(confluence.indicators.map((i) => i.id)).toEqual([
+      'custom_discount_factor',
+      'custom_drawdown_52w',
+      'custom_allocation_drift_gap',
+      'custom_stability_factor',
+    ]);
+
+    // Test intermediate confluence tiers by overriding triggered statuses
+    // 2 out of 4 triggered = 50% confluence -> Normal Buy (1.0x)
+    const conf50 = getAssetIndicatorConfluence({
+      asset: customAsset,
+      overrides: {
+        custom_discount_factor: { currentValue: 15 }, // >= 10 (Triggered)
+        custom_drawdown_52w: { currentValue: 10 }, // < 20 (Not triggered)
+        custom_allocation_drift_gap: { currentValue: 15 }, // >= 10 (Triggered)
+        custom_stability_factor: { currentValue: 50 }, // < 70 (Not triggered)
+      },
+    });
+
+    expect(conf50.triggeredCount).toBe(2);
+    expect(conf50.confluencePercent).toBe(50);
+    expect(conf50.action).toBe('NORMAL_BUY');
+    expect(conf50.multiplier).toBe(1.0);
+  });
 });

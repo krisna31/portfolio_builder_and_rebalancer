@@ -7,6 +7,19 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-charts': ['recharts'],
+          'vendor-export': ['html2canvas-pro', 'html2canvas'],
+          'vendor-tour': ['driver.js'],
+          'vendor-icons': ['lucide-react'],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api/yahoo': {

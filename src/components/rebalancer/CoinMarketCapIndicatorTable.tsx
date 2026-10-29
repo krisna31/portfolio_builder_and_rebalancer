@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CycleIndicatorState,
   AssetIndicatorConfluence,
@@ -83,8 +83,41 @@ export const CoinMarketCapIndicatorTable: React.FC<
     setEditingIndicatorId(null);
   };
 
+  // Keyboard accessibility (Escape) & click-outside listener to dismiss popover/editor
+  useEffect(() => {
+    if (!tooltipIndicatorId && !editingIndicatorId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setTooltipIndicatorId(null);
+        setEditingIndicatorId(null);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-cmc-popover]') &&
+        !target.closest('[data-cmc-trigger]')
+      ) {
+        setTooltipIndicatorId(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [tooltipIndicatorId, editingIndicatorId]);
+
   const displayRefreshTimestamp =
-    lastRefreshedAt || confluence.lastRefreshSuccessAt || 'Live Sync Otomatis';
+    lastRefreshedAt || confluence.lastRefreshSuccessAt || 'Snapshot Pasar (Klik Sinkronkan)';
+
+  const isSnapshotMode =
+    displayRefreshTimestamp.toLowerCase().includes('snapshot') ||
+    displayRefreshTimestamp.toLowerCase().includes('klik');
 
   return (
     <div className="space-y-3.5">
@@ -107,12 +140,28 @@ export const CoinMarketCapIndicatorTable: React.FC<
 
           {/* Live Sync Status & Refresh Indicator */}
           <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 font-medium text-[10px]">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium text-[10px] border ${
+                isSnapshotMode
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'
+                  : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+              }`}
+            >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span
+                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    isSnapshotMode ? 'bg-amber-400' : 'bg-emerald-400'
+                  }`}
+                ></span>
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    isSnapshotMode ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`}
+                ></span>
               </span>
-              <span>Live Sync Sukses</span>
+              <span>
+                {isSnapshotMode ? 'Snapshot Tersimpan' : 'Live Sync Sukses'}
+              </span>
             </span>
             <span className="text-[11px] ui-text-muted">
               Pembaruan Terakhir:{' '}
@@ -225,6 +274,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                           <div className="relative inline-block">
                             <button
                               type="button"
+                              data-cmc-trigger="true"
                               onClick={() =>
                                 setTooltipIndicatorId(
                                   tooltipIndicatorId === ind.id ? null : ind.id
@@ -238,7 +288,10 @@ export const CoinMarketCapIndicatorTable: React.FC<
 
                             {/* Inline Popover Tooltip */}
                             {tooltipIndicatorId === ind.id && (
-                              <div className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border bg-zinc-900 text-zinc-100 text-[11px] leading-relaxed shadow-2xl backdrop-blur-md">
+                              <div
+                                data-cmc-popover="true"
+                                className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border bg-zinc-900 text-zinc-100 text-[11px] leading-relaxed shadow-2xl backdrop-blur-md"
+                              >
                                 <p className="font-semibold text-emerald-400 mb-1">
                                   {ind.name}
                                 </p>

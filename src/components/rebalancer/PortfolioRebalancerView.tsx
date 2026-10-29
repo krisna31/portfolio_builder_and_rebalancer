@@ -17,8 +17,16 @@ import {
   roundToIdxTick,
 } from '../../lib/quant/rebalancerEngine';
 import { formatIdr, formatUsd } from '../../lib/formatters';
-import { HoldingsTextImportModal } from './HoldingsTextImportModal';
-import { RebalanceExecutionGuideModal } from './RebalanceExecutionGuideModal';
+const HoldingsTextImportModal = React.lazy(() =>
+  import('./HoldingsTextImportModal').then((m) => ({
+    default: m.HoldingsTextImportModal,
+  }))
+);
+const RebalanceExecutionGuideModal = React.lazy(() =>
+  import('./RebalanceExecutionGuideModal').then((m) => ({
+    default: m.RebalanceExecutionGuideModal,
+  }))
+);
 import { SmartDcaAdvisorPanel } from './SmartDcaAdvisorPanel';
 import { SmartDcaAllocationMode } from '../../lib/quant/smartDcaEngine';
 import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
@@ -137,6 +145,9 @@ interface PortfolioRebalancerViewProps {
   setSmartDcaIndicatorOverrides?: (
     overrides: Record<string, Record<string, any>>
   ) => void;
+  smartDcaLastRefreshSuccessAt?: string;
+  onUnifiedSync?: () => Promise<void>;
+  isSyncingPrices?: boolean;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -192,6 +203,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   setSmartDcaAllocationMode,
   smartDcaIndicatorOverrides,
   setSmartDcaIndicatorOverrides,
+  smartDcaLastRefreshSuccessAt,
+  onUnifiedSync,
+  isSyncingPrices,
 }) => {
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
@@ -789,6 +803,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           onUpdateSmartDcaAllocationMode={setSmartDcaAllocationMode}
           smartDcaIndicatorOverrides={smartDcaIndicatorOverrides}
           onUpdateSmartDcaIndicatorOverrides={setSmartDcaIndicatorOverrides}
+          smartDcaLastRefreshSuccessAt={smartDcaLastRefreshSuccessAt}
+          onUnifiedSync={onUnifiedSync}
+          isSyncingPrices={isSyncingPrices}
           onOpenOrderSlip={onOpenOrderSlip}
           onCommitRebalanceToHoldings={onCommitRebalanceToHoldings}
           onSwitchToStandardRebalancer={() => setRebalancerSubMode('rebalance')}
@@ -3531,26 +3548,33 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         </>
       )}
 
-      {/* Holdings Text Import & Export Modal */}
-      <HoldingsTextImportModal
-        isOpen={isHoldingsTextModalOpen}
-        onClose={() => setIsHoldingsTextModalOpen(false)}
-        allAssets={allAssets}
-        currentHoldings={holdings}
-        usdIdrRate={usdIdrRate}
-        onApplyHoldings={handleApplyHoldingsFromText}
-      />
+      {/* Lazy-Loaded Modals */}
+      <React.Suspense fallback={null}>
+        {/* Holdings Text Import & Export Modal */}
+        {isHoldingsTextModalOpen && (
+          <HoldingsTextImportModal
+            isOpen={isHoldingsTextModalOpen}
+            onClose={() => setIsHoldingsTextModalOpen(false)}
+            allAssets={allAssets}
+            currentHoldings={holdings}
+            usdIdrRate={usdIdrRate}
+            onApplyHoldings={handleApplyHoldingsFromText}
+          />
+        )}
 
-      {/* Rebalancer Onboarding & Execution Guide Modal */}
-      <RebalanceExecutionGuideModal
-        isOpen={isGuideModalOpen}
-        onClose={() => setIsGuideModalOpen(false)}
-        initialCapitalMenu1Idr={initialCapitalMenu1Idr}
-        activePortfolioName={activePortfolioName}
-        onSetupInitialBuy={onSetupInitialBuyFromMenu1}
-        onOpenOrderSlip={() => onOpenOrderSlip && onOpenOrderSlip(rebalanceResult)}
-        onOpenTextImport={() => setIsHoldingsTextModalOpen(true)}
-      />
+        {/* Rebalancer Onboarding & Execution Guide Modal */}
+        {isGuideModalOpen && (
+          <RebalanceExecutionGuideModal
+            isOpen={isGuideModalOpen}
+            onClose={() => setIsGuideModalOpen(false)}
+            initialCapitalMenu1Idr={initialCapitalMenu1Idr}
+            activePortfolioName={activePortfolioName}
+            onSetupInitialBuy={onSetupInitialBuyFromMenu1}
+            onOpenOrderSlip={() => onOpenOrderSlip && onOpenOrderSlip(rebalanceResult)}
+            onOpenTextImport={() => setIsHoldingsTextModalOpen(true)}
+          />
+        )}
+      </React.Suspense>
 
       {/* Feature 2 & Decision 1: Soft-Lock Overbudget Deficit Confirmation Modal */}
       {showDeficitConfirmModal && (

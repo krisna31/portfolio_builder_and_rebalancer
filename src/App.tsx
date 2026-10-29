@@ -28,16 +28,45 @@ import {
   computeUpdatedAverageCostBasis,
 } from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
+import { fetchLiveCryptoFearAndGreed } from './lib/quant/tacticalValuationEngine';
 import { startInteractiveTour, stopInteractiveTour } from './services/tourGuide';
 import { Header, SavedPortfolioSnapshot } from './components/Header';
 import { PortfolioBuilderView } from './components/builder/PortfolioBuilderView';
-import { PortfolioRebalancerView } from './components/rebalancer/PortfolioRebalancerView';
-import { WealthRoadmapView } from './components/roadmap/WealthRoadmapView';
-import { SmartPortfolioRecommenderModal } from './components/builder/SmartPortfolioRecommenderModal';
-import { PortfolioFactsheetModal } from './components/export/PortfolioFactsheetModal';
-import { BrokerOrderSlipModal } from './components/export/BrokerOrderSlipModal';
 import { ResetConfirmationModal } from './components/ResetConfirmationModal';
-import { DataTransferModal } from './components/export/DataTransferModal';
+
+// Code-split Menu 2 (Rebalancer & Smart DCA) and Menu 3 (Wealth Roadmap) on-demand
+const PortfolioRebalancerView = React.lazy(() =>
+  import('./components/rebalancer/PortfolioRebalancerView').then((m) => ({
+    default: m.PortfolioRebalancerView,
+  }))
+);
+const WealthRoadmapView = React.lazy(() =>
+  import('./components/roadmap/WealthRoadmapView').then((m) => ({
+    default: m.WealthRoadmapView,
+  }))
+);
+
+// Code-split heavy modals to keep main initial bundle < 400 kB
+const SmartPortfolioRecommenderModal = React.lazy(() =>
+  import('./components/builder/SmartPortfolioRecommenderModal').then((m) => ({
+    default: m.SmartPortfolioRecommenderModal,
+  }))
+);
+const PortfolioFactsheetModal = React.lazy(() =>
+  import('./components/export/PortfolioFactsheetModal').then((m) => ({
+    default: m.PortfolioFactsheetModal,
+  }))
+);
+const BrokerOrderSlipModal = React.lazy(() =>
+  import('./components/export/BrokerOrderSlipModal').then((m) => ({
+    default: m.BrokerOrderSlipModal,
+  }))
+);
+const DataTransferModal = React.lazy(() =>
+  import('./components/export/DataTransferModal').then((m) => ({
+    default: m.DataTransferModal,
+  }))
+);
 import {
   SmartDcaOverflowMode,
   SmartDcaAllocationMode,
@@ -92,6 +121,7 @@ interface PersistedAppState {
   smartDcaOverflowMode?: SmartDcaOverflowMode;
   smartDcaAllocationMode?: SmartDcaAllocationMode;
   smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
+  smartDcaLastRefreshSuccessAt?: string;
   driftThresholdPercent?: number;
   isHoldingsSyncedWithMenu1?: boolean;
   enableIdxLotRounding?: boolean;
@@ -393,6 +423,9 @@ export function App() {
   const [smartDcaIndicatorOverrides, setSmartDcaIndicatorOverrides] = useState<
     Record<string, Record<string, any>>
   >(() => initialSaved?.smartDcaIndicatorOverrides ?? {});
+  const [smartDcaLastRefreshSuccessAt, setSmartDcaLastRefreshSuccessAt] = useState<string | undefined>(
+    () => initialSaved?.smartDcaLastRefreshSuccessAt
+  );
 
   const [holdings, setHoldings] = useState<Record<string, HoldingEntry>>(() => {
     if (initialSaved?.holdings && Object.keys(initialSaved.holdings).length > 0) {
@@ -707,6 +740,7 @@ export function App() {
           smartDcaOverflowMode,
           smartDcaAllocationMode,
           smartDcaIndicatorOverrides,
+          smartDcaLastRefreshSuccessAt,
         })
       );
     } catch {
@@ -748,6 +782,7 @@ export function App() {
     smartDcaOverflowMode,
     smartDcaAllocationMode,
     smartDcaIndicatorOverrides,
+    smartDcaLastRefreshSuccessAt,
   ]);
 
   // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
@@ -1251,14 +1286,40 @@ export function App() {
     }
   };
 
-  // Handler: Live Price Sync
+  // Handler: Unified Live Market & Cycle Indicator Sync
   const handleRefreshLivePrices = async () => {
     setIsFetchingPrices(true);
     try {
-      const res = await fetchLiveMarketPrices(allAssets, usdIdrRate);
+      const [res, liveFng] = await Promise.all([
+        fetchLiveMarketPrices(allAssets, usdIdrRate),
+        fetchLiveCryptoFearAndGreed(),
+      ]);
+
+      const nowStr =
+        new Date().toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }) +
+        ', ' +
+        new Date().toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }) +
+        ' WIB';
+
       setUsdIdrRate(res.usdIdrRate);
       setPriceSourceText(res.sourceSummary);
       setLastUpdatedText(res.updatedAt);
+      setSmartDcaLastRefreshSuccessAt(nowStr);
+
+      if (liveFng && liveFng.score !== undefined) {
+        setTacticalConfig((prev) => ({
+          ...prev,
+          cryptoScore: liveFng.score,
+        }));
+      }
       setHoldings((prev) => {
         const next = { ...prev };
         for (const a of allAssets) {
@@ -1944,6 +2005,7 @@ export function App() {
           smartDcaOverflowMode,
           smartDcaAllocationMode,
           smartDcaIndicatorOverrides,
+          smartDcaLastRefreshSuccessAt,
         },
         menu3_simulator: {
           initialCapitalIdr,
@@ -2192,6 +2254,9 @@ export function App() {
       }
       if (d2.smartDcaIndicatorOverrides && typeof d2.smartDcaIndicatorOverrides === 'object') {
         setSmartDcaIndicatorOverrides(d2.smartDcaIndicatorOverrides);
+      }
+      if (typeof d2.smartDcaLastRefreshSuccessAt === 'string') {
+        setSmartDcaLastRefreshSuccessAt(d2.smartDcaLastRefreshSuccessAt);
       }
 
       // 3. Menu 3: Simulator & Goals
@@ -2653,31 +2718,150 @@ export function App() {
           />
         )}
 
-        {activeTab === 'rebalancer' && (
-          <PortfolioRebalancerView
+        <React.Suspense
+          fallback={
+            <div className="flex flex-col items-center justify-center py-24 min-h-[400px] gap-3 text-slate-400">
+              <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+              <span className="text-xs font-mono">Memuat Modul QuantPorto...</span>
+            </div>
+          }
+        >
+          {activeTab === 'rebalancer' && (
+            <PortfolioRebalancerView
+              allAssets={allAssets}
+              targetWeights={activeWeights}
+              holdings={holdings}
+              onUpdateHolding={handleUpdateHolding}
+              onPopulateCapital={handlePopulateCapital}
+              onLoadVideo1BExample={handleLoadVideo1BExample}
+              onApplyShockScenario={handleApplyShockScenario}
+              inputMode={inputMode}
+              setInputMode={setInputMode}
+              rebalanceMode={rebalanceMode}
+              setRebalanceMode={setRebalanceMode}
+              cashInjectionIdr={cashInjectionIdr}
+              setCashInjectionIdr={setCashInjectionIdr}
+              driftThresholdPercent={driftThresholdPercent}
+              setDriftThresholdPercent={setDriftThresholdPercent}
+              usdIdrRate={usdIdrRate}
+              rebalanceResult={rebalanceResult}
+              onApplyPeerDiversification={handleApplyPeerDiversification}
+              rebalanceHistory={rebalanceHistory}
+              onCommitRebalanceToHoldings={handleCommitRebalanceToHoldings}
+              onDeleteRebalanceHistoryEntry={handleDeleteRebalanceHistoryEntry}
+              initialCapitalMenu1Idr={initialCapitalIdr}
+              monthlySavingsMenu1Idr={monthlySavingsIdr}
+              activePortfolioName={
+                exactPresetMatch
+                  ? exactPresetMatch.name
+                  : allocationMethod === 'risk-parity'
+                    ? 'Custom Equal Risk Parity'
+                    : allocationMethod === 'risk-budgeting'
+                      ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                      : 'Portfolio Custom Anda'
+              }
+              isHoldingsSyncedWithMenu1={isHoldingsSyncedWithMenu1}
+              enableIdxLotRounding={enableIdxLotRounding}
+              setEnableIdxLotRounding={setEnableIdxLotRounding}
+              enableBrokerFees={enableBrokerFees}
+              setEnableBrokerFees={setEnableBrokerFees}
+              filterDustTrades={filterDustTrades}
+              setFilterDustTrades={setFilterDustTrades}
+              isFixedBudgetMode={isFixedBudgetMode}
+              setIsFixedBudgetMode={setIsFixedBudgetMode}
+              fixedTotalBudgetIdr={fixedTotalBudgetIdr}
+              setFixedTotalBudgetIdr={setFixedTotalBudgetIdr}
+              onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
+              onResetAllAssetPrices={handleResetAllAssetPrices}
+              onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
+              onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
+              onOpenOrderSlip={(planOverride) => {
+                setOrderSlipPlanOverride(planOverride ?? null);
+                setIsOrderSlipOpen(true);
+              }}
+              onPlanOverrideChange={(plan) => setOrderSlipPlanOverride(plan)}
+              onBatchUpdateHoldings={handleBatchUpdateHoldings}
+              tacticalConfig={tacticalConfig}
+              setTacticalConfig={setTacticalConfig}
+              smartDcaMonthlyBudgetIdr={smartDcaMonthlyBudgetIdr}
+              setSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
+              smartDcaOverflowMode={smartDcaOverflowMode}
+              setSmartDcaOverflowMode={setSmartDcaOverflowMode}
+              smartDcaAllocationMode={smartDcaAllocationMode}
+              setSmartDcaAllocationMode={setSmartDcaAllocationMode}
+              smartDcaIndicatorOverrides={smartDcaIndicatorOverrides}
+              setSmartDcaIndicatorOverrides={setSmartDcaIndicatorOverrides}
+              smartDcaLastRefreshSuccessAt={smartDcaLastRefreshSuccessAt}
+              onUnifiedSync={handleRefreshLivePrices}
+              isSyncingPrices={isFetchingPrices}
+            />
+          )}
+
+          {activeTab === 'roadmap' && (
+            <WealthRoadmapView
+              key={`roadmap-${roadmapSettingsVersion}`}
+              allAssets={allAssets}
+              activeWeights={activeWeights}
+              solvedMetrics={solvedMetrics}
+              initialCapitalIdr={initialCapitalIdr}
+              setInitialCapitalIdr={setInitialCapitalIdr}
+              targetGoalIdr={targetGoalIdr}
+              setTargetGoalIdr={setTargetGoalIdr}
+              monthlySavingsIdr={monthlySavingsIdr}
+              setMonthlySavingsIdr={setMonthlySavingsIdr}
+            />
+          )}
+        </React.Suspense>
+      </main>
+
+      {/* Code-Split On-Demand Modals */}
+      <React.Suspense fallback={null}>
+        {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
+        {isFactsheetOpen && (() => {
+          let roadmapSettings: any = null;
+          try {
+            const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
+            if (raw) roadmapSettings = JSON.parse(raw);
+          } catch {
+            // Ignore
+          }
+          return (
+            <PortfolioFactsheetModal
+              isOpen={isFactsheetOpen}
+              onClose={() => setIsFactsheetOpen(false)}
+              portfolioName={
+                exactPresetMatch
+                  ? exactPresetMatch.name
+                  : allocationMethod === 'risk-parity'
+                    ? 'Custom Equal Risk Parity'
+                    : allocationMethod === 'risk-budgeting'
+                      ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
+                      : 'Portfolio Custom Anda'
+              }
+              activeWeights={activeWeights}
+              allAssets={allAssets}
+              solvedMetrics={solvedMetrics}
+              initialCapitalIdr={initialCapitalIdr}
+              monthlySavingsIdr={monthlySavingsIdr}
+              targetGoalIdr={targetGoalIdr}
+              usdIdrRate={usdIdrRate}
+              annualInflationPercent={roadmapSettings?.annualInflationPercent}
+              annualStepUpPercent={roadmapSettings?.annualStepUpPct}
+            />
+          );
+        })()}
+
+        {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
+        {isOrderSlipOpen && (
+          <BrokerOrderSlipModal
+            isOpen={isOrderSlipOpen}
+            onClose={() => {
+              setIsOrderSlipOpen(false);
+            }}
+            rebalanceResult={orderSlipPlanOverride ?? rebalanceResult}
             allAssets={allAssets}
-            targetWeights={activeWeights}
             holdings={holdings}
-            onUpdateHolding={handleUpdateHolding}
-            onPopulateCapital={handlePopulateCapital}
-            onLoadVideo1BExample={handleLoadVideo1BExample}
-            onApplyShockScenario={handleApplyShockScenario}
-            inputMode={inputMode}
-            setInputMode={setInputMode}
-            rebalanceMode={rebalanceMode}
-            setRebalanceMode={setRebalanceMode}
-            cashInjectionIdr={cashInjectionIdr}
-            setCashInjectionIdr={setCashInjectionIdr}
-            driftThresholdPercent={driftThresholdPercent}
-            setDriftThresholdPercent={setDriftThresholdPercent}
             usdIdrRate={usdIdrRate}
-            rebalanceResult={rebalanceResult}
-            onApplyPeerDiversification={handleApplyPeerDiversification}
-            rebalanceHistory={rebalanceHistory}
-            onCommitRebalanceToHoldings={handleCommitRebalanceToHoldings}
-            onDeleteRebalanceHistoryEntry={handleDeleteRebalanceHistoryEntry}
-            initialCapitalMenu1Idr={initialCapitalIdr}
-            monthlySavingsMenu1Idr={monthlySavingsIdr}
             activePortfolioName={
               exactPresetMatch
                 ? exactPresetMatch.name
@@ -2687,140 +2871,40 @@ export function App() {
                     ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
                     : 'Portfolio Custom Anda'
             }
-            isHoldingsSyncedWithMenu1={isHoldingsSyncedWithMenu1}
-            enableIdxLotRounding={enableIdxLotRounding}
-            setEnableIdxLotRounding={setEnableIdxLotRounding}
-            enableBrokerFees={enableBrokerFees}
-            setEnableBrokerFees={setEnableBrokerFees}
-            filterDustTrades={filterDustTrades}
-            setFilterDustTrades={setFilterDustTrades}
-            isFixedBudgetMode={isFixedBudgetMode}
-            setIsFixedBudgetMode={setIsFixedBudgetMode}
-            fixedTotalBudgetIdr={fixedTotalBudgetIdr}
-            setFixedTotalBudgetIdr={setFixedTotalBudgetIdr}
-            onClearHoldingsForManualInput={handleClearHoldingsForManualInput}
-            onResetAllAssetPrices={handleResetAllAssetPrices}
-            onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
-            onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
-            onOpenOrderSlip={(planOverride) => {
-              setOrderSlipPlanOverride(planOverride ?? null);
-              setIsOrderSlipOpen(true);
-            }}
-            onPlanOverrideChange={(plan) => setOrderSlipPlanOverride(plan)}
-            onBatchUpdateHoldings={handleBatchUpdateHoldings}
-            tacticalConfig={tacticalConfig}
-            setTacticalConfig={setTacticalConfig}
-            smartDcaMonthlyBudgetIdr={smartDcaMonthlyBudgetIdr}
-            setSmartDcaMonthlyBudgetIdr={setSmartDcaMonthlyBudgetIdr}
-            smartDcaOverflowMode={smartDcaOverflowMode}
-            setSmartDcaOverflowMode={setSmartDcaOverflowMode}
-            smartDcaAllocationMode={smartDcaAllocationMode}
-            setSmartDcaAllocationMode={setSmartDcaAllocationMode}
-            smartDcaIndicatorOverrides={smartDcaIndicatorOverrides}
-            setSmartDcaIndicatorOverrides={setSmartDcaIndicatorOverrides}
           />
         )}
 
-        {activeTab === 'roadmap' && (
-          <WealthRoadmapView
-            key={`roadmap-${roadmapSettingsVersion}`}
+        {/* Interactive Multiple-Choice Smart Portfolio Diagnostic & Recommender Modal */}
+        {isRecommenderOpen && (
+          <SmartPortfolioRecommenderModal
+            isOpen={isRecommenderOpen}
+            onClose={() => setIsRecommenderOpen(false)}
             allAssets={allAssets}
-            activeWeights={activeWeights}
-            solvedMetrics={solvedMetrics}
+            presets={dynamicPresets}
             initialCapitalIdr={initialCapitalIdr}
-            setInitialCapitalIdr={setInitialCapitalIdr}
-            targetGoalIdr={targetGoalIdr}
-            setTargetGoalIdr={setTargetGoalIdr}
             monthlySavingsIdr={monthlySavingsIdr}
-            setMonthlySavingsIdr={setMonthlySavingsIdr}
+            targetGoalIdr={targetGoalIdr}
+            onApplyRecommendation={handleApplyRecommendation}
           />
         )}
-      </main>
 
-      {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
-      {isFactsheetOpen && (() => {
-        let roadmapSettings: any = null;
-        try {
-          const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
-          if (raw) roadmapSettings = JSON.parse(raw);
-        } catch {
-          // Ignore
-        }
-        return (
-          <PortfolioFactsheetModal
-            isOpen={isFactsheetOpen}
-            onClose={() => setIsFactsheetOpen(false)}
-            portfolioName={
-              exactPresetMatch
-                ? exactPresetMatch.name
-                : allocationMethod === 'risk-parity'
-                  ? 'Custom Equal Risk Parity'
-                  : allocationMethod === 'risk-budgeting'
-                    ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
-                    : 'Portfolio Custom Anda'
-            }
-            activeWeights={activeWeights}
-            allAssets={allAssets}
-            solvedMetrics={solvedMetrics}
-            initialCapitalIdr={initialCapitalIdr}
-            monthlySavingsIdr={monthlySavingsIdr}
-            targetGoalIdr={targetGoalIdr}
-            usdIdrRate={usdIdrRate}
-            annualInflationPercent={roadmapSettings?.annualInflationPercent}
-            annualStepUpPercent={roadmapSettings?.annualStepUpPct}
+        {/* Comprehensive Data Transfer Modal (Text & File) */}
+        {isDataTransferModalOpen && (
+          <DataTransferModal
+            isOpen={isDataTransferModalOpen}
+            onClose={() => setIsDataTransferModalOpen(false)}
+            exportPayload={getBackupPayload()}
+            onImportPayload={handleImportPayload}
+            onDownloadJsonFile={handleExportJson}
           />
-        );
-      })()}
-
-      {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
-      {isOrderSlipOpen && (
-        <BrokerOrderSlipModal
-          isOpen={isOrderSlipOpen}
-          onClose={() => {
-            setIsOrderSlipOpen(false);
-          }}
-          rebalanceResult={orderSlipPlanOverride ?? rebalanceResult}
-          allAssets={allAssets}
-          holdings={holdings}
-          usdIdrRate={usdIdrRate}
-          activePortfolioName={
-            exactPresetMatch
-              ? exactPresetMatch.name
-              : allocationMethod === 'risk-parity'
-                ? 'Custom Equal Risk Parity'
-                : allocationMethod === 'risk-budgeting'
-                  ? `Custom ${convictionRiskPercent}% Risk ${convictionAssetId}`
-                  : 'Portfolio Custom Anda'
-          }
-        />
-      )}
-
-      {/* Interactive Multiple-Choice Smart Portfolio Diagnostic & Recommender Modal */}
-      <SmartPortfolioRecommenderModal
-        isOpen={isRecommenderOpen}
-        onClose={() => setIsRecommenderOpen(false)}
-        allAssets={allAssets}
-        presets={dynamicPresets}
-        initialCapitalIdr={initialCapitalIdr}
-        monthlySavingsIdr={monthlySavingsIdr}
-        targetGoalIdr={targetGoalIdr}
-        onApplyRecommendation={handleApplyRecommendation}
-      />
+        )}
+      </React.Suspense>
 
       {/* Reset to Factory Default Confirmation Modal */}
       <ResetConfirmationModal
         isOpen={isResetConfirmOpen}
         onClose={() => setIsResetConfirmOpen(false)}
         onConfirmReset={handleConfirmResetAll}
-      />
-
-      {/* Comprehensive Data Transfer Modal (Text & File) */}
-      <DataTransferModal
-        isOpen={isDataTransferModalOpen}
-        onClose={() => setIsDataTransferModalOpen(false)}
-        exportPayload={getBackupPayload()}
-        onImportPayload={handleImportPayload}
-        onDownloadJsonFile={handleExportJson}
       />
 
       {/* Import Backup Feedback Notification Toast */}

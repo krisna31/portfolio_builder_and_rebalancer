@@ -337,6 +337,7 @@ export interface QuantPortoBackupPayload {
       smartDcaOverflowMode?: 'park-rdpu' | 'boost-discount';
       smartDcaAllocationMode?: SmartDcaAllocationMode;
       smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
+      smartDcaLastRefreshSuccessAt?: string;
       tacticalConfig?: ValuationSentimentConfig;
     };
     menu3_simulator: {

@@ -376,7 +376,9 @@ export function simulateMonteCarloPaths(params: {
 
   // Geometric Brownian motion monthly drift and volatility
   const dt = 1 / 12;
-  const driftMonthly = Math.log(1 + muAnnual) * dt;
+  // Geometric Brownian motion monthly drift with Ito's correction (-0.5 * sigma^2)
+  const driftMonthly =
+    (Math.log(1 + muAnnual) - 0.5 * sigmaAnnual * sigmaAnnual) * dt;
   const volMonthly = sigmaAnnual * Math.sqrt(dt);
 
   // Seeded Mulberry32 PRNG to eliminate random re-render jitter

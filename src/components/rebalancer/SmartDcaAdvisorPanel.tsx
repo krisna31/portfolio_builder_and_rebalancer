@@ -38,6 +38,7 @@ import {
   Database,
   RefreshCw,
   ExternalLink,
+  AlertTriangle,
 } from 'lucide-react';
 
 export interface SmartDcaAdvisorPanelProps {
@@ -62,6 +63,9 @@ export interface SmartDcaAdvisorPanelProps {
   onUpdateSmartDcaIndicatorOverrides?: (
     overrides: Record<string, Record<string, any>>
   ) => void;
+  smartDcaLastRefreshSuccessAt?: string;
+  onUnifiedSync?: () => Promise<void>;
+  isSyncingPrices?: boolean;
   onOpenOrderSlip?: (planOverride?: RebalanceSummaryResult) => void;
   onCommitRebalanceToHoldings?: (
     note?: string,
@@ -90,6 +94,9 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   onUpdateSmartDcaAllocationMode,
   smartDcaIndicatorOverrides,
   onUpdateSmartDcaIndicatorOverrides,
+  smartDcaLastRefreshSuccessAt,
+  onUnifiedSync,
+  isSyncingPrices = false,
   onOpenOrderSlip,
   onCommitRebalanceToHoldings,
   onSwitchToStandardRebalancer,
@@ -172,75 +179,77 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   const [activeCmcAssetId, setActiveCmcAssetId] = useState<string | null>(null);
 
   // Live Refresh & Data Source Transparency state
-  const [lastRefreshSuccessAt, setLastRefreshSuccessAt] = useState<string>(
-    () =>
-      new Date().toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }) +
-      ', ' +
-      new Date().toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }) +
-      ' WIB'
+  const [localLastRefreshSuccessAt, setLocalLastRefreshSuccessAt] = useState<string>(
+    () => smartDcaLastRefreshSuccessAt || 'Snapshot Pasar (Klik Sinkronkan)'
   );
+  const lastRefreshSuccessAt =
+    smartDcaLastRefreshSuccessAt || localLastRefreshSuccessAt;
+
   const [isRefreshingData, setIsRefreshingData] = useState<boolean>(false);
-  const [refreshToast, setRefreshToast] = useState<string | null>(null);
+  const [refreshToast, setRefreshToast] = useState<{
+    message: string;
+    isError?: boolean;
+  } | null>(null);
+
+  const isRefreshing = isSyncingPrices || isRefreshingData;
 
   // Live indicator sync handler
   const handleRefreshData = async () => {
     setIsRefreshingData(true);
     try {
-      const liveFng = await fetchLiveCryptoFearAndGreed();
-      const nowStr =
-        new Date().toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }) +
-        ', ' +
-        new Date().toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }) +
-        ' WIB';
-      setLastRefreshSuccessAt(nowStr);
-
-      if (liveFng) {
-        setRefreshToast(
-          `✅ Data indikator live Alternative.me (Fear & Greed ${liveFng.score}/100 - ${liveFng.classification}) berhasil disinkronkan pukul ${nowStr}!`
-        );
+      if (onUnifiedSync) {
+        await onUnifiedSync();
+        setRefreshToast({
+          message:
+            '✅ Seluruh harga pasar portofolio, kurs USD/IDR, dan sentimen siklus pasar berhasil disinkronkan!',
+          isError: false,
+        });
       } else {
-        setRefreshToast(
-          `✅ Semua indikator siklus pasar & sumber data terverifikasi berhasil disinkronkan pukul ${nowStr}!`
-        );
+        const liveFng = await fetchLiveCryptoFearAndGreed();
+        const nowStr =
+          new Date().toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }) +
+          ', ' +
+          new Date().toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }) +
+          ' WIB';
+
+        if (liveFng && liveFng.score !== undefined) {
+          setLocalLastRefreshSuccessAt(nowStr);
+          // Apply live score to crypto asset override so it triggers the indicator table
+          const cryptoAsset = allAssets.find((a) => a.category === 'crypto');
+          if (cryptoAsset) {
+            handleUpdateIndicatorOverride(cryptoAsset.id, 'fear_greed_crypto', {
+              currentValue: liveFng.score,
+            });
+          }
+          setRefreshToast({
+            message: `✅ Data indikator Alternative.me (Fear & Greed ${liveFng.score}/100 - ${liveFng.classification}) berhasil disinkronkan pukul ${nowStr}!`,
+            isError: false,
+          });
+        } else {
+          setRefreshToast({
+            message:
+              '⚠️ Gagal terhubung ke feed Alternative.me (koneksi offline atau kuota). Menggunakan snapshot tersimpan.',
+            isError: true,
+          });
+        }
       }
-      setTimeout(() => setRefreshToast(null), 4500);
     } catch {
-      const nowStr =
-        new Date().toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }) +
-        ', ' +
-        new Date().toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }) +
-        ' WIB';
-      setLastRefreshSuccessAt(nowStr);
-      setRefreshToast(
-        `✅ Indikator pasar berhasil diverifikasi ulang pukul ${nowStr}`
-      );
-      setTimeout(() => setRefreshToast(null), 4000);
+      setRefreshToast({
+        message:
+          '⚠️ Terjadi gangguan koneksi saat sinkronisasi data live. Menggunakan snapshot data tersimpan.',
+        isError: true,
+      });
     } finally {
       setIsRefreshingData(false);
+      setTimeout(() => setRefreshToast(null), 4500);
     }
   };
 
@@ -436,15 +445,29 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
       {/* LIVE SYNC REFRESH TOAST NOTIFICATION */}
       {refreshToast && (
-        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs animate-in fade-in">
+        <div
+          className={`flex items-center justify-between gap-2 p-3 rounded-xl border text-xs animate-in fade-in ${
+            refreshToast.isError
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-            <span className="font-medium">{refreshToast}</span>
+            {refreshToast.isError ? (
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            )}
+            <span className="font-medium">{refreshToast.message}</span>
           </div>
           <button
             type="button"
             onClick={() => setRefreshToast(null)}
-            className="text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100 p-0.5"
+            className={`p-0.5 ${
+              refreshToast.isError
+                ? 'text-amber-600 hover:text-amber-800 dark:hover:text-amber-100'
+                : 'text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100'
+            }`}
           >
             <X className="w-3.5 h-3.5" />
           </button>

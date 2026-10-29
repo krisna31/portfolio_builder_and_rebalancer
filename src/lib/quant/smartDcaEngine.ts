@@ -8,6 +8,7 @@ import {
   ValuationSentimentConfig,
 } from './types';
 import { getSentimentZone } from './tacticalValuationEngine';
+import { roundToIdxTick } from './rebalancerEngine';
 import {
   AssetIndicatorConfluence,
   CycleIndicatorState,
@@ -867,8 +868,13 @@ export function calculateSmartDcaPlan(params: SmartDcaInputParams): SmartDcaResu
     const h = holdings[asset.id];
     const unitPriceNative =
       h && h.currentPrice > 0 ? h.currentPrice : asset.defaultPrice;
-    const unitPriceIdr =
+    const rawUnitPriceIdr =
       asset.currency === 'USD' ? unitPriceNative * usdIdrRate : unitPriceNative;
+    // Snap Indonesian stocks to official BEI fractional price tick (Rp 1, 2, 5, 10, 25)
+    const unitPriceIdr =
+      asset.category === 'idx-equity' && !asset.isNominalOnly
+        ? roundToIdxTick(rawUnitPriceIdr, 'nearest')
+        : rawUnitPriceIdr;
 
     const override = marketDataOverrides?.[asset.id];
 

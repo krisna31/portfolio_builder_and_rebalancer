@@ -9,6 +9,7 @@ import { calculateRebalancePlan, generateCrashBuyingLadder } from '../rebalancer
 import {
   simulateWealthToGoal,
   simulateRebalancingFrequencyBacktest,
+  simulateMonteCarloPaths,
 } from '../wealthSimulator';
 import { generatePortfolioRecommendations } from '../portfolioRecommender';
 import { HoldingEntry, QuantPortoBackupPayload } from '../types';
@@ -565,5 +566,31 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     );
     expect(backup.data.menu3_simulator.monthlySavingsIdr).toBe(5_000_000);
     expect(backup.data.menu3_simulator.targetGoalIdr).toBe(10_000_000_000);
+  });
+
+  it('applies Ito Lemma variance correction in Monte Carlo Geometric Brownian Motion', () => {
+    // Under log-normal Geometric Brownian Motion with Ito drift (ln(1+mu) - 0.5*sigma^2),
+    // the theoretical median (50th percentile) is S_0 * exp((ln(1+mu) - 0.5*sigma^2) * t).
+    // For 15% CAGR (mu = 0.15) and 50% volatility (sigma = 0.5) over 5 years:
+    // drift_rate = ln(1.15) - 0.5 * (0.25) = 0.13976 - 0.125 = 0.01476
+    // theoretical_median = 100M * exp(0.01476 * 5) = ~107.66M
+    const res = simulateMonteCarloPaths({
+      initialCapitalIdr: 100_000_000,
+      monthlyContributionIdr: 0,
+      annualCagrPercent: 15,
+      annualVolatilityPercent: 50,
+      maxYears: 5,
+      numSimulations: 500,
+      seed: 42,
+    });
+
+    const year5Median = res.series[5].p50;
+    const theoreticalMedian =
+      100_000_000 * Math.exp((Math.log(1.15) - 0.5 * 0.5 * 0.5) * 5);
+    const ratioToTheoretical = year5Median / theoreticalMedian;
+
+    // Simulation median converges within 5% of theoretical Ito-corrected log-normal median
+    expect(ratioToTheoretical).toBeGreaterThan(0.95);
+    expect(ratioToTheoretical).toBeLessThan(1.05);
   });
 });
