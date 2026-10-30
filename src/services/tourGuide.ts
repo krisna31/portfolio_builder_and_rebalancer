@@ -268,10 +268,24 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       },
     },
     {
+      element: '#tour-smart-dca-submode-btn',
+      data: { tab: 'rebalancer' },
+      popover: {
+        title: '💡 15. Smart DCA & Indikator Siklus Multi-Faktor',
+        description: `
+          Selain rebalancing berkala standar, Anda dapat beralih ke sub-mode <strong>Smart DCA Advisor</strong>!
+          <br/><br/>
+          Smart DCA menggabungkan <strong>Defisit Bobot Target</strong> dengan <strong>Indikator Siklus Pasar Multi-Faktor</strong> (Crypto Fear &amp; Greed, MVRV Z-Score, Puell Multiple, Pi Cycle Top, dan Valuasi Saham). Sistem secara kuantitatif melipatgandakan alokasi saat aset terdiskon dalam (*aggressive buy*) dan menahan pembelian saat harga berada di pucuk siklus.
+        `,
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
       element: '#tour-rebalance-journal',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '📓 15. Jurnal Audit & Riwayat Rebalancing',
+        title: '📓 16. Jurnal Audit & Riwayat Rebalancing',
         description: `
           Setiap kali selesai mengeksekusi rebalancing di aplikasi sekuritas, simpan catatan ke dalam jurnal audit ini.
           <br/><br/>
@@ -289,7 +303,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-roadmap-calculator',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🎯 16. Peta Jalan Menuju Rp 10 Miliar Pertama',
+        title: '🎯 17. Peta Jalan Menuju Rp 10 Miliar Pertama',
         description: `
           Selamat datang di <strong>Menu 3: Simulator Kekayaan</strong>!
           <br/><br/>
@@ -303,7 +317,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-backtest-frequency',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🔄 17. Backtest Historis Frekuensi Rebalancing',
+        title: '🔄 18. Backtest Historis Frekuensi Rebalancing',
         description: `
           Pembuktian nyata menit 16:08 video:
           <br/><br/>
@@ -317,7 +331,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-dividend-retirement',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🌴 18. Estimator Dividen & Pensiun Mandiri (4% SWR)',
+        title: '🌴 19. Estimator Dividen & Pensiun Mandiri (4% SWR)',
         description: `
           Kapan portofolio Anda mampu membiayai seluruh kebutuhan hidup bulanan tanpa harus bekerja aktif lagi?
           <br/><br/>
@@ -335,7 +349,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-export-actions',
       data: { tab: 'builder' },
       popover: {
-        title: '🖨️ 19. Dokumen Ekspor Factsheet & Slip Order',
+        title: '🖨️ 20. Dokumen Ekspor Factsheet & Slip Order',
         description: `
           Bagian akhir: Anda dapat mengunduh dokumen profesional siap pakai:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -379,7 +393,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
         }
 
         if (typeof rawElement === 'string') {
-          // Special handling for Step 19 Export Actions:
+          // Special handling for Step 20 Export Actions:
           // In desktop, opening "Alat & Pengaturan" menu exposes #tour-export-actions.
           // In mobile, header tools dropdown is hidden so we point to #tour-mobile-menu-btn.
           if (rawElement === '#tour-export-actions') {

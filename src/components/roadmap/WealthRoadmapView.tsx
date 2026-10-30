@@ -30,6 +30,9 @@ import {
   Activity,
   CheckCircle2,
   Calculator,
+  Share2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 
@@ -355,8 +358,112 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     }));
   }, [monteCarloResult, monteCarloDisplayMode, annualInflationPercent]);
 
+  const [copiedSummary, setCopiedSummary] = useState(false);
+
+  const handleCopyRoadmapSummary = async () => {
+    const todayStr = new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+
+    const yearsToGoalStr = sim.reachedGoal
+      ? `${sim.yearsToGoal} thn ${sim.monthsToGoal} bln`
+      : '> 30 tahun';
+
+    const realGoalStr =
+      annualInflationPercent > 0
+        ? ` (Daya beli riil setara ${formatIdr(sim.realPurchasingPowerAtGoalIdr ?? targetGoalIdr, true)} saat ini)`
+        : '';
+
+    const freedomSwrStr =
+      sim.monthsToFinancialFreedomSWR !== null && sim.monthsToFinancialFreedomSWR !== undefined
+        ? `${Math.floor(sim.monthsToFinancialFreedomSWR / 12)} thn ${sim.monthsToFinancialFreedomSWR % 12} bln`
+        : '> 30 tahun';
+
+    const freedomDivStr =
+      sim.monthsToFinancialFreedomDividends !== null && sim.monthsToFinancialFreedomDividends !== undefined
+        ? `${Math.floor(sim.monthsToFinancialFreedomDividends / 12)} thn ${sim.monthsToFinancialFreedomDividends % 12} bln`
+        : '> 30 tahun';
+
+    const lines = [
+      '🎯 *QUANTPORTO WEALTH ROADMAP SUMMARY*',
+      `Tanggal: ${todayStr}`,
+      `Target Dana: ${formatIdr(targetGoalIdr)}`,
+      `Modal Awal: ${formatIdr(initialCapitalIdr)} | Tabungan Rutin: ${formatIdr(monthlySavingsIdr)}/bln${
+        annualStepUpPct > 0 ? ` (+${annualStepUpPct}% step-up/thn)` : ''
+      }`,
+      `CAGR Portfolio: +${solvedMetrics.cagr.toFixed(2)}%/thn (Max DD: -${solvedMetrics.maxDrawdown.toFixed(1)}%)`,
+      annualInflationPercent > 0 ? `Asumsi Inflasi: ${annualInflationPercent}%/thn` : '',
+      '',
+      '📈 *PROYEKSI MENUJU TARGET:*',
+      `• Estimasi Capai Target: ${yearsToGoalStr}${realGoalStr}`,
+      `• Total Modal Disetor: ${formatIdr(sim.totalPrincipalAtGoalIdr)}`,
+      `• Akumulasi Imbal Hasil (Gain): ${formatIdr(sim.totalGainAtGoalIdr)}`,
+      '',
+      `🌴 *MILESTONE PENSIUN & FINANCIAL FREEDOM (Living Cost: ${formatIdr(monthlyLivingCostTargetIdr, true)}/bln):*`,
+      `• Bebas Finansial via SWR 4%: ${freedomSwrStr}`,
+      `• Bebas Finansial via Dividen: ${freedomDivStr} (Pasif income saat target: ${formatIdr(dividendBreakdown.monthlyPassiveAtGoalIdr, true)}/bln)`,
+      `• Strategi Dividen: ${dividendUsageMode === 'reinvest-drip' ? 'DRIP (Gulung ke Pokok)' : 'Tarik Tunai (Cashout Living Cost)'}`,
+      '',
+      '🎲 *SIMULASI STOKASTIK MONTE CARLO (500 Skenario Pasar):*',
+      `• Probabilitas Sukses Capai Target: ${monteCarloResult.successProbabilityPercent.toFixed(1)}%`,
+      `• Median Skenario Pasar (P50): ${formatIdr(monteCarloResult.medianFinalWealthIdr)}`,
+      `• Skenario Pasar Lesu / Bear (P10): ${formatIdr(monteCarloResult.bearFinalWealthIdr)}`,
+      `• Skenario Pasar Bullish (P90): ${formatIdr(monteCarloResult.bullFinalWealthIdr)}`,
+      '',
+      'Dibuat dengan QuantPorto Portfolio Builder & Rebalancer',
+    ].filter(Boolean);
+
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2500);
+    } catch {
+      // Ignore clipboard error
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Top Header Action Bar with 1-Click WhatsApp / Notion Summary Copy */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b ui-border pb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <TrendingUp className="h-4 w-4" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold ui-text-main flex items-center gap-2">
+              <span>Simulator Kekayaan &amp; Kemandirian Finansial</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+                CAGR +{solvedMetrics.cagr.toFixed(2)}%
+              </span>
+            </h1>
+            <p className="text-xs ui-text-muted mt-0.5">
+              Peta jalan compounding eksponensial menuju target {formatIdr(targetGoalIdr, true)} &amp; pensiun mandiri
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopyRoadmapSummary}
+          className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-3 py-1.5 text-xs font-semibold hover:ui-text-main transition shadow-xs"
+          title="Salin ringkasan proyeksi kekayaan dan milestone pensiun ke Clipboard"
+        >
+          {copiedSummary ? (
+            <>
+              <Check className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-emerald-500 font-medium">Tersalin ke Clipboard!</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="h-3.5 w-3.5 text-indigo-500" />
+              <span>Salin Ringkasan Roadmap</span>
+            </>
+          )}
+        </button>
+      </div>
       <section id="tour-roadmap-calculator" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 5 Cols: Wealth Simulator Parameters */}
         <div className="ui-card space-y-4 rounded-xl p-5 lg:col-span-5">

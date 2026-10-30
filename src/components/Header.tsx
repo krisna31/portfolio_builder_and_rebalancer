@@ -143,6 +143,17 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [biometricToast]);
 
+  // Two-step delete confirmation state for saved snapshots
+  const [confirmDeleteSnapshotId, setConfirmDeleteSnapshotId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!confirmDeleteSnapshotId) return;
+    const timer = setTimeout(() => {
+      setConfirmDeleteSnapshotId(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [confirmDeleteSnapshotId]);
+
   // Detect platform biometric authenticator support on mount
   useEffect(() => {
     let mounted = true;
@@ -1237,13 +1248,28 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         Load
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteSavedPortfolio(snap.id)}
-                        className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-600 dark:text-rose-400"
-                      >
-                        Hapus
-                      </button>
+                      {confirmDeleteSnapshotId === snap.id ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onDeleteSavedPortfolio(snap.id);
+                            setConfirmDeleteSnapshotId(null);
+                          }}
+                          className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700 animate-pulse"
+                          title="Klik sekali lagi untuk menghapus permanen"
+                        >
+                          Yakin Hapus?
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteSnapshotId(snap.id)}
+                          className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-500/20"
+                          title="Hapus snapshot ini"
+                        >
+                          Hapus
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

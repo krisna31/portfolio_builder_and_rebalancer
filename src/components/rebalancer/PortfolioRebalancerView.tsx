@@ -556,6 +556,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     setTimeout(() => setCommittedBanner(false), 2500);
   };
 
+  const downloadCsvBlob = (filename: string, csvContent: string) => {
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const exportCsvTrades = () => {
     const headers = [
       'Symbol',
@@ -576,7 +588,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     ];
     const rows = rebalanceResult.items.map((i) => [
       i.symbol,
-      `"${i.name}"`,
+      `"${i.name.replace(/"/g, '""')}"`,
       i.targetWeightPercent,
       i.currentWeightPercent,
       i.absoluteDriftPercent,
@@ -591,19 +603,40 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       i.tradeLotsRemainderIdr ?? 0,
       i.estimatedFeeIdr ?? 0,
     ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `quantporto-rebalance-${new Date().toISOString().slice(0, 10)}.csv`
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    downloadCsvBlob(
+      `quantporto-rebalance-${new Date().toISOString().slice(0, 10)}.csv`,
+      csvContent
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  };
+
+  const exportCsvHistory = () => {
+    if (rebalanceHistory.length === 0) return;
+    const headers = [
+      'Timestamp',
+      'Catatan Rebalance',
+      'Nilai Sebelum (IDR)',
+      'Top-Up Kas (IDR)',
+      'Nilai Sesudah (IDR)',
+      'Total Beli (IDR)',
+      'Total Jual (IDR)',
+      'Rincian Transaksi',
+    ];
+    const rows = rebalanceHistory.map((h) => [
+      `"${h.timestamp}"`,
+      `"${(h.note || '').replace(/"/g, '""')}"`,
+      h.totalValueBeforeIdr,
+      h.cashInjectedIdr,
+      h.totalValueAfterIdr,
+      h.totalBuyIdr,
+      h.totalSellIdr,
+      `"${(h.tradesSummary || []).join('; ').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    downloadCsvBlob(
+      `quantporto-audit-journal-${new Date().toISOString().slice(0, 10)}.csv`,
+      csvContent
+    );
   };
 
   // Format and copy an actionable WhatsApp / Telegram / Notes Order Slip
@@ -791,6 +824,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </button>
           <button
             type="button"
+            id="tour-smart-dca-submode-btn"
             onClick={() => setRebalancerSubMode('smart-dca')}
             className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
               rebalancerSubMode === 'smart-dca'
@@ -3432,9 +3466,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </p>
             </div>
           </div>
-          <span className="ui-subtle ui-text-secondary rounded-md px-2.5 py-1 font-mono text-xs font-semibold">
-            {rebalanceHistory.length} Snapshot Tersimpan
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="ui-subtle ui-text-secondary rounded-md px-2.5 py-1 font-mono text-xs font-semibold">
+              {rebalanceHistory.length} Snapshot Tersimpan
+            </span>
+            {rebalanceHistory.length > 0 && (
+              <button
+                type="button"
+                onClick={exportCsvHistory}
+                className="ui-subtle ui-text-secondary flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition shadow-xs"
+                title="Unduh seluruh riwayat rebalancing sebagai file CSV"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Unduh Jurnal CSV</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {rebalanceHistory.length === 0 ? (

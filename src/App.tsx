@@ -26,6 +26,7 @@ import {
 import {
   calculateRebalancePlan,
   computeUpdatedAverageCostBasis,
+  roundToIdxTick,
 } from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
 import { fetchLiveCryptoFearAndGreed } from './lib/quant/tacticalValuationEngine';
@@ -1899,10 +1900,18 @@ export function App() {
           item.isNominalOnly ??
           prevHold?.isNominalOnly ??
           (asset.category === 'bonds' || asset.category === 'money-market');
+        const isIdxStock =
+          asset.category === 'idx-equity' &&
+          asset.lotSize === 100 &&
+          !isNominal;
+        const rawPostShockPrice =
+          (prevHold?.currentPrice ?? asset.defaultPrice) *
+          Math.max(0, 1 + (prevHold?.shockPercent ?? 0) / 100);
         const postShockUnitPriceNative = isNominal
           ? 1
-          : (prevHold?.currentPrice ?? asset.defaultPrice) *
-            Math.max(0, 1 + (prevHold?.shockPercent ?? 0) / 100);
+          : isIdxStock
+            ? roundToIdxTick(rawPostShockPrice, 'nearest')
+            : rawPostShockPrice;
         const unitPriceIdr = isNominal
           ? 1
           : asset.currency === 'USD'
@@ -1980,6 +1989,22 @@ export function App() {
     setActiveWeights({ ...snap.weights });
     setActivePresetId(null);
     setAllocationMethod('custom');
+
+    // Synchronize selected universe so all active assets in saved snapshot are visible
+    const activeUniverseIds = Object.entries(snap.weights)
+      .filter(([, w]) => w > 0)
+      .map(([id]) => id);
+    if (activeUniverseIds.length > 0) {
+      setSelectedUniverseIds((prev) => Array.from(new Set([...prev, ...activeUniverseIds])));
+    }
+
+    setBackupToast({
+      message: `Portofolio "${snap.name}" Berhasil Dimuat!`,
+      details: [
+        'Alokasi bobot racikan telah diterapkan ke Menu 1.',
+        'Instrumen aktif telah disinkronkan ke daftar pantauan.',
+      ],
+    });
   };
 
   const handleDeleteSavedPortfolio = (id: string) => {
