@@ -7,7 +7,6 @@ import {
   Upload,
   ClipboardPaste,
   FileCode,
-  Sparkles,
   AlertCircle,
   CheckCircle2,
   Database,
@@ -305,7 +304,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
                     className="ui-subtle ui-border ui-text-muted hover:ui-text-main flex items-center gap-1 rounded-lg border px-2 py-1 text-xs"
                     title="Muat data konfigurasi saat ini sebagai contoh"
                   >
-                    <Sparkles className="h-3 w-3 text-amber-500" />
+                    <FileCode className="h-3 w-3 text-amber-500" />
                     <span>Contoh Format</span>
                   </button>
 

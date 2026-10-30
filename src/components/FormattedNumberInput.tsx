@@ -118,7 +118,7 @@ export const FormattedNumberInput: React.FC<FormattedNumberInputProps> = ({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       aria-label={ariaLabel}
-      className={className}
+      className={`font-mono tabular-nums ${className}`.trim()}
     />
   );
 };

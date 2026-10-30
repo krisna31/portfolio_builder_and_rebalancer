@@ -7,7 +7,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
+  FileText,
   ArrowRight,
   HelpCircle,
   ListPlus,
@@ -219,7 +219,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                     className="ui-subtle ui-border ui-text-muted hover:ui-text-main flex items-center gap-1 rounded-lg border px-2 py-1 text-xs"
                     title="Contoh format copy dari spreadsheet"
                   >
-                    <Sparkles className="h-3 w-3 text-emerald-500" />
+                    <FileSpreadsheet className="h-3 w-3 text-emerald-500" />
                     <span>Contoh Excel</span>
                   </button>
 
@@ -229,7 +229,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                     className="ui-subtle ui-border ui-text-muted hover:ui-text-main flex items-center gap-1 rounded-lg border px-2 py-1 text-xs"
                     title="Contoh format teks cepat misal 'BBCA 25jt'"
                   >
-                    <Sparkles className="h-3 w-3 text-amber-500" />
+                    <FileText className="h-3 w-3 text-amber-500" />
                     <span>Contoh Teks Bebas</span>
                   </button>
 

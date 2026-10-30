@@ -218,12 +218,8 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-1/4 left-1/3 -translate-x-1/2 w-80 h-80 bg-sky-500/10 blur-[100px] rounded-full" />
-      </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
+
 
       <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Brand & Security Title */}
@@ -245,14 +241,14 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
 
         {/* Lock Screen Card */}
         <div
-          className={`bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur transition duration-200 ${
+          className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-sm transition duration-150 ${
             isShaking ? 'animate-shake border-rose-500/50' : ''
           }`}
         >
           {showRegisterPrompt ? (
             /* Post-Login Biometric Registration Prompt */
             <div className="space-y-4 text-center">
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner">
+              <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
                 <Fingerprint className="w-8 h-8" />
               </div>
 
@@ -277,7 +273,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   type="button"
                   onClick={handleRegisterBiometricNow}
                   disabled={isRegisteringBiometric}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition duration-150 active:scale-[0.99]"
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm py-2.5 rounded-xl transition duration-150"
                 >
                   <Fingerprint className={`w-4 h-4 ${isRegisteringBiometric ? 'animate-pulse' : ''}`} />
                   <span>
@@ -308,7 +304,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     onClick={handleBiometricLogin}
                     disabled={isVerifyingBiometric || lockoutSec > 0}
                     aria-label="Masuk dengan Sidik Jari atau Biometrik"
-                    className="w-full py-3 px-4 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all shadow-lg hover:shadow-emerald-950/40 disabled:opacity-50 active:scale-[0.99]"
+                    className="w-full py-3 px-4 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
                   >
                     <Fingerprint
                       className={`w-5 h-5 text-emerald-400 ${
@@ -375,7 +371,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                 {/* Error / Lockout Banner */}
                 {lockoutSec > 0 ? (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
-                    <Clock className="w-4 h-4 shrink-0 animate-pulse" />
+                    <Clock className="w-4 h-4 shrink-0" />
                     <span>
                       Terlalu banyak percobaan. Silakan tunggu{' '}
                       <strong className="font-mono font-bold text-amber-300">
@@ -395,7 +391,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                 <button
                   type="submit"
                   disabled={!password || isVerifying || lockoutSec > 0}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition duration-150 active:scale-[0.99]"
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl transition duration-150"
                 >
                   {isVerifying ? (
                     <span>Memverifikasi...</span>

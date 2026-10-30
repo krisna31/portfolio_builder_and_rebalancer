@@ -22,7 +22,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  Sparkles,
+  CircleDollarSign,
   ExternalLink,
   Share2,
 } from 'lucide-react';
@@ -180,7 +180,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         id: 'gold',
         name: 'Emas Digital & Fisik',
         apps: 'Pluang Emas / Pegadaian / Antam',
-        icon: <Sparkles className="w-4 h-4 text-yellow-400" />,
+        icon: <CircleDollarSign className="w-4 h-4 text-yellow-500" />,
         colorClass: 'border-yellow-500/30 bg-yellow-500/5 dark:bg-yellow-950/20',
         badgeClass: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
         note: 'Instrumen lindung nilai (safe haven) dengan volatilitas rendah.',

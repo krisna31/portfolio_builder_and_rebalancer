@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Layers,
   ArrowRight,
-  Sparkles,
   ChevronDown,
   ArrowLeftRight,
   Zap,
@@ -492,7 +491,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
               {/* Institutional Risk Parity Principle */}
               <div className="rounded-xl p-3.5 bg-indigo-500/10 border border-indigo-500/20 text-xs space-y-1 text-indigo-950 dark:text-indigo-200">
                 <div className="font-semibold flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                   <span>Prinsip Risk Parity:</span>
                 </div>
                 <p className="text-[11px] ui-text-secondary leading-relaxed">

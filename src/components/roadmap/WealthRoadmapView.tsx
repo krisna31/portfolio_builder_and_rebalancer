@@ -26,7 +26,6 @@ import {
   Award,
   Coins,
   RefreshCw,
-  Sparkles,
   Activity,
   CheckCircle2,
   Calculator,
@@ -1040,7 +1039,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h3 className="ui-text-main text-sm font-bold">
                 Kalkulator Kebebasan Finansial (Financial Freedom &amp; Biaya Hidup Pensiun)
               </h3>
@@ -1296,7 +1295,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 <span className="ui-text-muted text-xs font-semibold uppercase">
                   Estimasi Deterministik (CAGR {effectiveCompoundingCagr.toFixed(1)}%)
                 </span>
-                <Sparkles className="h-4 w-4 text-emerald-500" />
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
               </div>
               <div className="ui-text-main mt-2 font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 {formatIdr(reverseDcaSolution.deterministicMonthlyDcaIdr)} / bln

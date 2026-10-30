@@ -8,7 +8,6 @@ import {
   Upload,
   Share2,
   BookmarkCheck,
-  Sparkles,
   Check,
   Copy,
   X,
@@ -562,7 +561,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>Promo RDPT (+3% Alpha)</span>
                       </div>
                       <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
@@ -917,7 +916,7 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'ui-subtle ui-text-secondary'
                   }`}
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Promo RDPT +3%</span>
                 </button>
 
@@ -1133,20 +1132,21 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {(rebalanceBreachedCount ?? 0) > 0 ? (
                   <>
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                     <span className="sm:hidden">
-                      ⚠️ {rebalanceBreachedCount} Melenceng
+                      {rebalanceBreachedCount} DRIFT
                     </span>
                     <span className="hidden sm:inline">
-                      ⚠️ {rebalanceBreachedCount} Aset Melenceng
+                      {rebalanceBreachedCount} ASET DRIFT
                       {rebalanceMaxDriftPercent !== undefined &&
-                        ` (Max: ±${rebalanceMaxDriftPercent.toFixed(1)}%)`}
+                        ` (MAX: ±${rebalanceMaxDriftPercent.toFixed(1)}%)`}
                     </span>
                   </>
                 ) : (
                   <>
-                    <span>✅</span>
-                    <span className="sm:hidden">Seimbang</span>
-                    <span className="hidden sm:inline">Portofolio Seimbang</span>
+                    <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                    <span className="sm:hidden">SEIMBANG</span>
+                    <span className="hidden sm:inline">PORTOFOLIO SEIMBANG</span>
                   </>
                 )}
               </button>
@@ -1255,7 +1255,7 @@ export const Header: React.FC<HeaderProps> = ({
                             onDeleteSavedPortfolio(snap.id);
                             setConfirmDeleteSnapshotId(null);
                           }}
-                          className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700 animate-pulse"
+                          className="rounded bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-700"
                           title="Klik sekali lagi untuk menghapus permanen"
                         >
                           Yakin Hapus?

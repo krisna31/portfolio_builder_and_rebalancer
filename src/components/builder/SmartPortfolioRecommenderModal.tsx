@@ -16,7 +16,6 @@ import {
   ArrowRight,
   X,
   ShieldCheck,
-  Sparkles,
   CheckSquare,
   Square,
 } from 'lucide-react';
@@ -533,7 +532,7 @@ export const SmartPortfolioRecommenderModal: React.FC<
             <div className="ui-subtle rounded-xl border border-emerald-500/40 p-4">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                  <Sparkles className="h-3 w-3" />
+                  <ShieldCheck className="h-3 w-3" />
                   <span>{primary.badgeLabel}</span>
                 </span>
                 <span className="ui-text-muted font-mono text-[11px]">

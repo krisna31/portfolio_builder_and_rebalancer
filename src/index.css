@@ -104,6 +104,15 @@
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   }
+
+  /* Institutional Tabular Numeric Precision: prevent digit width shifts / layout jittering */
+  table,
+  input[type="number"],
+  .font-mono,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
 }
 
 /* Ensure native select options adapt cleanly in both Light and Dark mode */
@@ -171,14 +180,14 @@ select option {
   }
 }
 
-/* Custom Driver.js Spotlight & Popover Theme for QuantPorto */
+/* Custom Driver.js Spotlight & Popover Theme for QuantPorto (Crisp Minimalist Terminal) */
 .driver-popover {
   background-color: var(--bg-card) !important;
   color: var(--text-main) !important;
   border: 1px solid var(--border-subtle) !important;
-  border-radius: 1rem !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
-  padding: 1.25rem !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.15) !important;
+  padding: 1.125rem !important;
   max-width: 380px !important;
   font-family: inherit !important;
 }

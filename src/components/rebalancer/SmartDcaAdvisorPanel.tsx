@@ -17,7 +17,6 @@ import { CoinMarketCapIndicatorTable } from './CoinMarketCapIndicatorTable';
 import { formatIdr, formatUsd } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import {
-  Sparkles,
   Shield,
   TrendingUp,
   SlidersHorizontal,
@@ -412,7 +411,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-xs">
-              <Sparkles className="h-5 w-5" />
+              <SlidersHorizontal className="h-5 w-5" />
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">

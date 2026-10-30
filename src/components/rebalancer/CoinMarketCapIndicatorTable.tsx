@@ -13,7 +13,7 @@ import {
   TrendingUp,
   TrendingDown,
   Edit2,
-  Sparkles,
+  Activity,
   ExternalLink,
   RefreshCw,
   ShieldCheck,
@@ -147,18 +147,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                   : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
               }`}
             >
-              <span className="relative flex h-2 w-2">
-                <span
-                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                    isSnapshotMode ? 'bg-amber-400' : 'bg-emerald-400'
-                  }`}
-                ></span>
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    isSnapshotMode ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`}
-                ></span>
-              </span>
+              <span className={`inline-block h-2 w-2 rounded-full ${isSnapshotMode ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span>
                 {isSnapshotMode ? 'Snapshot Tersimpan' : 'Live Sync Sukses'}
               </span>
@@ -194,7 +183,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${confluence.badgeClass}`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Activity className="w-3.5 h-3.5" />
             <span>
               {confluence.triggeredCount} / {confluence.totalIndicators} Triggered
             </span>

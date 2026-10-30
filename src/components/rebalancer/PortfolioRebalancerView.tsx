@@ -56,7 +56,6 @@ import {
   Tag,
   FileSpreadsheet,
   Lightbulb,
-  Sparkles,
   HelpCircle,
   X,
   Lock,
@@ -265,6 +264,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   }, []);
   const [rebalanceNoteInput, setRebalanceNoteInput] = useState('');
   const [committedBanner, setCommittedBanner] = useState(false);
+  const [activePriceToolAssetId, setActivePriceToolAssetId] = useState<string | null>(null);
+
+  // Close price tool popover on click outside
+  React.useEffect(() => {
+    if (!activePriceToolAssetId) return;
+    const handleClosePriceTool = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.price-tool-container')) {
+        setActivePriceToolAssetId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClosePriceTool);
+    return () => document.removeEventListener('mousedown', handleClosePriceTool);
+  }, [activePriceToolAssetId]);
+
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'cards';
@@ -832,7 +846,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 : 'ui-text-secondary hover:ui-text-main'
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-amber-300" />
             <span>Smart DCA Advisor</span>
             <span className="rounded bg-amber-400/20 text-amber-300 text-[10px] px-1.5 py-0.5 font-mono font-semibold">
               2-Pillar
@@ -880,7 +894,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Sparkles className="h-4 w-4" />
+                <Coins className="h-4 w-4" />
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
@@ -949,7 +963,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 }`}
               >
                 {isHoldingsSyncedWithMenu1
-                  ? `🟢 Auto-Sync M1 (${formatIdr(initialCapitalMenu1Idr, true)})`
+                  ? `[SYNC M1] (${formatIdr(initialCapitalMenu1Idr, true)})`
                   : 'Mode Posisi Manual'}
               </span>
             </div>
@@ -1462,7 +1476,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
 
                           <p className="text-[9px] ui-text-muted italic">
-                            💡 Tilt bobot otomatis didanai dari aset defensif (Kas/RDPT) secara zero-sum tanpa mengubah total 100%.
+                            Catatan: Tilt bobot otomatis didanai dari aset defensif (Kas/RDPT) secara zero-sum tanpa mengubah total 100%.
                           </p>
                         </div>
                       )}
@@ -1640,7 +1654,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 {rebalanceResult.initialTotalIdr >
                   (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr) && (
                   <div className="text-[10px] text-amber-500 pt-0.5">
-                    ⚠️ Terisi melebihi target (+
+                    Terisi melebihi target (+
                     {formatIdr(
                       rebalanceResult.initialTotalIdr -
                         (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr)
@@ -1718,7 +1732,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               }`}
               title="Hanya jual aset yang surplus/kelebihan bobot signifikan. Aset dengan drift kecil di-HOLD tanpa penjualan receh."
             >
-              <span>🎯 Untung Saja</span>
+              <span>Jual Untung Saja</span>
               {rebalanceMode === 'selective-profit-trim' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               )}
@@ -1734,7 +1748,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               }`}
               title="Cairkan dana dari aset defensif (RDPT/RDPU/Kas) untuk membeli aset diskon, tanpa menjual saham/kripto."
             >
-              <span>🛡️ RDPT Dulu</span>
+              <span>Prioritas Kas/RDPT</span>
               {rebalanceMode === 'trim-defensive-first' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               )}
@@ -1750,7 +1764,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               }`}
               title="Jual rata seluruh aset yang kelebihan bobot secara proporsional (rumus modern portfolio theory standar)."
             >
-              <span>⚖️ Jual Rata</span>
+              <span>Jual Proporsional</span>
               {rebalanceMode === 'sell-and-buy' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
               )}
@@ -1766,7 +1780,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               }`}
               title="Tanpa jual aset ($0 jual). Alokasikan suntikan kas baru ke aset yang paling underweight."
             >
-              <span>💰 DCA Saja</span>
+              <span>Beli Saja (DCA)</span>
               {rebalanceMode === 'buy-only-dca' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               )}
@@ -1780,7 +1794,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               title="Buka Smart DCA Advisor: Akumulasi cerdas berbasis metrik valuasi pasar & defisit bobot"
             >
               <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <SlidersHorizontal className="h-3.5 w-3.5 text-amber-500" />
                 <span>Beralih ke Smart DCA Advisor (2-Pillar Akumulasi)</span>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 px-1.5 py-0.5 rounded">
@@ -2041,6 +2055,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       Instrumen
                     </th>
                     <th className="ui-border border-b px-3 py-2 text-right">
+                      Harga Pasar
+                    </th>
+                    <th className="ui-border border-b px-3 py-2 text-right">
                       Input Posisi Awal
                     </th>
                     <th className="ui-border border-b px-3 py-2 text-right">
@@ -2104,7 +2121,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                         className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-sky-600 dark:text-sky-400 border border-sky-500/20 select-none"
                                         title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal Rupiah."
                                       >
-                                        🏷️ Nominal Murni
+                                        Nominal Murni
                                       </span>
                                       <button
                                         type="button"
@@ -2478,7 +2495,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               </div>
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {item.isNominalOnly
-                                  ? '🏷️ Nominal Murni'
+                                  ? 'Nominal Murni'
                                   : asset?.currency === 'USD'
                                     ? `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
                                     : item.tradeLotsInteger !== undefined ? (
@@ -2552,7 +2569,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               </div>
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {item.isNominalOnly
-                                  ? '🏷️ Nominal Murni'
+                                  ? 'Nominal Murni'
                                   : asset?.currency === 'USD'
                                     ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
                                     : item.tradeLotsInteger !== undefined ? (
@@ -2689,7 +2706,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-sky-600 dark:text-sky-400 border border-sky-500/20 select-none"
                                     title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal Rupiah."
                                   >
-                                    🏷️ Nominal Murni
+                                    Nominal Murni
                                   </span>
                                   <button
                                     type="button"

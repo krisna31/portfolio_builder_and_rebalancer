@@ -37,7 +37,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-nav-tabs',
       data: { tab: 'builder' },
       popover: {
-        title: '🧭 1. Arsitektur 3 Modul QuantPorto',
+        title: '1. Arsitektur 3 Modul QuantPorto',
         description: `
           QuantPorto adalah platform kuantitatif terpadu untuk membangun dan menjaga kekayaan jangka panjang (reverse-engineered dari video edukasi Leon Hartono & Sander).
           <br/><br/>
@@ -56,7 +56,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-tanya-quant',
       data: { tab: 'builder' },
       popover: {
-        title: '🤖 2. Tanya Quant (Kuis Rekomendasi Cerdas)',
+        title: '2. Tanya Quant (Kuis Rekomendasi Alokasi)',
         description: `
           Bingung memilih strategi mana yang paling tepat untuk situasi finansial Anda?
           <br/><br/>
@@ -70,7 +70,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-tools-menu',
       data: { tab: 'builder' },
       popover: {
-        title: '⚙️ 3. Pengaturan Pasar, Kurs USD & Cloud Sync',
+        title: '3. Pengaturan Pasar, Kurs USD & Sinkronisasi',
         description: `
           Pusat kendali parameter eksternal:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -92,7 +92,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-quick-dca',
       data: { tab: 'builder' },
       popover: {
-        title: '💰 4. Target Modal Awal & Compounding DCA',
+        title: '4. Target Modal Awal & Compounding DCA',
         description: `
           Langkah pertama: ketikkan modal awal investasi Anda dan komitmen tabungan rutin bulanan (*Dollar-Cost Averaging*).
           <br/><br/>
@@ -106,11 +106,11 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-table-section',
       data: { tab: 'builder' },
       popover: {
-        title: '📊 5. Tabel 15 Portofolio Optimal Pareto',
+        title: '5. Tabel 15 Portofolio Optimal Pareto',
         description: `
           Daftar 15 racikan portofolio paling efisien secara matematis (memberikan return majemuk tertinggi pada batas penurunan risiko tertentu).
           <br/><br/>
-          💡 <strong>Fitur Kustomisasi Slot:</strong> Anda dapat mengganti benchmark di header kolom (misal: <em>BBCA ➔ PTBA atau AADI</em>) dan ke-15 baris otomatis dihitung ulang secara real-time!
+          <strong>Fitur Kustomisasi Slot:</strong> Anda dapat mengganti benchmark di header kolom (misal: <em>BBCA ➔ PTBA atau AADI</em>) dan ke-15 baris otomatis dihitung ulang secara real-time!
         `,
         side: 'top',
         align: 'center',
@@ -120,9 +120,9 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-table-pin',
       data: { tab: 'builder' },
       popover: {
-        title: '📌 6. Pinning / Sematkan Baris Favorit',
+        title: '6. Pinning / Sematkan Baris Favorit',
         description: `
-          Tertarik dengan strategi tertentu? Klik ikon <strong>Pin 📌</strong> di samping nama portofolio untuk menyematkannya di bagian paling atas tabel.
+          Tertarik dengan strategi tertentu? Klik ikon <strong>Pin</strong> di samping nama portofolio untuk menyematkannya di bagian paling atas tabel.
           <br/><br/>
           Baris yang di-pin akan tetap melayang di urutan teratas sehingga memudahkan Anda membandingkan racikan aktif Anda terhadap benchmark.
         `,
@@ -134,7 +134,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-builder-sliders',
       data: { tab: 'builder' },
       popover: {
-        title: '🎛️ 7. Custom Quant Lab & Solver Risiko',
+        title: '7. Custom Quant Lab & Solver Risiko',
         description: `
           Laboratorium kuantitatif mandiri:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -151,7 +151,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-pareto-chart',
       data: { tab: 'builder' },
       popover: {
-        title: '📈 8. Spektrum Return vs Risiko (Pareto Frontier)',
+        title: '8. Spektrum Return vs Risiko (Pareto Frontier)',
         description: `
           Visualisasi kurva batas efisiensi investasi:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -169,7 +169,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-correlation-section',
       data: { tab: 'builder' },
       popover: {
-        title: '🧬 9. Matriks Korelasi & Heatmap Diversifikasi',
+        title: '9. Matriks Korelasi & Heatmap Diversifikasi',
         description: `
           Korelasi rendah adalah satu-satunya <em>"free lunch"</em> dalam dunia finansial.
           <br/><br/>
@@ -183,7 +183,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-comparator-section',
       data: { tab: 'builder' },
       popover: {
-        title: '⚔️ 10. Head-to-Head Portfolio Comparator',
+        title: '10. Komparator Portofolio Head-to-Head',
         description: `
           Fitur tanding portofolio: adu racikan aktif Anda secara <em>head-to-head</em> melawan portofolio lain.
           <br/><br/>
@@ -201,7 +201,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-rebalance-table',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '⚖️ 11. Portofolio Aktual & Deteksi Drift',
+        title: '11. Portofolio Aktual & Deteksi Drift',
         description: `
           Selamat datang di <strong>Menu 2: Rebalancer</strong>!
           <br/><br/>
@@ -215,7 +215,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-stress-scenarios',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '⚡ 12. Simulasi Krisis Pasar Video (Stress-Test)',
+        title: '12. Simulasi Krisis Pasar Video (Stress-Test)',
         description: `
           Uji ketahanan mental dan portofolio Anda menggunakan skenario krisis nyata dari video:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -239,7 +239,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-crash-ladder',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '🪜 13. Jaring Beli Bertahap (Crash Limit Order Ladder)',
+        title: '13. Jaring Beli Bertahap (Crash Limit Order Ladder)',
         description: `
           Kunci sukses kuantitatif adalah memasang antrean limit order <strong>sebelum</strong> kepanikan terjadi di pasar.
           <br/><br/>
@@ -253,7 +253,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-rebalance-actions',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '📋 14. Eksekusi Order & Pembulatan Lot Saham BEI',
+        title: '14. Eksekusi Order & Pembulatan Lot Saham BEI',
         description: `
           Sistem menyusun daftar instruksi eksekusi:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -271,7 +271,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-smart-dca-submode-btn',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '💡 15. Smart DCA & Indikator Siklus Multi-Faktor',
+        title: '15. Smart DCA & Indikator Siklus Multi-Faktor',
         description: `
           Selain rebalancing berkala standar, Anda dapat beralih ke sub-mode <strong>Smart DCA Advisor</strong>!
           <br/><br/>
@@ -285,7 +285,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-rebalance-journal',
       data: { tab: 'rebalancer' },
       popover: {
-        title: '📓 16. Jurnal Audit & Riwayat Rebalancing',
+        title: '16. Jurnal Audit & Riwayat Rebalancing',
         description: `
           Setiap kali selesai mengeksekusi rebalancing di aplikasi sekuritas, simpan catatan ke dalam jurnal audit ini.
           <br/><br/>
@@ -303,7 +303,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-roadmap-calculator',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🎯 17. Peta Jalan Menuju Rp 10 Miliar Pertama',
+        title: '17. Peta Jalan Menuju Target Finansial',
         description: `
           Selamat datang di <strong>Menu 3: Simulator Kekayaan</strong>!
           <br/><br/>
@@ -317,7 +317,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-backtest-frequency',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🔄 18. Backtest Historis Frekuensi Rebalancing',
+        title: '18. Backtest Historis Frekuensi Rebalancing',
         description: `
           Pembuktian nyata menit 16:08 video:
           <br/><br/>
@@ -331,7 +331,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-dividend-retirement',
       data: { tab: 'roadmap' },
       popover: {
-        title: '🌴 19. Estimator Dividen & Pensiun Mandiri (4% SWR)',
+        title: '19. Estimator Dividen & Pensiun Mandiri (4% SWR)',
         description: `
           Kapan portofolio Anda mampu membiayai seluruh kebutuhan hidup bulanan tanpa harus bekerja aktif lagi?
           <br/><br/>
@@ -349,7 +349,7 @@ export function startInteractiveTour(options?: TourGuideOptions) {
       element: '#tour-export-actions',
       data: { tab: 'builder' },
       popover: {
-        title: '🖨️ 20. Dokumen Ekspor Factsheet & Slip Order',
+        title: '20. Dokumen Ekspor Factsheet & Slip Order',
         description: `
           Bagian akhir: Anda dapat mengunduh dokumen profesional siap pakai:
           <ul style="margin-top: 6px; padding-left: 18px; list-style-type: disc;">
@@ -471,9 +471,9 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     stageRadius: 10,
     allowClose: true,
     waitForElement: 3000,
-    nextBtnText: 'Lanjut ➔',
+    nextBtnText: 'Lanjut →',
     prevBtnText: '⬅ Kembali',
-    doneBtnText: 'Selesai & Eksplorasi 🎉',
+    doneBtnText: 'Selesai & Eksplorasi',
     progressText: 'Langkah {{current}} dari {{total}}',
     steps,
     onHighlightStarted: (_element, step) => {

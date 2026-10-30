@@ -34,7 +34,11 @@ import {
 import {
   Sliders,
   ShieldAlert,
-  Sparkles,
+  TrendingUp,
+  Scale,
+  ShieldCheck,
+  Award,
+  Zap,
   CheckCircle2,
   AlertTriangle,
   Plus,
@@ -764,7 +768,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             <div className="ui-subtle mt-3 rounded-lg border border-emerald-500/20 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-xs font-semibold">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span className="ui-text-main">
                     Bedah Asumsi Return Tiap Aset ➔ Pembentuk CAGR{' '}
                     <span className="font-mono text-emerald-600 dark:text-emerald-400">
@@ -865,7 +869,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
                     {activePresetObj?.dominatedByReason && (
                       <div className="mt-1 text-[11px] opacity-90">
-                        💡 {activePresetObj.dominatedByReason}
+                        Catatan: {activePresetObj.dominatedByReason}
                       </div>
                     )}
 
@@ -886,7 +890,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             onClick={() => onSelectPreset(targetPreset)}
                             className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 font-mono text-[11px] font-semibold text-amber-950 transition hover:bg-amber-500 hover:text-white dark:text-amber-100 dark:hover:bg-amber-500 dark:hover:text-zinc-950"
                           >
-                            <span>⚡ {dom.name}</span>
+                            <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>{dom.name}</span></span>
                             <span className="rounded bg-emerald-500/20 px-1 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                               CAGR {dom.cagr.toFixed(2)}% (+{dom.cagrDiff.toFixed(2)}%)
                             </span>
@@ -936,7 +940,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           title={`Turunkan risiko Max Drawdown dari -${solvedMetrics.maxDrawdown.toFixed(2)}% ke -${saferAlternativePreset.maxDrawdown.toFixed(2)}%`}
                           className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                         >
-                          <span>🛡️ Lebih Aman:</span>
+                          <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-500" /><span>Lebih Aman:</span></span>
                           <strong className="font-semibold">
                             {saferAlternativePreset.name}
                           </strong>
@@ -954,7 +958,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           title={`Tingkatkan potensi CAGR dari ${solvedMetrics.cagr.toFixed(2)}% ke ${higherReturnAlternativePreset.cagr.toFixed(2)}%`}
                           className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                         >
-                          <span>🚀 Return Lebih Tinggi:</span>
+                          <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500" /><span>Return Lebih Tinggi:</span></span>
                           <strong className="font-semibold">
                             {higherReturnAlternativePreset.name}
                           </strong>
@@ -974,7 +978,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             title="Strategi dengan Rasio Return / Drawdown (Calmar) paling efisien"
                             className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                           >
-                            <span>🏆 Juara Efisiensi (Calmar):</span>
+                            <span className="flex items-center gap-1"><Award className="h-3 w-3 text-amber-500" /><span>Optimal Calmar:</span></span>
                             <strong className="font-semibold">
                               {bestCalmarPreset.name}
                             </strong>
@@ -1260,7 +1264,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                <Sparkles className="h-3 w-3" />
+                <Scale className="h-3 w-3" />
                 <span>Risk Budgeting</span>
               </button>
               <button
@@ -1661,9 +1665,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                   {preset.name}
                                 </span>
                                 {isPinned && (
-                                  <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.2 font-mono text-[9px] font-bold text-amber-700 dark:text-amber-300">
-                                    📌 Pin
-                                  </span>
+                                  <span className="inline-flex items-center gap-0.5 shrink-0 rounded bg-amber-500/15 px-1 py-0.2 font-mono text-[9px] font-bold text-amber-700 dark:text-amber-300"><Pin className="h-2 w-2" /> PIN</span>
                                 )}
                               </div>
                               {preset.videoNote && (
@@ -1673,7 +1675,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               )}
                               {preset.dominatedByReason && (
                                 <div className="mt-0.5 line-clamp-1 max-w-xs text-[10px] font-normal text-amber-600 dark:text-amber-400">
-                                  ⚠️ {preset.dominatedByReason}
+                                  <AlertTriangle className="h-2.5 w-2.5 inline mr-1 text-amber-500 shrink-0" />{preset.dominatedByReason}
                                 </div>
                               )}
                             </div>
@@ -2355,9 +2357,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-500/80 font-medium italic">
-                            <span>✏️ Mode Edit Instrumen Aktif</span>
-                          </div>
+                          <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium italic"><Pencil className="h-3 w-3" /><span>Mode Edit Instrumen Aktif</span></div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                           <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -2728,7 +2728,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             </div>
                           </div>
                           <div className="mt-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                            👆 Klik batang untuk set Conviction {d.symbol}
+                            [Klik batang untuk set Conviction {d.symbol}]
                           </div>
                         </div>
                       );
@@ -2888,13 +2888,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
                           {pt.dominatedByReason && (
                             <div className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
-                              ⚠️ {pt.dominatedByReason}
+                              Catatan: {pt.dominatedByReason}
                             </div>
                           )}
 
                           {pt.preset && (
                             <div className="mt-2 border-t border-zinc-500/20 pt-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                              👆 Klik titik ini untuk menerapkan portfolio
+                              Klik titik untuk menerapkan racikan ini
                             </div>
                           )}
                         </div>
