@@ -457,7 +457,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </>
           ) : (
             <>
-              <Share2 className="h-3.5 w-3.5 text-indigo-500" />
+              <Share2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Salin Ringkasan Roadmap</span>
             </>
           )}
@@ -608,7 +608,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 <label className="ui-text-secondary font-medium">
                   Penyesuaian Inflasi (Daya Beli Riil):
                 </label>
-                <span className="font-mono font-semibold text-purple-600 dark:text-purple-400">
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                   {annualInflationPercent > 0
                     ? `${annualInflationPercent}% / thn`
                     : '0% (Nominal)'}
@@ -627,7 +627,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     onClick={() => setAnnualInflationPercent(inf.val)}
                     className={`rounded px-2 py-0.5 font-mono transition ${
                       annualInflationPercent === inf.val
-                        ? 'bg-purple-600 font-semibold text-white'
+                        ? 'bg-emerald-600 font-semibold text-white'
                         : 'ui-subtle ui-text-secondary hover:opacity-80'
                     }`}
                   >
@@ -659,12 +659,12 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </div>
 
             {annualInflationPercent > 0 && (
-              <div className="mt-2 rounded-lg bg-purple-500/10 p-2 text-xs">
+              <div className="mt-2 rounded-lg bg-emerald-500/10 p-2 text-xs">
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-purple-700 dark:text-purple-300">
+                  <span className="text-emerald-700 dark:text-emerald-300">
                     Daya Beli Riil saat {formatIdr(targetGoalIdr, true)} tercapai:
                   </span>
-                  <span className="font-mono font-bold text-purple-700 dark:text-purple-300">
+                  <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
                     ≈{' '}
                     {formatIdr(
                       sim.realPurchasingPowerAtGoalIdr ?? targetGoalIdr,
@@ -732,7 +732,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       onClick={() => setMonteCarloDisplayMode('real')}
                       className={`px-2 py-1 rounded font-medium transition ${
                         monteCarloDisplayMode === 'real'
-                          ? 'bg-purple-600 font-semibold text-white shadow-2xs'
+                          ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                           : 'ui-text-muted hover:opacity-80'
                       }`}
                       title="Tampilkan proyeksi dalam daya beli riil yang didiskonto inflasi"
@@ -771,7 +771,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     onClick={() => setSimulationViewMode('monte-carlo')}
                     className={`flex items-center gap-1 px-2.5 py-1 rounded font-medium transition ${
                       simulationViewMode === 'monte-carlo'
-                        ? 'bg-indigo-600 font-semibold text-white shadow-2xs'
+                        ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                         : 'ui-text-muted hover:opacity-80'
                     }`}
                   >
@@ -960,7 +960,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
 
                 <div className="p-3 rounded-lg ui-card border ui-border">
                   <div className="text-[11px] ui-text-muted">Median Waktu ke Goal</div>
-                  <div className="mt-0.5 text-base font-bold font-mono text-indigo-400">
+                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
                     {monteCarloResult.medianYearsToGoal !== null
                       ? `${monteCarloResult.medianYearsToGoal} Tahun`
                       : `> ${displayYears} Tahun`}
@@ -1099,7 +1099,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               {formatIdr(monthlyLivingCostTargetIdr * 12 * 25, true)}
             </div>
             {annualInflationPercent > 0 && (
-              <div className="text-[11px] font-mono text-indigo-500 dark:text-indigo-400 font-semibold">
+              <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400 font-semibold">
                 Nominal Masa Depan:{' '}
                 {formatIdr(
                   sim.requiredNestEggSWRIdr ?? monthlyLivingCostTargetIdr * 12 * 25,
@@ -1134,7 +1134,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <span className="ui-text-muted text-xs font-semibold uppercase">
                 Metode 2: 100% Dividen Murni
               </span>
-              <Coins className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             {(() => {
               const divRealTarget =
@@ -1162,7 +1162,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       : 'N/A (Yield 0%)'}
                   </div>
                   {annualInflationPercent > 0 && divRealTarget > 0 && (
-                    <div className="text-[11px] font-mono text-purple-500 dark:text-purple-400 font-semibold">
+                    <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400 font-semibold">
                       Nominal Masa Depan:{' '}
                       {formatIdr(divNominalTarget, true)}
                     </div>
@@ -1173,11 +1173,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <p className="ui-text-muted mt-0.5 text-[11px]">
               Biaya hidup ditutup 100% dari kupon/dividen bersih (Yield saat ini {dividendBreakdown.weightedNetYieldPct.toFixed(2)}%) tanpa pernah menjual aset pokok sama sekali.
             </p>
-            <div className="mt-3 rounded-lg bg-purple-500/10 p-2.5">
-              <div className="text-[11px] text-purple-700 dark:text-purple-300">
+            <div className="mt-3 rounded-lg bg-emerald-500/10 p-2.5">
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300">
                 Estimasi Waktu Tercapai:
               </div>
-              <div className="font-mono text-base font-bold text-purple-700 dark:text-purple-300">
+              <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-300">
                 {sim.monthsToFinancialFreedomDividends === 0
                   ? 'Sudah Tercapai Sekarang! 🎉'
                   : sim.monthsToFinancialFreedomDividends
@@ -1252,11 +1252,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* FEATURE 3: REVERSE DCA GOAL SOLVER */}
-      <section className="ui-card rounded-xl p-5 border border-indigo-500/20 bg-indigo-500/5">
-        <div className="ui-border flex flex-col gap-3 border-b border-indigo-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
+      <section className="ui-card rounded-xl p-5 border border-zinc-500/20 ui-subtle">
+        <div className="ui-border flex flex-col gap-3 border-b border-zinc-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400" />
               <h3 className="ui-text-main text-sm font-bold">
                 Reverse DCA Goal Solver (Berapa Tabungan Bulanan yang Dibutuhkan?)
               </h3>
@@ -1276,7 +1276,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   onClick={() => setReverseDcaTargetYears(yr)}
                   className={`rounded px-2 py-1 font-mono text-xs font-semibold transition ${
                     reverseDcaTargetYears === yr
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-emerald-600 text-white shadow-sm'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
                 >
@@ -1323,9 +1323,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 <span className="ui-text-muted text-xs font-semibold uppercase">
                   Konservatif Monte Carlo (Tingkat Keyakinan 75%)
                 </span>
-                <ShieldAlert className="h-4 w-4 text-indigo-500" />
+                <ShieldAlert className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="ui-text-main mt-2 font-mono text-xl font-bold text-indigo-600 dark:text-indigo-400">
+              <div className="ui-text-main mt-2 font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 {formatIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr)} / bln
               </div>
               <p className="ui-text-muted mt-1 text-[11px]">
@@ -1336,7 +1336,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setMonthlySavingsIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr)}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition shadow-sm"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition shadow-sm"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Terapkan DCA Konservatif ({formatIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr, true)})</span>

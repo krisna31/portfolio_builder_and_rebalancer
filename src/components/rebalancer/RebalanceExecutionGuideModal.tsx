@@ -375,7 +375,7 @@ export const RebalanceExecutionGuideModal: React.FC<
                           <strong className="text-amber-400">⚖️ Jual Rata:</strong> Menjual proporsional semua aset yang kegemukan.
                         </div>
                         <div className="p-2 rounded ui-card border ui-border">
-                          <strong className="text-indigo-400">💰 DCA Beli Saja:</strong> Menyeimbangkan hanya dengan modal baru (tanpa jual & bebas pajak).
+                          <strong className="text-emerald-600 dark:text-emerald-400">💰 DCA Beli Saja:</strong> Menyeimbangkan hanya dengan modal baru (tanpa jual & bebas pajak).
                         </div>
                       </div>
                     </div>

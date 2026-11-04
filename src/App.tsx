@@ -630,7 +630,7 @@ export function App() {
     }
   }, [isAuthenticated]);
 
-  // Global Keyboard Shortcut: Press '?' anywhere to immediately trigger the interactive guide (only when authenticated)
+  // Global Keyboard Shortcuts: Press '?' for interactive guide, or Alt+1 / Alt+2 / Alt+3 to switch primary tabs
   useEffect(() => {
     if (!isAuthenticated) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -639,9 +639,28 @@ export function App() {
         target &&
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
           target.isContentEditable)
       ) {
         return;
+      }
+
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.key === '1') {
+          e.preventDefault();
+          setActiveTab('builder');
+          return;
+        }
+        if (e.key === '2') {
+          e.preventDefault();
+          setActiveTab('rebalancer');
+          return;
+        }
+        if (e.key === '3') {
+          e.preventDefault();
+          setActiveTab('roadmap');
+          return;
+        }
       }
 
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
@@ -3030,22 +3049,26 @@ export function App() {
 
       {/* Import Backup Feedback Notification Toast */}
       {backupToast && (
-        <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border border-emerald-500/40 bg-slate-900/95 p-4 text-xs text-slate-100 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border border-emerald-500/40 ui-card p-4 text-xs ui-text-main shadow-lg animate-in fade-in slide-in-from-bottom-5 duration-300"
+        >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 font-bold text-emerald-400">
-              <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+            <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
+              <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>{backupToast.message}</span>
             </div>
             <button
               type="button"
               onClick={() => setBackupToast(null)}
-              className="text-slate-400 hover:text-white p-0.5"
+              className="ui-text-muted hover:opacity-80 p-0.5"
               aria-label="Tutup notifikasi"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <ul className="mt-2 space-y-1 text-[11px] text-slate-300 border-t border-slate-800 pt-2 font-mono">
+          <ul className="mt-2 space-y-1 text-[11px] ui-text-secondary border-t ui-border pt-2 font-mono">
             {backupToast.details.map((d, i) => (
               <li key={i} className="flex items-center gap-1.5">
                 <span className="text-emerald-500">•</span>

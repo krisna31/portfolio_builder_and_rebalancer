@@ -682,10 +682,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={onOpenFactsheet}
-                    className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-indigo-500/40 px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+                    className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border ui-border px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
                     title="Buka Factsheet 1-Halaman Siap Cetak A4 & Unduh PNG"
                   >
-                    <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>Factsheet Portofolio (A4)</span>
                   </button>
                 )}
@@ -2339,7 +2339,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             )}
                             {asset.isRenamed && (
                               <span
-                                className="rounded bg-purple-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                                className="rounded bg-zinc-500/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold ui-text-secondary border ui-border"
                                 title={`Aset ini telah dikustomisasi dari ${asset.originalShortName || asset.id}`}
                               >
                                 Customized

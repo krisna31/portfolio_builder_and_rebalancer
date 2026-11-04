@@ -169,19 +169,17 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
   ];
 
   return (
-    <div className="ui-card rounded-2xl p-5 sm:p-6 border ui-border shadow-xs space-y-5">
+    <div className="ui-card rounded-xl p-5 sm:p-6 border ui-border shadow-xs space-y-5">
       {/* Header bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b ui-border">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-            <Layers className="h-5 w-5" />
-          </div>
+        <div className="flex items-start gap-2.5">
+          <Layers className="mt-1 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="ui-text-main text-base font-bold sm:text-lg">
                 Matriks Korelasi &amp; Efisiensi Diversifikasi
               </h3>
-              <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <span className="rounded-md ui-subtle px-2 py-0.5 font-mono text-[10px] font-semibold ui-text-secondary">
                 Risk Parity Heatmap
               </span>
             </div>
@@ -290,7 +288,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                               key={colAsset.id}
                               className={`p-2 text-center text-xs transition-colors min-w-[56px] sm:min-w-[64px] ${
                                 isHighlighted
-                                  ? 'font-bold text-indigo-600 dark:text-indigo-400'
+                                  ? 'font-bold text-emerald-600 dark:text-emerald-400'
                                   : 'font-semibold ui-text-secondary'
                               }`}
                               title={`${colAsset.name} (${colAsset.symbol})`}
@@ -318,7 +316,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                               <div
                                 className={`flex items-center gap-2 font-mono text-xs ${
                                   isRowHighlighted
-                                    ? 'font-bold text-indigo-600 dark:text-indigo-400'
+                                    ? 'font-bold text-emerald-600 dark:text-emerald-400'
                                     : 'font-semibold ui-text-main'
                                 }`}
                               >
@@ -347,7 +345,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                                     isSelf
                                   )} ${
                                     isSelected
-                                      ? 'ring-2 ring-indigo-500 scale-105 z-20 shadow-md font-bold bg-indigo-500/25 text-indigo-900 dark:text-indigo-100 border-indigo-500'
+                                      ? 'ring-2 ring-emerald-500 z-20 shadow-xs font-bold bg-emerald-500/20 text-emerald-950 dark:text-emerald-100 border-emerald-500'
                                       : ''
                                   }`}
                                   title={`Klik untuk analisis: ${rowAsset.symbol} vs ${colAsset.symbol} (r = ${corr.toFixed(2)})`}
@@ -384,7 +382,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                       <span>Tinggi (&ge; 0.70)</span>
                     </div>
                   </div>
-                  <span className="italic text-[11px] text-indigo-600 dark:text-indigo-400">
+                  <span className="italic text-[11px] text-emerald-600 dark:text-emerald-400">
                     💡 Klik sel mana saja untuk analisis detail
                   </span>
                 </div>
@@ -432,7 +430,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
 
                 {/* Connector */}
                 <div className="flex flex-col items-center justify-center shrink-0 px-1">
-                  <div className="h-7 w-7 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <div className="h-7 w-7 rounded-full ui-card ui-border text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <ArrowLeftRight className="w-3.5 h-3.5" />
                   </div>
                 </div>
@@ -467,10 +465,14 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                   <span>0.0 (Netral)</span>
                   <span>+1.0 (Searah)</span>
                 </div>
-                <div className="relative h-2.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 via-amber-400 to-rose-500 opacity-80">
+                <div className="relative flex h-2.5 w-full overflow-visible rounded-md border ui-border ui-subtle">
+                  <div className="h-full w-1/4 rounded-l-md bg-emerald-500/40" />
+                  <div className="h-full w-1/4 bg-sky-500/35" />
+                  <div className="h-full w-1/4 bg-amber-500/35" />
+                  <div className="h-full w-1/4 rounded-r-md bg-rose-500/40" />
                   {/* Position Marker */}
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-white dark:bg-zinc-900 border-2 border-indigo-600 shadow-md"
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-2 rounded-xs bg-zinc-900 dark:bg-white border border-emerald-500 shadow-xs"
                     style={{
                       left: `${Math.max(4, Math.min(96, ((selectedCorrelation + 1) / 2) * 100))}%`,
                     }}
@@ -489,8 +491,8 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
               </div>
 
               {/* Institutional Risk Parity Principle */}
-              <div className="rounded-xl p-3.5 bg-indigo-500/10 border border-indigo-500/20 text-xs space-y-1 text-indigo-950 dark:text-indigo-200">
-                <div className="font-semibold flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300">
+              <div className="rounded-xl p-3.5 ui-subtle border ui-border text-xs space-y-1 ui-text-main">
+                <div className="font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
                   <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                   <span>Prinsip Risk Parity:</span>
                 </div>
@@ -520,7 +522,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                         }}
                         className={`rounded-lg px-2 py-1 text-[11px] transition ${
                           isSelected
-                            ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                            ? 'bg-emerald-600 text-white font-semibold shadow-xs'
                             : 'ui-subtle ui-text-secondary hover:ui-text-main hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                       >

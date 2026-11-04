@@ -1199,7 +1199,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
                     >
                       <div className="flex items-center gap-1.5">
-                        <Split className="h-3.5 w-3.5 text-indigo-400" />
+                        <Split className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         <span>Split Diversifikasi Sub-Bank</span>
                       </div>
                       <span className="ui-text-muted font-mono text-[10px]">Rekening</span>
@@ -1251,7 +1251,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         onClick={() => setFilterDustTrades(!filterDustTrades)}
                         className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
                           filterDustTrades
-                            ? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold'
+                            ? 'bg-zinc-500/10 ui-text-main font-semibold'
                             : 'ui-subtle ui-text-secondary'
                         }`}
                       >
@@ -1710,7 +1710,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             <span className="ui-text-muted text-xs font-medium">
               Mode Eksekusi Rebalancing
             </span>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-zinc-500/10 text-emerald-600 dark:text-emerald-400">
               {rebalanceMode === 'selective-profit-trim'
                 ? 'Selective Trim'
                 : rebalanceMode === 'trim-defensive-first'
@@ -1759,14 +1759,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               onClick={() => setRebalanceMode('sell-and-buy')}
               className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                 rebalanceMode === 'sell-and-buy'
-                  ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 font-bold ring-1 ring-purple-500/30 shadow-2xs'
+                  ? 'bg-zinc-500/15 ui-text-main font-bold ring-1 ring-emerald-500/30 shadow-2xs'
                   : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
               title="Jual rata seluruh aset yang kelebihan bobot secara proporsional (rumus modern portfolio theory standar)."
             >
               <span>Jual Proporsional</span>
               {rebalanceMode === 'sell-and-buy' && (
-                <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               )}
             </button>
 
@@ -2634,7 +2634,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 HOLD
                               </span>
                               {item.isDustFiltered && (
-                                <span className="text-[9px] text-indigo-500 font-sans font-medium">
+                                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
                                   Anti-Dust (&lt; 25rb)
                                 </span>
                               )}
@@ -2919,7 +2919,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             )}
                           </div>
                           {item.isDustFiltered && (
-                            <span className="text-[9px] text-indigo-500 font-sans font-medium">
+                            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
                               Anti-Dust (&lt; 25rb)
                             </span>
                           )}
@@ -3204,7 +3204,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <button
                   type="button"
                   onClick={() => onOpenOrderSlip(rebalanceResult)}
-                  className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition"
+                  className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-zinc-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
                   title="Buka slip instruksi order yang dikelompokkan berdasarkan aplikasi broker"
                 >
                   <Building2 className="h-3.5 w-3.5" />
@@ -3667,34 +3667,39 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
       {/* Feature 2 & Decision 1: Soft-Lock Overbudget Deficit Confirmation Modal */}
       {showDeficitConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deficit-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-lg p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
-                <AlertTriangle className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
+                <AlertTriangle className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">
+                <h3 id="deficit-modal-title" className="text-sm font-bold ui-text-main">
                   Konfirmasi Defisit Kas (Overbudget)
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs ui-text-muted">
                   Pembelian melebihi kas yang tersedia
                 </p>
               </div>
             </div>
 
-            <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 space-y-2 text-xs">
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3.5 space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">Total Beli yang Diinginkan:</span>
-                <span className="font-mono font-bold text-emerald-400">{formatIdr(rebalanceResult.totalBuyIdr)}</span>
+                <span className="ui-text-secondary">Total Beli yang Diinginkan:</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatIdr(rebalanceResult.totalBuyIdr)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">Kas Tersedia (Jual + DCA):</span>
-                <span className="font-mono font-bold text-slate-300">
+                <span className="ui-text-secondary">Kas Tersedia (Jual + DCA):</span>
+                <span className="font-mono font-bold ui-text-main">
                   {formatIdr(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr)}
                 </span>
               </div>
-              <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-rose-400 font-bold">
+              <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-rose-600 dark:text-rose-400 font-bold">
                 <span>Kekurangan Dana (Defisit):</span>
                 <span className="font-mono text-sm">
                   {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}
@@ -3702,7 +3707,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs ui-text-secondary leading-relaxed">
               Apakah Anda akan melakukan <strong>top-up kas sebesar {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}</strong> ke portofolio / RDN untuk menutup kekurangan dana ini sebelum menerapkan rebalance?
             </p>
 
@@ -3710,7 +3715,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <button
                 type="button"
                 onClick={() => setShowDeficitConfirmModal(false)}
-                className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                className="px-3.5 py-2 rounded-lg ui-subtle ui-border hover:opacity-90 ui-text-main text-xs font-semibold transition"
               >
                 Batal / Sesuaikan Lot
               </button>

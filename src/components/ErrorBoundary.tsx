@@ -36,7 +36,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleResetStorage = () => {
     try {
-      localStorage.clear();
+      // Surgically remove only portfolio application state keys while preserving
+      // WebAuthn passkeys (quantporto_webauthn_*) and user theme preference (color-scheme)
+      const appStateKeys = [
+        'quantporto_state_v2',
+        'quantporto_saved_portfolios_v1',
+        'quantporto_tour_seen_v2',
+      ];
+      for (const key of appStateKeys) {
+        localStorage.removeItem(key);
+      }
       sessionStorage.clear();
     } catch {
       // Ignore storage errors
@@ -50,25 +59,25 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-5">
+        <div className="min-h-screen ui-page flex items-center justify-center p-4">
+          <div className="w-full max-w-lg ui-card ui-border rounded-xl p-6 sm:p-8 shadow-lg space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">
+                <h1 className="text-lg font-bold ui-text-main">
                   Terjadi Kendala Tampilan
                 </h1>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs ui-text-muted mt-0.5">
                   QuantPorto mendeteksi adanya error pada render komponen.
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-950/80 rounded-xl border border-slate-800 text-xs space-y-2">
-              <div className="text-slate-400 font-semibold">Pesan Kesalahan:</div>
-              <div className="font-mono text-rose-400 text-[11px] break-words">
+            <div className="p-3.5 ui-subtle rounded-lg ui-border text-xs space-y-2">
+              <div className="ui-text-secondary font-semibold">Pesan Kesalahan:</div>
+              <div className="font-mono text-rose-600 dark:text-rose-400 text-[11px] break-words">
                 {this.state.error?.message || 'Unknown Application Error'}
               </div>
             </div>
@@ -77,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-sm transition"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Muat Ulang Halaman</span>
@@ -86,9 +95,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleResetStorage}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 ui-subtle hover:opacity-90 ui-text-main ui-border rounded-lg text-xs font-semibold transition"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                <RotateCcw className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span>Reset Data ke Awal</span>
               </button>
             </div>

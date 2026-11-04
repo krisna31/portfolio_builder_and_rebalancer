@@ -265,7 +265,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       case 'money-market':
         return { label: 'Pasar Uang', color: isLight ? 'bg-sky-50 text-sky-700 border-sky-300' : 'bg-sky-500/15 text-sky-400 border-sky-500/30' };
       case 'idx-equity':
-        return { label: 'Saham IDX', color: isLight ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30' };
+        return { label: 'Saham IDX', color: isLight ? 'bg-zinc-100 text-zinc-700 border-zinc-300' : 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' };
       case 'us-equity':
         return { label: 'Saham US', color: isLight ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
       case 'crypto':
@@ -273,27 +273,30 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       case 'gold':
         return { label: 'Emas', color: isLight ? 'bg-yellow-50 text-yellow-800 border-yellow-300' : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' };
       default:
-        return { label: 'Custom', color: isLight ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-purple-500/15 text-purple-400 border-purple-500/30' };
+        return { label: 'Custom', color: isLight ? 'bg-zinc-100 text-zinc-700 border-zinc-300' : 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' };
     }
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="factsheet-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-xs overflow-y-auto"
     >
-      <div className="factsheet-modal-container relative w-full max-w-5xl my-auto bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+      <div className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-card ui-border rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[95vh]">
         {/* Top Control Bar (Hidden on print) */}
-        <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-slate-900 border-b border-slate-800">
+        <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-indigo-400" />
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 className="text-sm sm:text-base font-semibold text-slate-100">
+              <h2 id="factsheet-modal-title" className="text-sm sm:text-base font-semibold ui-text-main">
                 Institutional 1-Page Factsheet
               </h2>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] ui-text-muted">
                 Format laporan eksekutif siap cetak A4 atau unduh PNG
               </p>
             </div>
@@ -361,7 +364,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-sm transition-all shadow-indigo-500/20"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-xs transition-all"
               title="Cetak langsung atau simpan sebagai dokumen PDF A4"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -380,12 +383,12 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
         </div>
 
         {/* Scrollable Factsheet Container */}
-        <div className="factsheet-scroll-container overflow-y-auto p-4 sm:p-6 bg-slate-950 flex justify-center">
+        <div className="factsheet-scroll-container overflow-y-auto p-4 sm:p-6 ui-page flex justify-center">
           {/* Printable Factsheet Sheet: Designed to fit exactly 1 Page A4 */}
           <div
             id="quantporto-printable-factsheet"
             ref={sheetRef}
-            className={`w-full max-w-[800px] rounded-2xl p-5 sm:p-6 shadow-xl space-y-3.5 transition-colors border ${
+            className={`w-full max-w-[800px] rounded-xl p-5 sm:p-6 shadow-lg space-y-3.5 transition-colors border ${
               isLight
                 ? 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'
                 : 'bg-slate-900 text-slate-100 border-slate-800 shadow-black/50'
@@ -402,8 +405,8 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <span
                     className={`font-bold tracking-wider text-[10px] px-2 py-0.5 rounded border ${
                       isLight
-                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                     }`}
                   >
                     QUANTPORTO INSTITUTIONAL FACTSHEET
@@ -480,7 +483,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     Calmar Ratio
                   </div>
-                  <div className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                     {calmarRatio}x
                   </div>
                   <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
@@ -512,7 +515,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
                 <span className={`font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                  <Percent className="w-3.5 h-3.5 text-indigo-500" />
+                  <Percent className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Komposisi Alokasi Aset ({activeAssetList.length} Instrumen)</span>
                 </span>
                 <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -635,7 +638,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <div>
               <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
                 <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                  <Coins className="w-3.5 h-3.5 text-indigo-500" />
+                  <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Proyeksi Akumulasi Kekayaan (DCA {formatIdr(monthlySavingsIdr, true)}/Bulan)</span>
                 </span>
                 {dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0 && (
@@ -700,7 +703,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
               }`}
             >
               <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                <Clock className="w-3 h-3 text-indigo-500" />
+                <Clock className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 <span>Pedoman Disiplin Rebalancing QuantPorto:</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5 leading-relaxed">

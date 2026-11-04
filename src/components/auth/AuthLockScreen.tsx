@@ -227,7 +227,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         {/* Brand & Security Title */}
         <div className="flex flex-col items-center text-center space-y-2">
           <BrandLogo className="w-12 h-12" />
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase mt-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase mt-1">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Sesi Akses Portofolio Terproteksi</span>
           </div>

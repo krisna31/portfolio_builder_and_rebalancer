@@ -424,12 +424,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Desktop Primary Navigation Tabs (Hidden on mobile because mobile uses thumb-friendly Bottom Bar) */}
             <nav
               id="tour-nav-tabs"
-              aria-label="Main Navigation"
+              aria-label="Navigasi Utama Desktop"
               className="ui-subtle hidden items-center gap-1 rounded-lg p-1 lg:flex"
             >
               <button
                 type="button"
                 onClick={() => setActiveTab('builder')}
+                title="Portfolio Builder (Shortcut: Alt+1)"
                 className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === 'builder'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -438,10 +439,14 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <BarChart3 className="h-3.5 w-3.5" />
                 <span>1. Builder</span>
+                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
+                  Alt+1
+                </kbd>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
+                title="Portfolio Rebalancer (Shortcut: Alt+2)"
                 className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === 'rebalancer'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -450,10 +455,14 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Scale className="h-3.5 w-3.5" />
                 <span>2. Rebalancer</span>
+                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
+                  Alt+2
+                </kbd>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('roadmap')}
+                title="Rp10M Wealth Simulator (Shortcut: Alt+3)"
                 className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === 'roadmap'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -462,6 +471,9 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <TrendingUp className="h-3.5 w-3.5" />
                 <span>3. Rp10M Simulator</span>
+                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
+                  Alt+3
+                </kbd>
               </button>
             </nav>
 
@@ -709,10 +721,10 @@ export const Header: React.FC<HeaderProps> = ({
                             className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
                           >
                             <div className="flex items-center gap-1.5">
-                              <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-500" />
+                              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                               <span>Factsheet Portofolio</span>
                             </div>
-                            <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                            <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold ui-text-secondary">
                               A4 / PNG
                             </span>
                           </button>
@@ -993,7 +1005,7 @@ export const Header: React.FC<HeaderProps> = ({
                       setIsMobileMenuOpen(false);
                       onOpenFactsheet();
                     }}
-                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-indigo-500 dark:text-indigo-400"
+                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                   >
                     <FileSpreadsheet className="h-3.5 w-3.5" />
                     <span>Factsheet A4</span>
@@ -1335,7 +1347,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Thumb-Friendly Mobile Bottom Tab Navigation Bar (< lg) */}
       <nav
-        aria-label="Mobile Bottom Navigation"
+        aria-label="Navigasi Utama Mobile"
         className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-lg lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-3 gap-1">

@@ -109,7 +109,7 @@ export function getSourceTypeBadge(type: IndicatorSourceType): {
       return {
         label: 'On-Chain / Model',
         colorClass:
-          'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+          'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
       };
     case 'macro-official':
       return {

@@ -410,9 +410,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
       <div className="relative overflow-hidden rounded-xl border ui-border ui-card p-4 sm:p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-xs">
-              <SlidersHorizontal className="h-5 w-5" />
-            </div>
+            <SlidersHorizontal className="mt-1 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm sm:text-base font-bold ui-text-main flex items-center gap-1.5">
@@ -587,7 +585,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSetMonthlyBudgetIdr(cashInjectionIdr)}
-                  className="rounded px-2 py-1 text-[11px] font-mono font-semibold border border-indigo-500/40 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition"
+                  className="rounded px-2 py-1 text-[11px] font-mono font-semibold border border-emerald-500/40 bg-emerald-500/10 ui-text-main hover:bg-emerald-500/20 transition"
                   title="Gunakan nominal kas masuk / cash injection dari Rebalancer"
                 >
                   Kas Rebalance ({formatIdr(cashInjectionIdr, true)})
@@ -615,7 +613,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             {/* Mode 1: Sisa Dana Aset Hold */}
             <div className="space-y-1.5">
               <span className="text-xs font-bold ui-text-main flex items-center gap-1.5">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-500" />
+                <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Strategi Sisa Dana Aset yang di-Hold / Diskon:</span>
               </span>
 
@@ -645,12 +643,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   onClick={() => handleSetOverflowMode('boost-discount')}
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     overflowMode === 'boost-discount'
-                      ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
+                      ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
                       : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span className="text-xs font-bold ui-text-main">
                       Perbesar Diskon
                     </span>
@@ -699,7 +697,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   onClick={() => handleSetAllocationMode('pure-confluence-rank')}
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     allocationMode === 'pure-confluence-rank'
-                      ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
+                      ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
                       : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
                   }`}
                 >
@@ -745,11 +743,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         </div>
 
         <div className="ui-card rounded-xl p-4 border ui-border space-y-1">
-          <div className="flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+          <div className="flex items-center justify-between text-xs ui-text-main font-medium">
             <span>Parkir War Chest &amp; Kas Siaga</span>
             <Shield className="h-4 w-4" />
           </div>
-          <div className="text-lg font-bold font-mono text-indigo-600 dark:text-indigo-400">
+          <div className="text-lg font-bold font-mono ui-text-main">
             {formatIdr(
               smartDcaResult.warChestParkedIdr +
                 smartDcaResult.unallocatedCashRemainderIdr
@@ -913,7 +911,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               <button
                 type="button"
                 onClick={handleCommit}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition"
                 title="Simpan alokasi Smart DCA ini ke saldo portofolio"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1353,10 +1351,10 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               <div className="rounded-xl border ui-border p-3.5 space-y-2.5 bg-black/5 dark:bg-white/5">
                 <div className="flex items-center justify-between border-b ui-border pb-2">
                   <span className="text-xs font-bold ui-text-main flex items-center gap-1">
-                    <Percent className="h-3.5 w-3.5 text-indigo-500" />
+                    <Percent className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>Pilar 2: Defisit Portofolio</span>
                   </span>
-                  <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">
+                  <span className="font-mono font-bold text-xs ui-text-main">
                     {selectedAssetForWhy.explanation.driftScore}/100
                   </span>
                 </div>
@@ -1413,7 +1411,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
                   <span className="text-[10px] text-slate-400 block">Multiplier</span>
-                  <span className="font-mono font-bold text-indigo-400">
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {selectedAssetForWhy.multiplier}x
                   </span>
                 </div>

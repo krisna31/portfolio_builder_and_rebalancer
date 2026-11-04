@@ -171,15 +171,13 @@ export const SmartPortfolioRecommenderModal: React.FC<
       ref={dialogRef}
       {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
       aria-labelledby={titleId}
-      className="ui-card ui-text-main m-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-[2px]"
+      className="ui-card ui-text-main m-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-xl p-0 shadow-lg backdrop:bg-black/60 backdrop:backdrop-blur-[2px]"
     >
       <div className="p-5 sm:p-6">
         {/* Header */}
         <div className="ui-border flex items-start justify-between gap-3 border-b pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-              <Compass className="h-5 w-5" />
-            </div>
+            <Compass className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
               <h2 id={titleId} className="ui-text-main text-base font-bold">
                 Tanya Quant: Asisten Penentu Portfolio Ideal Anda

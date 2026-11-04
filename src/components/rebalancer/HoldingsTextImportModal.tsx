@@ -141,20 +141,21 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="holdings-import-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl border shadow-2xl overflow-hidden">
+      <div className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-xl border shadow-lg overflow-hidden">
         {/* Header */}
         <div className="ui-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <FileSpreadsheet className="h-5 w-5" />
-            </div>
+            <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 className="ui-text-main text-base font-bold sm:text-lg">
+              <h2 id="holdings-import-modal-title" className="ui-text-main text-base font-bold sm:text-lg">
                 Import / Export Saldo Holding (Teks & Excel)
               </h2>
               <p className="ui-text-muted text-xs">

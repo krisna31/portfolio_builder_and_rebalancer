@@ -363,7 +363,7 @@ describe('Smart DCA 100% Indicator-Driven Engine (Zero Drift Interference)', () 
 
     const onChain = getSourceTypeBadge('on-chain-benchmark');
     expect(onChain.label).toBe('On-Chain / Model');
-    expect(onChain.colorClass).toContain('purple');
+    expect(onChain.colorClass).toContain('zinc');
 
     const macro = getSourceTypeBadge('macro-official');
     expect(macro.label).toBe('Data Resmi / Makro');

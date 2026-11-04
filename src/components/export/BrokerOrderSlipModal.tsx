@@ -141,9 +141,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         id: 'idx_stocks',
         name: 'Saham Bursa Efek Indonesia (IDX)',
         apps: 'Stockbit / Ajaib / IPOT / Mirae',
-        icon: <TrendingUp className="w-4 h-4 text-indigo-400" />,
-        colorClass: 'border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20',
-        badgeClass: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+        icon: <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+        colorClass: 'border-zinc-500/30 bg-zinc-500/5 dark:bg-zinc-900/40',
+        badgeClass: 'bg-zinc-500/10 text-emerald-600 dark:text-emerald-400 border-zinc-500/30',
         note: '1 Lot = 100 lembar saham. Gunakan fitur Order Pad / Limit Order pada jam bursa (09:00 - 15:50 WIB).',
         items: groups.idx_stocks,
       });
@@ -193,9 +193,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         id: 'custom',
         name: 'Aset Kustom Lainnya',
         apps: 'Platform Terkait',
-        icon: <ShieldAlert className="w-4 h-4 text-purple-400" />,
-        colorClass: 'border-purple-500/30 bg-purple-500/5 dark:bg-purple-950/20',
-        badgeClass: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
+        icon: <ShieldAlert className="w-4 h-4 ui-text-secondary" />,
+        colorClass: 'border-zinc-500/30 bg-zinc-500/5 dark:bg-zinc-900/40',
+        badgeClass: 'bg-zinc-500/10 ui-text-secondary border-zinc-500/30',
         note: 'Aset kustom yang ditambahkan secara manual.',
         items: groups.custom,
       });
@@ -344,20 +344,21 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="broker-slip-modal-title"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-xs overflow-y-auto animate-in fade-in"
     >
-      <div className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-500 border border-indigo-500/30 flex items-center justify-center shadow-xs">
-              <Building2 className="w-4 h-4" />
-            </div>
+            <Building2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 className="text-base font-bold ui-text-main flex items-center gap-2">
+              <h2 id="broker-slip-modal-title" className="text-base font-bold ui-text-main flex items-center gap-2">
                 <span>Multi-Platform Broker Order Slips</span>
                 <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border">
                   {platformGroups.length} Platform
@@ -383,7 +384,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             <button
               type="button"
               onClick={() => handleCopySlip()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold ui-text-main ui-card ui-border hover:opacity-90 rounded-lg shadow-xs transition-all"
               title="Salin seluruh instruksi transaksi ke clipboard"
             >
               {copiedGroupId === 'all' ? (
@@ -418,7 +419,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             </span>
             <div className="w-32 h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -438,7 +439,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             <button
               type="button"
               onClick={handleMarkAllExecuted}
-              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+              className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
             >
               Tandai Semua Selesai
             </button>
@@ -561,7 +562,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            className="ui-text-muted hover:text-indigo-500 transition-colors flex-shrink-0"
+                            className="ui-text-muted hover:text-emerald-600 dark:text-emerald-400 transition-colors flex-shrink-0"
                             aria-label={isDone ? 'Batal tandai selesai' : 'Tandai selesai'}
                           >
                             {isDone ? (
@@ -619,7 +620,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                           ) : isIdx ? (
                             <div>
                               <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">
-                                <span className="text-indigo-600 dark:text-indigo-400">
+                                <span className="text-emerald-600 dark:text-emerald-400">
                                   {lots} Lot
                                 </span>
                                 <span className="text-xs font-normal ui-text-muted">

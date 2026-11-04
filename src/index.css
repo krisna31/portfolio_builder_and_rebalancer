@@ -145,7 +145,22 @@ select option {
 
 .ui-input:focus {
   border-color: var(--accent-color);
+}
+
+.ui-input:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Global Keyboard Accessibility Focus Ring (Modern Web Guidance compliant: 3:1+ contrast with outline-offset) */
+:where(a:any-link, button, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.ui-modal {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
 }
 
 .ui-border {
