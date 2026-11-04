@@ -170,7 +170,7 @@ export function sanitizePrototypePollution<T>(input: T): T {
     return input.map((item) => sanitizePrototypePollution(item)) as unknown as T;
   }
 
-  const cleanObj: Record<string, unknown> = Object.create(null);
+  const cleanObj: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(input)) {
     if (DANGEROUS_PROTO_KEYS.has(key)) {
       continue;
@@ -400,12 +400,20 @@ export function exportHoldingsToText(
     return 'Belum ada holding aset yang diisi.';
   }
 
+  const sanitizeSpreadsheetCell = (val: string): string => {
+    const cleaned = String(val ?? '').replace(/[\r\n]+/g, ' ').trim();
+    if (/^[=+\-@\t\r]/.test(cleaned)) {
+      return `'${cleaned}`;
+    }
+    return cleaned;
+  };
+
   if (format === 'tsv') {
     const headers = ['Symbol', 'Asset Name', 'Value (IDR)', 'Units', 'Lots (IDX)', 'Price'];
     const rows = holdingEntries.map(([assetId, h]) => {
       const asset = assetMap.get(assetId);
-      const symbol = asset?.shortName || asset?.symbol || assetId;
-      const name = asset?.name || assetId;
+      const symbol = sanitizeSpreadsheetCell(asset?.shortName || asset?.symbol || assetId);
+      const name = sanitizeSpreadsheetCell(asset?.name || assetId);
       const nominal = h.currentValueIdr || 0;
       const units = h.units || 0;
       const isNominalOnly =
@@ -424,8 +432,9 @@ export function exportHoldingsToText(
     const headers = ['Symbol', 'Asset Name', 'Value (IDR)', 'Units', 'Lots (IDX)', 'Price'];
     const rows = holdingEntries.map(([assetId, h]) => {
       const asset = assetMap.get(assetId);
-      const symbol = asset?.shortName || asset?.symbol || assetId;
-      const name = `"${(asset?.name || assetId).replace(/"/g, '""')}"`;
+      const symbol = sanitizeSpreadsheetCell(asset?.shortName || asset?.symbol || assetId);
+      const safeName = sanitizeSpreadsheetCell(asset?.name || assetId);
+      const name = `"${safeName.replace(/"/g, '""')}"`;
       const nominal = h.currentValueIdr || 0;
       const units = h.units || 0;
       const isNominalOnly =

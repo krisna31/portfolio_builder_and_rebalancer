@@ -149,7 +149,10 @@ export async function verifyPasswordHash(
   if (cleanExpected.startsWith('pbkdf2:')) {
     const parts = cleanExpected.split(':');
     if (parts.length === 4) {
-      const iterations = parseInt(parts[1], 10) || PBKDF2_DEFAULT_ITERATIONS;
+      const parsedIter = parseInt(parts[1], 10);
+      const iterations = Number.isFinite(parsedIter)
+        ? Math.min(2_000_000, Math.max(10_000, parsedIter))
+        : PBKDF2_DEFAULT_ITERATIONS;
       const salt = parts[2];
       const targetHash = parts[3].toLowerCase();
       const computed = await pbkdf2Hash(password, salt, iterations);

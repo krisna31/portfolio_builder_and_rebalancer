@@ -57,7 +57,8 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('yahoo.com') ||
     url.hostname.includes('coingecko.com') ||
     url.hostname.includes('alternative.me') ||
-    url.hostname.includes('corsproxy.io')
+    url.hostname.includes('corsproxy.io') ||
+    url.hostname.includes('codetabs.com')
   ) {
     return;
   }

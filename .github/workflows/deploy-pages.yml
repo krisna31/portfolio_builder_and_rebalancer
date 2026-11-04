@@ -19,6 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,6 +37,7 @@ jobs:
         run: npm run build
         env:
           VITE_APP_PASSWORD_HASH: ${{ secrets.VITE_APP_PASSWORD_HASH }}
+          VITE_APP_PASSWORD_SALT: ${{ secrets.VITE_APP_PASSWORD_SALT }}
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5

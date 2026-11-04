@@ -132,7 +132,7 @@ describe('authUtils', () => {
     it('authenticates PBKDF2 formatted token (pbkdf2:iterations:salt:hash)', async () => {
       const password = 'mySecretMasterKey';
       const salt = 'uniqueDeviceSalt';
-      const iterations = 5000;
+      const iterations = 10000;
       const derivedHash = await pbkdf2Hash(password, salt, iterations);
       const token = `pbkdf2:${iterations}:${salt}:${derivedHash}`;
 
@@ -141,6 +141,15 @@ describe('authUtils', () => {
 
       const isInvalid = await verifyPasswordHash('wrongPassword', token);
       expect(isInvalid).toBe(false);
+    });
+
+    it('clamps PBKDF2 iteration count to [10_000, 2_000_000] to prevent DoS or weak derivation', async () => {
+      const password = 'clampTestPassword';
+      const salt = 'clampSalt';
+      // Token claims 50 iterations, but verifyPasswordHash clamps minimum to 10_000
+      const derivedAt10k = await pbkdf2Hash(password, salt, 10000);
+      const underflowToken = `pbkdf2:50:${salt}:${derivedAt10k}`;
+      expect(await verifyPasswordHash(password, underflowToken)).toBe(true);
     });
 
     it('authenticates PBKDF2 with environment configured salt', async () => {

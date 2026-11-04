@@ -288,8 +288,11 @@ export function solveRiskBudgetingWeights(
   if (solverMode === 'euler-covariance') {
     // Spinu / Cyclical Coordinate Descent solver for Exact Covariance Risk Budgeting
     const cov = buildCovarianceMatrix(activeAssets);
-    let w = activeAssets.map((a) => 1 / Math.max(0.1, a.riskScale));
-    const sumInit = w.reduce((acc, v) => acc + v, 0);
+    let w = activeAssets.map((a) => {
+      const safeRiskScale = Number.isFinite(a.riskScale) ? a.riskScale : 5;
+      return 1 / Math.max(0.1, safeRiskScale);
+    });
+    const sumInit = w.reduce((acc, v) => acc + v, 0) || 1;
     w = w.map((v) => v / sumInit);
 
     for (let iter = 0; iter < 250; iter++) {
@@ -308,7 +311,10 @@ export function solveRiskBudgetingWeights(
     const totalW = w.reduce((acc, v) => acc + v, 0);
     const weights: Record<string, number> = {};
     activeAssets.forEach((asset, idx) => {
-      weights[asset.id] = Number(((w[idx] / totalW) * 100).toFixed(2));
+      weights[asset.id] =
+        totalW > 0 && Number.isFinite(w[idx])
+          ? Number(((w[idx] / totalW) * 100).toFixed(2))
+          : Number((100 / Math.max(1, k)).toFixed(2));
     });
     return applyLockingIfAny(weights);
   }
@@ -325,7 +331,8 @@ export function solveRiskBudgetingWeights(
   //   * 70% Risk Budget on GLD yields ~34% capital weight
   //   * 90% Risk Budget on GLD yields ~51% capital weight
   const rawWeights: number[] = activeAssets.map((asset, idx) => {
-    const baseInvRisk = 1 / Math.max(0.1, asset.riskScale);
+    const safeRiskScale = Number.isFinite(asset.riskScale) ? asset.riskScale : 5;
+    const baseInvRisk = 1 / Math.max(0.1, safeRiskScale);
     if (method === 'risk-parity') {
       return baseInvRisk;
     }
@@ -369,8 +376,11 @@ export function normalizeWeightsTo100(
 
   // If no assets are locked, perform standard normalization
   if (lockedEntries.length === 0) {
-    const total = entries.reduce((acc, [, val]) => acc + val, 0);
-    if (total === 0) {
+    const total = entries.reduce(
+      (acc, [, val]) => acc + (typeof val === 'number' && Number.isFinite(val) && val > 0 ? val : 0),
+      0
+    );
+    if (total <= 0) {
       if (strategy === 'equal') {
         const perAsset = Number((100 / entries.length).toFixed(1));
         const res: Record<string, number> = {};
@@ -386,17 +396,18 @@ export function normalizeWeightsTo100(
       return { ...weights, [firstKey]: 100 };
     }
 
-    const allIntegers = entries.every(([, val]) => Number.isInteger(val));
+    const allIntegers = entries.every(([, val]) => Number.isInteger(val) && val >= 0);
     const scaled: Record<string, number> = {};
     let runningSum = 0;
     let maxKey = entries[0][0];
     let maxVal = -1;
 
     for (const [key, val] of entries) {
+      const safeVal = typeof val === 'number' && Number.isFinite(val) && val > 0 ? val : 0;
       const cleanVal =
         allIntegers && Math.abs(total - 100) <= 3
-          ? Math.max(0, Math.round(val))
-          : Math.max(0, Number(((val / total) * 100).toFixed(1)));
+          ? Math.max(0, Math.round(safeVal))
+          : Math.max(0, Number(((safeVal / total) * 100).toFixed(1)));
       scaled[key] = cleanVal;
       runningSum += cleanVal;
       if (cleanVal > maxVal) {

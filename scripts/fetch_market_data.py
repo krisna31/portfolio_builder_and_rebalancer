@@ -110,7 +110,7 @@ def main():
     for asset_id, yf_sym in TICKER_MAP.items():
         try:
             hist = yf.Ticker(yf_sym).history(period="5y", interval="1wk")
-            closes = [float(x) for x in hist["Close"].dropna().tolist() if x > 0]
+            closes = [float(x) for x in hist["Close"].dropna().tolist() if math.isfinite(float(x)) and float(x) > 0]
             if len(closes) >= 20:
                 assets_data[asset_id] = compute_metrics(closes)
                 print(f"Updated {asset_id} ({yf_sym}): {assets_data[asset_id]}")
@@ -124,7 +124,7 @@ def main():
         "assets": assets_data,
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    out_path.write_text(json.dumps(payload, indent=2, allow_nan=False), encoding="utf-8")
     print(f"Saved market data to {out_path}")
 
 

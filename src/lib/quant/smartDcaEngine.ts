@@ -385,8 +385,10 @@ export function calculateValuationScore(
       pe5y = benchmark.pe5yAvg ?? 16.0;
     }
 
-    // Diskon P/E %: (pe5y - currentPe) / pe5y * 100
-    const peDiscountPct = Number((((pe5y - currentPe) / pe5y) * 100).toFixed(1));
+    // Diskon P/E %: (pe5y - currentPe) / pe5y * 100 (guarded against pe5y <= 0 or NaN)
+    const safePe5y = Number.isFinite(pe5y) && pe5y > 0 ? pe5y : 16.0;
+    const safeCurrentPe = Number.isFinite(currentPe) && currentPe >= 0 ? currentPe : safePe5y;
+    const peDiscountPct = Number((((safePe5y - safeCurrentPe) / safePe5y) * 100).toFixed(1));
     // Score: 50 baseline when equal, +1.5 pt per 1% discount
     const peScore = Math.max(0, Math.min(100, Math.round(50 + peDiscountPct * 1.5)));
 
@@ -450,7 +452,9 @@ export function calculateValuationScore(
       fwdPe5y = benchmark.forwardPe5yAvg ?? 20.0;
     }
 
-    const peDiscountPct = Number((((fwdPe5y - fwdPe) / fwdPe5y) * 100).toFixed(1));
+    const safeFwdPe5y = Number.isFinite(fwdPe5y) && fwdPe5y > 0 ? fwdPe5y : 20.0;
+    const safeFwdPe = Number.isFinite(fwdPe) && fwdPe >= 0 ? fwdPe : safeFwdPe5y;
+    const peDiscountPct = Number((((safeFwdPe5y - safeFwdPe) / safeFwdPe5y) * 100).toFixed(1));
     const peScore = Math.max(0, Math.min(100, Math.round(50 + peDiscountPct * 1.5)));
 
     const dd52w =

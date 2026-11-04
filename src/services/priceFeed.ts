@@ -723,7 +723,7 @@ export async function lookupCustomYahooTicker(
         result.indicators?.quote?.[0]?.close ??
         [];
       const closes = adjClose.filter(
-        (v: number | null) => typeof v === 'number' && v > 0
+        (v: number | null): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0
       );
 
       // Accept even newly IPO'd stocks with at least 4 weeks of history
@@ -774,15 +774,21 @@ export async function lookupCustomYahooTicker(
       );
       const isIdr = cleanSym.endsWith('.JK') || meta.currency === 'IDR';
 
+      const rawName =
+        typeof meta.longName === 'string' && meta.longName.trim()
+          ? meta.longName.trim()
+          : typeof meta.shortName === 'string' && meta.shortName.trim()
+            ? meta.shortName.trim()
+            : cleanSym;
       return {
         symbol: cleanSym,
-        name: meta.longName || meta.shortName || cleanSym,
+        name: rawName.slice(0, 80),
         currency: isIdr ? 'IDR' : 'USD',
-        price: Number(lastPrice.toFixed(2)),
-        cagr: Math.max(-30, Math.min(95, rawCagr)),
-        maxDrawdown,
-        volatility: annualVol,
-        riskScale,
+        price: Number.isFinite(lastPrice) && lastPrice > 0 ? Number(lastPrice.toFixed(2)) : closes[closes.length - 1],
+        cagr: Number.isFinite(rawCagr) ? Math.max(-30, Math.min(95, rawCagr)) : 10,
+        maxDrawdown: Number.isFinite(maxDrawdown) ? Math.max(0, Math.min(99.9, maxDrawdown)) : 25,
+        volatility: Number.isFinite(annualVol) ? Math.max(0.5, Math.min(300, annualVol)) : 20,
+        riskScale: Number.isFinite(riskScale) ? Math.max(0.5, Math.min(100, riskScale)) : 5,
         dataYears,
         sourceType: 'live-yahoo',
         assumptionNote,

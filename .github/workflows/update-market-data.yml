@@ -12,6 +12,7 @@ permissions:
 jobs:
   update_data:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,7 +23,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install yfinance
-        run: pip install yfinance
+        run: pip install "yfinance>=0.2.54,<0.3.0"
 
       - name: Fetch 5Y historical data & latest prices
         run: python scripts/fetch_market_data.py

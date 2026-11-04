@@ -72,7 +72,14 @@ import {
   SmartDcaOverflowMode,
   SmartDcaAllocationMode,
 } from './lib/quant/smartDcaEngine';
-import { ParsedHoldingItem, utf8ToBase64, base64ToUtf8 } from './lib/quant/textDataParser';
+import {
+  ParsedHoldingItem,
+  utf8ToBase64,
+  base64ToUtf8,
+  sanitizePrototypePollution,
+  parseBackupPayload,
+  MAX_BACKUP_PAYLOAD_BYTES,
+} from './lib/quant/textDataParser';
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
 import { MissingEnvScreen } from './components/auth/MissingEnvScreen';
@@ -143,7 +150,7 @@ interface PersistedAppState {
 
 function sanitizePersistedAppState(data: unknown): PersistedAppState | null {
   if (!data || typeof data !== 'object') return null;
-  const obj = data as Record<string, unknown>;
+  const obj = sanitizePrototypePollution(data) as Record<string, unknown>;
   const clean: PersistedAppState = { ...obj } as PersistedAppState;
 
   // Sanitize holdings: ensure each entry is a valid object with finite numbers
@@ -675,41 +682,70 @@ export function App() {
 
   // Guard ref to prevent the quant solver useEffect from re-solving and overwriting shared weights on mount
   const isRestoringFromHashRef = useRef(false);
+  const hasProcessedHashRef = useRef(false);
 
-  // Restore state from URL Hash (if user navigated to a shared link) on first mount
+  // Restore state from URL Hash (if user navigated to a shared link) ONLY after authenticated
   useEffect(() => {
+    if (!isAuthenticated || hasProcessedHashRef.current) return;
     try {
-      if (window.location.hash.startsWith('#porto=')) {
+      const rawHash = window.location.hash;
+      if (rawHash.startsWith('#porto=') && rawHash.length <= 65_536) {
+        hasProcessedHashRef.current = true;
         try {
-          const encoded = decodeURIComponent(window.location.hash.slice(7));
-          const hashParsed = JSON.parse(base64ToUtf8(encoded));
-          if (hashParsed?.weights) {
-            isRestoringFromHashRef.current = true;
-            setActiveWeights(hashParsed.weights);
-            setActivePresetId(hashParsed.presetId ?? null);
-            setAllocationMethod(hashParsed.method ?? 'custom');
-            setTimeout(() => {
-              isRestoringFromHashRef.current = false;
-            }, 150);
+          const encoded = decodeURIComponent(rawHash.slice(7));
+          const hashParsed = sanitizePrototypePollution(JSON.parse(base64ToUtf8(encoded)));
+          if (hashParsed?.weights && typeof hashParsed.weights === 'object') {
+            const safeWeights: Record<string, number> = {};
+            for (const [k, v] of Object.entries(hashParsed.weights)) {
+              if (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100) {
+                safeWeights[k.slice(0, 24)] = v;
+              }
+            }
+            if (Object.keys(safeWeights).length > 0) {
+              isRestoringFromHashRef.current = true;
+              setActiveWeights(safeWeights);
+              setActivePresetId(typeof hashParsed.presetId === 'string' ? hashParsed.presetId : null);
+              setAllocationMethod(hashParsed.method ?? 'custom');
+              setTimeout(() => {
+                isRestoringFromHashRef.current = false;
+              }, 150);
+            }
           }
-          if (hashParsed?.convictionAssetId) setConvictionAssetId(hashParsed.convictionAssetId);
-          if (typeof hashParsed?.convictionRiskPercent === 'number')
-            setConvictionRiskPercent(hashParsed.convictionRiskPercent);
-          if (hashParsed?.solverMode) setSolverMode(hashParsed.solverMode);
+          if (typeof hashParsed?.convictionAssetId === 'string')
+            setConvictionAssetId(hashParsed.convictionAssetId.slice(0, 24));
+          if (
+            typeof hashParsed?.convictionRiskPercent === 'number' &&
+            Number.isFinite(hashParsed.convictionRiskPercent)
+          ) {
+            setConvictionRiskPercent(Math.min(99, Math.max(5, hashParsed.convictionRiskPercent)));
+          }
+          if (
+            hashParsed?.solverMode === 'calibrated-video' ||
+            hashParsed?.solverMode === 'euler-covariance'
+          ) {
+            setSolverMode(hashParsed.solverMode);
+          }
           if (
             Array.isArray(hashParsed?.selectedUniverseIds) &&
             hashParsed.selectedUniverseIds.length > 0
           ) {
-            setSelectedUniverseIds(hashParsed.selectedUniverseIds);
+            setSelectedUniverseIds(
+              hashParsed.selectedUniverseIds
+                .filter((id: unknown): id is string => typeof id === 'string')
+                .map((id: string) => id.slice(0, 24))
+                .slice(0, 50)
+            );
           }
-          if (hashParsed?.slotMap) setSlotMap(hashParsed.slotMap);
+          if (hashParsed?.slotMap && typeof hashParsed.slotMap === 'object') {
+            setSlotMap(hashParsed.slotMap);
+          }
           if (hashParsed?.rdptPromo !== undefined)
             setRdptPromoActive(Boolean(hashParsed.rdptPromo));
-          if (hashParsed?.capital !== undefined)
+          if (typeof hashParsed?.capital === 'number' && Number.isFinite(hashParsed.capital) && hashParsed.capital >= 0)
             setInitialCapitalIdr(hashParsed.capital);
-          if (hashParsed?.dca !== undefined)
+          if (typeof hashParsed?.dca === 'number' && Number.isFinite(hashParsed.dca) && hashParsed.dca >= 0)
             setMonthlySavingsIdr(hashParsed.dca);
-          if (hashParsed?.goal !== undefined)
+          if (typeof hashParsed?.goal === 'number' && Number.isFinite(hashParsed.goal) && hashParsed.goal > 0)
             setTargetGoalIdr(hashParsed.goal);
           if (hashParsed?.roadmap) {
             try {
@@ -764,6 +800,7 @@ export function App() {
           // Restore Smart DCA Settings if available in shared hash
           if (
             typeof hashParsed?.smartDcaMonthlyBudgetIdr === 'number' &&
+            Number.isFinite(hashParsed.smartDcaMonthlyBudgetIdr) &&
             hashParsed.smartDcaMonthlyBudgetIdr > 0
           ) {
             setSmartDcaMonthlyBudgetIdr(hashParsed.smartDcaMonthlyBudgetIdr);
@@ -808,7 +845,7 @@ export function App() {
     } catch {
       // Ignore
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Persist active state to LocalStorage
   useEffect(() => {
@@ -2589,15 +2626,18 @@ export function App() {
   };
 
   const handleImportJson = (file: File) => {
+    if (file.size > MAX_BACKUP_PAYLOAD_BYTES) {
+      alert('Ukuran file backup melebihi batas keamanan maksimum 2 MB.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        const raw = JSON.parse(String(reader.result));
-        handleImportPayload(raw, 'overwrite');
-      } catch (err) {
-        console.error('Failed to read file:', err);
-        alert('File JSON tidak valid atau rusak.');
+      const parsed = parseBackupPayload(String(reader.result ?? ''));
+      if (!parsed.success || !parsed.data) {
+        alert(parsed.error || 'File JSON tidak valid atau rusak.');
+        return;
       }
+      handleImportPayload(parsed.data, 'overwrite');
     };
     reader.readAsText(file);
   };
@@ -2650,7 +2690,7 @@ export function App() {
     const url = `${window.location.origin}${window.location.pathname}#porto=${encodeURIComponent(
       shareData
     )}`;
-    navigator.clipboard?.writeText(url);
+    navigator.clipboard?.writeText(url).catch(() => {});
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
   };

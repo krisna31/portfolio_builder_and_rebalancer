@@ -7,7 +7,7 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://api.alternative.me https://api.coingecko.com https://query1.finance.yahoo.com https://corsproxy.io https://api.codetabs.com; object-src 'none'; base-uri 'self';"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://api.alternative.me https://api.coingecko.com https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://corsproxy.io https://api.codetabs.com; worker-src 'self' blob:; form-action 'self'; object-src 'none'; base-uri 'self';"
     />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#059669" />
@@ -20,8 +20,10 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <script>
       try {
-        document.querySelector('meta[name="color-scheme"]').content =
-          localStorage.getItem('color-scheme') ?? 'light dark';
+        var mode = localStorage.getItem('color-scheme');
+        if (mode === 'light' || mode === 'dark' || mode === 'light dark') {
+          document.querySelector('meta[name="color-scheme"]').content = mode;
+        }
       } catch (e) {}
     </script>
     <title>QuantPorto — Portfolio Builder & Rebalancer</title>

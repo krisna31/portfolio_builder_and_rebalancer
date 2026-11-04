@@ -222,10 +222,38 @@ describe('textDataParser - Backup Payload Serialization & Parsing', () => {
 
       expect(clean.safeKey).toBe(123);
       expect((clean as any).nested.ok).toBe('yes');
+      expect(typeof (clean as any).hasOwnProperty).toBe('function');
+      expect(typeof (clean as any).nested.hasOwnProperty).toBe('function');
       expect(Object.prototype.hasOwnProperty.call(clean, '__proto__')).toBe(false);
       expect(Object.prototype.hasOwnProperty.call(clean, 'constructor')).toBe(false);
       expect(Object.prototype.hasOwnProperty.call(clean, 'prototype')).toBe(false);
       expect((clean as any).polluted).toBeUndefined();
+    });
+
+    it('neutralizes CSV/TSV formula injection payloads (=, +, -, @) during export', () => {
+      const maliciousAssets = [
+        {
+          ...CORE_AND_EXPANDED_ASSETS[0],
+          id: '=CMD|"/C calc"!A0',
+          shortName: '+SUM(1,1)',
+          name: '@evil_formula()',
+        },
+      ];
+      const maliciousHoldings: Record<string, HoldingEntry> = {
+        '=CMD|"/C calc"!A0': {
+          assetId: '=CMD|"/C calc"!A0',
+          currentValueIdr: 10_000_000,
+          units: 100,
+          currentPrice: 100_000,
+          shockPercent: 0,
+        },
+      };
+      const csv = exportHoldingsToText(maliciousHoldings, maliciousAssets, 'csv');
+      const tsv = exportHoldingsToText(maliciousHoldings, maliciousAssets, 'tsv');
+      expect(csv).toContain("'+SUM(1,1)");
+      expect(csv).toContain("'@evil_formula()");
+      expect(tsv).toContain("'+SUM(1,1)");
+      expect(tsv).toContain("'@evil_formula()");
     });
 
     it('rejects oversized backup payloads (> 2 MB) with friendly error', () => {

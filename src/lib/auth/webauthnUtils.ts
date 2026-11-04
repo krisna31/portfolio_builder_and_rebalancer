@@ -10,7 +10,7 @@
  * the native platform authenticator, unlocking the tab session upon success.
  */
 
-import { authenticateSession } from './authUtils';
+import { authenticateSession, getRemainingLockoutSeconds } from './authUtils';
 
 export const WEBAUTHN_STORAGE_KEY = 'quantporto_webauthn_credential';
 export const WEBAUTHN_PROMPT_DISMISSED_KEY = 'quantporto_webauthn_prompt_dismissed';
@@ -485,6 +485,14 @@ export async function authenticateWithBiometric(): Promise<{
   success: boolean;
   error?: string;
 }> {
+  const lockoutSec = getRemainingLockoutSeconds();
+  if (lockoutSec > 0) {
+    return {
+      success: false,
+      error: `Terlalu banyak percobaan salah. Silakan tunggu ${lockoutSec} detik lagi.`,
+    };
+  }
+
   if (!isWebAuthnSupported()) {
     return {
       success: false,
@@ -549,6 +557,35 @@ export async function authenticateWithBiometric(): Promise<{
         success: false,
         error: 'Verifikasi sidik jari dibatalkan.',
       };
+    }
+
+    if (assertion.id && assertion.id !== stored.id && assertion.id !== stored.rawId) {
+      return {
+        success: false,
+        error: 'Verifikasi sidik jari gagal: identitas kredensial tidak cocok.',
+      };
+    }
+
+    const assertionResponse = (assertion as any).response as
+      | AuthenticatorAssertionResponse
+      | undefined;
+    if (assertionResponse?.authenticatorData && assertionResponse?.signature) {
+      const authDataBytes =
+        assertionResponse.authenticatorData instanceof Uint8Array
+          ? assertionResponse.authenticatorData
+          : new Uint8Array(assertionResponse.authenticatorData);
+      const sigBytes =
+        assertionResponse.signature instanceof Uint8Array
+          ? assertionResponse.signature
+          : new Uint8Array(assertionResponse.signature);
+      const flags = authDataBytes.byteLength >= 37 ? authDataBytes[32] : 0;
+      const isUserPresent = (flags & 0x01) !== 0;
+      if (!isUserPresent || sigBytes.byteLength === 0) {
+        return {
+          success: false,
+          error: 'Verifikasi perangkat biometrik tidak valid.',
+        };
+      }
     }
 
     // Hardware cryptographic biometric verification succeeded!

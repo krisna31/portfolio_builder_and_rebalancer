@@ -770,5 +770,32 @@ describe('webauthnUtils', () => {
       expect(afterRevokeRes.error).toContain('Belum ada sidik jari yang terdaftar');
       expect(isSessionAuthenticated()).toBe(false);
     });
+
+    it('blocks biometric authentication when brute-force lockout is active', async () => {
+      mockLocalStorage.setItem('quantporto_auth_lockout_until', String(Date.now() + 30_000));
+      const res = await authenticateWithBiometric();
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('Terlalu banyak percobaan salah');
+      expect(isSessionAuthenticated()).toBe(false);
+    });
+
+    it('rejects biometric authentication if assertion ID does not match stored credential ID', async () => {
+      const validRawId = bufferToBase64Url(new Uint8Array([1, 2, 3, 4]));
+      saveBiometricCredential({
+        id: 'expected-id-123',
+        rawId: validRawId,
+        createdAt: new Date().toISOString(),
+      });
+      mockWindow.PublicKeyCredential = {};
+      mockNavigator.credentials = {
+        create: vi.fn(),
+        get: vi.fn().mockResolvedValue({ id: 'spoofed-id-999' }),
+      };
+
+      const res = await authenticateWithBiometric();
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('identitas kredensial tidak cocok');
+      expect(isSessionAuthenticated()).toBe(false);
+    });
   });
 });

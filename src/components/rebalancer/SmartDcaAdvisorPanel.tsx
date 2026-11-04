@@ -375,7 +375,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
       );
     }
 
-    navigator.clipboard?.writeText(lines.join('\n'));
+    navigator.clipboard?.writeText(lines.join('\n')).catch(() => {});
     setCopiedSummary(true);
     setTimeout(() => setCopiedSummary(false), 2500);
   };

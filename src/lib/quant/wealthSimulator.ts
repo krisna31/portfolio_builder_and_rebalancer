@@ -79,7 +79,8 @@ export function simulateWealthToGoal(params: {
     },
   ];
 
-  const totalMonths = maxYears * 12;
+  const safeMaxYears = Math.min(100, Math.max(1, Math.floor(Number.isFinite(maxYears) ? maxYears : 45)));
+  const totalMonths = safeMaxYears * 12;
 
   for (let m = 1; m <= totalMonths; m++) {
     // Apply annual step-up in monthly savings at the start of each new year (after year 1)
@@ -393,7 +394,9 @@ export function simulateMonteCarloPaths(params: {
     return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
   };
 
-  const totalMonths = maxYears * 12;
+  const safeMaxYears = Math.min(100, Math.max(1, Math.floor(Number.isFinite(maxYears) ? maxYears : 25)));
+  const safeNumSimulations = Math.min(2000, Math.max(10, Math.floor(Number.isFinite(numSimulations) ? numSimulations : 500)));
+  const totalMonths = safeMaxYears * 12;
   const monthlyInflationRate =
     annualInflationPercent > 0
       ? Math.pow(1 + annualInflationPercent / 100, 1 / 12) - 1
@@ -401,17 +404,17 @@ export function simulateMonteCarloPaths(params: {
 
   // Track values at each year end for all simulation paths: [yearIndex][pathIndex]
   const yearlyWealthDistribution: number[][] = Array.from(
-    { length: maxYears + 1 },
-    () => new Array(numSimulations)
+    { length: safeMaxYears + 1 },
+    () => new Array(safeNumSimulations)
   );
   const yearlyRealWealthDistribution: number[][] = Array.from(
-    { length: maxYears + 1 },
-    () => new Array(numSimulations)
+    { length: safeMaxYears + 1 },
+    () => new Array(safeNumSimulations)
   );
 
-  const goalReachedMonths: (number | null)[] = new Array(numSimulations).fill(null);
+  const goalReachedMonths: (number | null)[] = new Array(safeNumSimulations).fill(null);
 
-  for (let s = 0; s < numSimulations; s++) {
+  for (let s = 0; s < safeNumSimulations; s++) {
     let wealth = Math.max(0, initialCapitalIdr);
     let currentMonthlyPmt = Math.max(0, monthlyContributionIdr);
     yearlyWealthDistribution[0][s] = wealth;
@@ -458,7 +461,7 @@ export function simulateMonteCarloPaths(params: {
   let runningMonthlyPmt = Math.max(0, monthlyContributionIdr);
   const series: MonteCarloYearPoint[] = [];
 
-  for (let yr = 0; yr <= maxYears; yr++) {
+  for (let yr = 0; yr <= safeMaxYears; yr++) {
     if (yr > 0) {
       if (yr > 1 && annualStepUpPercent > 0) {
         runningMonthlyPmt *= 1 + annualStepUpPercent / 100;
@@ -490,17 +493,17 @@ export function simulateMonteCarloPaths(params: {
 
   // Calculate Success Probability (% of paths reaching targetGoalIdr)
   const pathsReachedGoal = goalReachedMonths.filter((m) => m !== null).length;
-  const successProbabilityPercent = Math.round((pathsReachedGoal / numSimulations) * 100);
+  const successProbabilityPercent = Math.round((pathsReachedGoal / safeNumSimulations) * 100);
 
   // Bug 14 fix: True population median time across all paths (null if < 50% paths succeed)
   const allPathMonths = goalReachedMonths
     .map((m) => (m === null ? Infinity : m))
     .sort((a, b) => a - b);
-  const medianMonthVal = allPathMonths[Math.floor(numSimulations / 2)];
+  const medianMonthVal = allPathMonths[Math.floor(safeNumSimulations / 2)];
   const medianYearsToGoal =
     medianMonthVal !== Infinity ? Number((medianMonthVal / 12).toFixed(1)) : null;
 
-  const finalYearValues = [...yearlyWealthDistribution[maxYears]].sort((a, b) => a - b);
+  const finalYearValues = [...yearlyWealthDistribution[safeMaxYears]].sort((a, b) => a - b);
 
   return {
     series,
@@ -509,7 +512,7 @@ export function simulateMonteCarloPaths(params: {
     medianFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.5)),
     bearFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.1)),
     bullFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.9)),
-    totalSimulations: numSimulations,
+    totalSimulations: safeNumSimulations,
   };
 }
 

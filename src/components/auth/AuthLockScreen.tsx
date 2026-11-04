@@ -220,21 +220,19 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
-
-
+    <div className="min-h-screen ui-page flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
       <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Brand & Security Title */}
         <div className="flex flex-col items-center text-center space-y-2">
           <BrandLogo className="w-12 h-12" />
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase mt-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase mt-1">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Sesi Akses Portofolio Terproteksi</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight ui-text-main mt-1">
             {showRegisterPrompt ? 'Pendaftaran Sidik Jari' : 'Masukkan Kata Sandi'}
           </h1>
-          <p className="text-xs text-slate-400 max-w-xs">
+          <p className="text-xs ui-text-secondary max-w-xs">
             {showRegisterPrompt
               ? 'Daftarkan sensor biometrik perangkat ini untuk kemudahan login cepat di masa mendatang.'
               : 'Akses dashboard QuantPorto dilindungi untuk keamanan strategi investasi dan data portofolio Anda.'}
@@ -243,7 +241,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
 
         {/* Lock Screen Card */}
         <div
-          className={`bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-sm transition duration-150 ${
+          className={`ui-card ui-border rounded-xl p-6 shadow-sm transition duration-150 ${
             isShaking ? 'animate-shake border-rose-500/50' : ''
           }`}
         >
@@ -339,30 +337,34 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                 <div>
                   <label
                     htmlFor="access-password"
-                    className="block text-xs font-medium text-slate-300 mb-1.5"
+                    className="block text-xs font-medium ui-text-secondary mb-1.5"
                   >
                     Kata Sandi Akses:
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ui-text-muted">
                       <Lock className="w-4 h-4" />
                     </div>
                     <input
                       ref={inputRef}
                       id="access-password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={isVerifying || lockoutSec > 0}
                       placeholder={lockoutSec > 0 ? 'Terkunci sementara...' : 'Ketik kata sandi...'}
                       autoComplete="current-password"
-                      className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-900 rounded-xl pl-10 pr-11 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none transition"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      className="w-full ui-input disabled:opacity-50 rounded-lg pl-10 pr-11 py-2.5 text-sm placeholder:text-zinc-500 transition"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      tabIndex={-1}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                      aria-pressed={showPassword}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center ui-text-muted hover:ui-text-main transition"
                       aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -409,8 +411,8 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
           )}
 
           {/* Tab Session Note */}
-          <div className="mt-4 pt-4 border-t border-slate-800 text-center">
-            <p className="text-[11px] text-slate-500">
+          <div className="mt-4 pt-4 border-t ui-border text-center">
+            <p className="text-[11px] ui-text-muted">
               Sesi login aktif selama tab browser ini terbuka. Gunakan tombol Kunci di Header untuk mengunci sewaktu-waktu.
             </p>
           </div>

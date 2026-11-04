@@ -4,6 +4,7 @@ import {
   solveRiskBudgetingWeights,
   evaluatePortfolioMetrics,
   buildDynamicPresetsForSlotMap,
+  normalizeWeightsTo100,
 } from '../riskParitySolver';
 import { calculateRebalancePlan, generateCrashBuyingLadder } from '../rebalancerEngine';
 import {
@@ -592,5 +593,27 @@ describe('Rp10 Miliar Pertama Wealth Simulator', () => {
     // Simulation median converges within 5% of theoretical Ito-corrected log-normal median
     expect(ratioToTheoretical).toBeGreaterThan(0.95);
     expect(ratioToTheoretical).toBeLessThan(1.05);
+  });
+
+  it('guards normalizeWeightsTo100 and solveRiskBudgetingWeights against NaN or non-positive inputs', () => {
+    const normalized = normalizeWeightsTo100({
+      RDPT: Number.NaN,
+      BBCA: -25,
+      BTC: 50,
+      ETH: 50,
+    });
+    expect(normalized.RDPT).toBe(0);
+    expect(normalized.BBCA).toBe(0);
+    expect(normalized.BTC).toBe(50);
+    expect(normalized.ETH).toBe(50);
+
+    const degeneratedAssets = CORE_AND_EXPANDED_ASSETS.slice(0, 3).map((a) => ({
+      ...a,
+      riskScale: Number.NaN,
+    }));
+    const solved = solveRiskBudgetingWeights(degeneratedAssets, 'risk-budgeting', 'BTC', 80, 'calibrated-video');
+    for (const w of Object.values(solved)) {
+      expect(Number.isFinite(w)).toBe(true);
+    }
   });
 });

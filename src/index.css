@@ -163,6 +163,12 @@ select option {
   border-radius: 0.75rem;
 }
 
+/* Defer rendering heavy below-the-fold sections (Modern Web Guidance: defer-rendering-heavy-content) */
+.ui-section-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 420px;
+}
+
 .ui-border {
   border-color: var(--border-subtle);
 }
