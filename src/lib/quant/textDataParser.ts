@@ -152,12 +152,50 @@ export function parseFinancialNumber(rawStr: string): {
 /**
  * Parses freeform, Excel TSV, CSV, or colon-delimited lines of holdings
  */
+export const MAX_HOLDINGS_INPUT_BYTES = 500 * 1024; // 500 KB limit to prevent UI thread lock
+export const MAX_BACKUP_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB limit for backup import
+
+const DANGEROUS_PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Recursively removes prototype pollution gadget keys (__proto__, constructor, prototype)
+ * from an object to prevent object prototype tampering when importing untrusted JSON.
+ */
+export function sanitizePrototypePollution<T>(input: T): T {
+  if (input === null || typeof input !== 'object') {
+    return input;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizePrototypePollution(item)) as unknown as T;
+  }
+
+  const cleanObj: Record<string, unknown> = Object.create(null);
+  for (const [key, val] of Object.entries(input)) {
+    if (DANGEROUS_PROTO_KEYS.has(key)) {
+      continue;
+    }
+    cleanObj[key] = sanitizePrototypePollution(val);
+  }
+  return cleanObj as T;
+}
+
 export function parseHoldingsText(
   rawText: string,
   allAssets: AssetDefinition[],
   defaultMode: 'nominal' | 'units' = 'nominal',
   usdIdrRate: number = 18000
 ): ParsedHoldingsResult {
+  if (rawText.length > MAX_HOLDINGS_INPUT_BYTES) {
+    return {
+      items: [],
+      recognizedCount: 0,
+      totalNominalIdr: 0,
+      invalidLines: [`Ukuran input (${Math.round(rawText.length / 1024)} KB) melebihi batas maksimum 500 KB.`],
+      warnings: ['Input teks holdings terlalu besar. Maksimum batas ukuran adalah 500 KB untuk mencegah UI freeze.'],
+    };
+  }
+
   const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const items: ParsedHoldingItem[] = [];
   const invalidLines: string[] = [];
@@ -482,6 +520,14 @@ export function serializeBackupPayload(
  * Parses raw text input into a QuantPortoBackupPayload (supporting both JSON and Base64)
  */
 export function parseBackupPayload(text: string): ParsedBackupResult {
+  if (text.length > MAX_BACKUP_PAYLOAD_BYTES) {
+    return {
+      success: false,
+      format: 'unknown',
+      error: `Ukuran payload (${(text.length / (1024 * 1024)).toFixed(1)} MB) melebihi batas keamanan maksimum 2 MB.`,
+    };
+  }
+
   const trimmed = text.trim();
   if (!trimmed) {
     return {
@@ -509,7 +555,7 @@ export function parseBackupPayload(text: string): ParsedBackupResult {
   }
 
   try {
-    const raw = JSON.parse(jsonStr);
+    const raw = sanitizePrototypePollution(JSON.parse(jsonStr));
     const isV2 = raw.version === 2 && raw.data;
     const isLegacyV1 = raw.activeWeights || raw.holdings || (raw.version === 1 && raw.data);
 

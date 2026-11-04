@@ -7,6 +7,9 @@ import {
   parseBackupPayload,
   utf8ToBase64,
   base64ToUtf8,
+  sanitizePrototypePollution,
+  MAX_BACKUP_PAYLOAD_BYTES,
+  MAX_HOLDINGS_INPUT_BYTES,
 } from '../textDataParser';
 import { CORE_AND_EXPANDED_ASSETS } from '../../../data/presets';
 import { QuantPortoBackupPayload, HoldingEntry } from '../types';
@@ -208,5 +211,36 @@ describe('textDataParser - Backup Payload Serialization & Parsing', () => {
     const garbageRes = parseBackupPayload('random non-json non-base64 garbage 123 !@#$');
     expect(garbageRes.success).toBe(false);
     expect(garbageRes.error).toBeDefined();
+  });
+
+  describe('Security Hardening & Input Guards', () => {
+    it('sanitizes prototype pollution keys recursively', () => {
+      const maliciousObj = JSON.parse(
+        '{"__proto__": {"polluted": true}, "constructor": "bad", "prototype": "bad", "safeKey": 123, "nested": {"__proto__": {"danger": 1}, "ok": "yes"}}'
+      );
+      const clean = sanitizePrototypePollution(maliciousObj);
+
+      expect(clean.safeKey).toBe(123);
+      expect((clean as any).nested.ok).toBe('yes');
+      expect(Object.prototype.hasOwnProperty.call(clean, '__proto__')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(clean, 'constructor')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(clean, 'prototype')).toBe(false);
+      expect((clean as any).polluted).toBeUndefined();
+    });
+
+    it('rejects oversized backup payloads (> 2 MB) with friendly error', () => {
+      const oversized = 'a'.repeat(MAX_BACKUP_PAYLOAD_BYTES + 10);
+      const res = parseBackupPayload(oversized);
+      expect(res.success).toBe(false);
+      expect(res.error).toContain('melebihi batas keamanan maksimum 2 MB');
+    });
+
+    it('rejects oversized holdings text input (> 500 KB) with friendly warning', () => {
+      const oversized = 'BBCA 10 lot\n'.repeat(50000); // > 500 KB
+      expect(oversized.length).toBeGreaterThan(MAX_HOLDINGS_INPUT_BYTES);
+      const res = parseHoldingsText(oversized, CORE_AND_EXPANDED_ASSETS, 'nominal', 18000);
+      expect(res.items).toHaveLength(0);
+      expect(res.warnings[0]).toContain('terlalu besar');
+    });
   });
 });

@@ -412,7 +412,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <a
                     href="https://www.youtube.com/watch?v=O8PShy9d484"
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="underline hover:text-emerald-600"
                   >
                     Ref Video

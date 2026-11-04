@@ -431,6 +431,22 @@ export function resolveAssetYahooTicker(asset: AssetDefinition): string | null {
 }
 
 /**
+ * Creates an AbortSignal that automatically aborts after timeoutMs.
+ * Safe fallback across modern and older browser/test environments.
+ */
+function createTimeoutSignal(timeoutMs: number): AbortSignal | undefined {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  if (typeof AbortController !== 'undefined') {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), timeoutMs);
+    return controller.signal;
+  }
+  return undefined;
+}
+
+/**
  * Fetches the latest live market price or previous close for a single Yahoo symbol
  */
 export async function fetchSingleYahooPrice(symbol: string): Promise<number | null> {
@@ -506,7 +522,10 @@ export async function fetchLiveMarketPrices(
 
   // 1. Load static GitHub Actions snapshot (`./data/market-data.json`)
   try {
-    const res = await fetch('./data/market-data.json', { cache: 'no-store' });
+    const res = await fetch('./data/market-data.json', {
+      cache: 'no-store',
+      signal: createTimeoutSignal(6000),
+    });
     if (res.ok) {
       const snapshot: MarketDataSnapshot = await res.json();
       if (snapshot.usdIdrRate && snapshot.usdIdrRate > 10000) {
@@ -535,7 +554,9 @@ export async function fetchLiveMarketPrices(
       const cgUrl = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(
         cgIds
       )},tether&vs_currencies=usd,idr`;
-      const cgRes = await fetch(cgUrl);
+      const cgRes = await fetch(cgUrl, {
+        signal: createTimeoutSignal(6000),
+      });
       if (cgRes.ok) {
         const cgData = await cgRes.json();
         if (cgData.tether?.idr && cgData.tether?.usd) {
@@ -647,7 +668,9 @@ export async function lookupCustomYahooTicker(
   const shortId = cleanSym.replace('.JK', '');
   let snapshotPrice: number | null = null;
   try {
-    const snapRes = await fetch('./data/market-data.json');
+    const snapRes = await fetch('./data/market-data.json', {
+      signal: createTimeoutSignal(6000),
+    });
     if (snapRes.ok) {
       const snap: MarketDataSnapshot = await snapRes.json();
       if (snap.assets?.[shortId]?.price) {

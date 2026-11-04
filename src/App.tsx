@@ -77,6 +77,7 @@ import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
 import { MissingEnvScreen } from './components/auth/MissingEnvScreen';
 import { isSessionAuthenticated, revokeSession } from './lib/auth/authUtils';
+import { useAutoLock } from './hooks/useAutoLock';
 
 const STORAGE_KEY = 'quantporto_state_v2';
 const SAVED_PORTFOLIOS_KEY = 'quantporto_saved_portfolios_v1';
@@ -95,6 +96,10 @@ const DEFAULT_SLOT_MAP: Record<string, string> = {
 
 const CONFIGURED_PASSWORD_HASH = (
   (import.meta.env.VITE_APP_PASSWORD_HASH as string | undefined) || ''
+).trim();
+
+const CONFIGURED_PASSWORD_SALT = (
+  (import.meta.env.VITE_APP_PASSWORD_SALT as string | undefined) || ''
 ).trim();
 
 interface PersistedAppState {
@@ -136,11 +141,49 @@ interface PersistedAppState {
   allAssets?: AssetDefinition[];
 }
 
+function sanitizePersistedAppState(data: unknown): PersistedAppState | null {
+  if (!data || typeof data !== 'object') return null;
+  const obj = data as Record<string, unknown>;
+  const clean: PersistedAppState = { ...obj } as PersistedAppState;
+
+  // Sanitize holdings: ensure each entry is a valid object with finite numbers
+  if (obj.holdings && typeof obj.holdings === 'object') {
+    const validHoldings: Record<string, HoldingEntry> = {};
+    for (const [key, val] of Object.entries(obj.holdings)) {
+      if (val && typeof val === 'object' && typeof (val as HoldingEntry).units === 'number') {
+        const h = val as HoldingEntry;
+        validHoldings[key] = {
+          ...h,
+          assetId: typeof h.assetId === 'string' ? h.assetId : key,
+          units: Number.isFinite(h.units) ? h.units : 0,
+          currentValueIdr: Number.isFinite(h.currentValueIdr) ? h.currentValueIdr : 0,
+          currentPrice: Number.isFinite(h.currentPrice) ? h.currentPrice : 0,
+          shockPercent: Number.isFinite(h.shockPercent) ? h.shockPercent : 0,
+        };
+      }
+    }
+    clean.holdings = validHoldings;
+  }
+
+  // Sanitize activeWeights: ensure finite numbers
+  if (obj.activeWeights && typeof obj.activeWeights === 'object') {
+    const validWeights: Record<string, number> = {};
+    for (const [key, val] of Object.entries(obj.activeWeights)) {
+      if (typeof val === 'number' && Number.isFinite(val)) {
+        validWeights[key] = val;
+      }
+    }
+    clean.activeWeights = validWeights;
+  }
+
+  return clean;
+}
+
 function getInitialSavedState(): PersistedAppState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    return sanitizePersistedAppState(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -160,6 +203,13 @@ export function App() {
     revokeSession();
     setIsAuthenticated(false);
   };
+
+  // Inactivity auto-lock (15 minutes idle timeout)
+  useAutoLock({
+    isEnabled: isAuthenticated && Boolean(CONFIGURED_PASSWORD_HASH),
+    timeoutMs: 15 * 60 * 1000,
+    onLock: handleLockApp,
+  });
 
   const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(() => {
     if (initialSaved?.activeTab && ['builder', 'rebalancer', 'roadmap'].includes(initialSaved.activeTab)) {
@@ -2684,6 +2734,7 @@ export function App() {
     return (
       <AuthLockScreen
         expectedHash={CONFIGURED_PASSWORD_HASH}
+        configuredSalt={CONFIGURED_PASSWORD_SALT}
         onAuthenticated={() => setIsAuthenticated(true)}
       />
     );
@@ -3011,7 +3062,7 @@ export function App() {
           <a
             href="https://www.youtube.com/watch?v=O8PShy9d484"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="underline hover:opacity-80"
           >
             &ldquo;Cara Dapet Rp10 MILIAR PERTAMA&rdquo; (Leon Hartono &amp; Sander)

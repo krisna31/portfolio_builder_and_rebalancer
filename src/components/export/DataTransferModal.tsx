@@ -18,6 +18,7 @@ import { QuantPortoBackupPayload } from '../../lib/quant/types';
 import {
   parseBackupPayload,
   serializeBackupPayload,
+  MAX_BACKUP_PAYLOAD_BYTES,
 } from '../../lib/quant/textDataParser';
 import { formatIdr } from '../../lib/formatters';
 
@@ -115,6 +116,14 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_BACKUP_PAYLOAD_BYTES) {
+      alert(
+        `Ukuran file terlalu besar (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maksimum batas ukuran file backup adalah 2 MB.`
+      );
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       setImportText(String(reader.result || ''));

@@ -17,6 +17,7 @@ import { AssetDefinition, HoldingEntry } from '../../lib/quant/types';
 import {
   exportHoldingsToText,
   parseHoldingsText,
+  MAX_HOLDINGS_INPUT_BYTES,
   ParsedHoldingItem,
 } from '../../lib/quant/textDataParser';
 import { formatIdr } from '../../lib/formatters';
@@ -84,7 +85,13 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
   const handlePasteFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setInputText(text);
+      if (text) {
+        if (text.length > MAX_HOLDINGS_INPUT_BYTES) {
+          alert('Teks clipboard melebihi batas keamanan maksimum 500 KB.');
+          return;
+        }
+        setInputText(text);
+      }
     } catch {
       alert('Tidak dapat membaca clipboard otomatis. Silakan gunakan Ctrl+V / Cmd+V.');
     }
@@ -250,7 +257,14 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
               <div className="relative">
                 <textarea
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val.length > MAX_HOLDINGS_INPUT_BYTES) {
+                      alert('Ukuran teks melebihi batas keamanan maksimum 500 KB.');
+                      return;
+                    }
+                    setInputText(val);
+                  }}
                   placeholder="Contoh format yang didukung:&#10;BBCA 10 lot&#10;RDPT Rp 25.000.000&#10;BTC 0.05&#10;Atau salin tabel dari Excel/Google Sheets..."
                   rows={6}
                   className="ui-subtle ui-border ui-text-main w-full rounded-xl border p-3 font-mono text-[11px] leading-relaxed focus:border-emerald-500 focus:outline-none"

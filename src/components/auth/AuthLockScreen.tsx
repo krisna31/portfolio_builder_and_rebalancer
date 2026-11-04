@@ -13,6 +13,7 @@ import { BrandLogo } from '../BrandLogo';
 import { stopInteractiveTour } from '../../services/tourGuide';
 import {
   sha256Hash,
+  verifyPasswordHash,
   authenticateSession,
   recordFailedAttempt,
   getRemainingLockoutSeconds,
@@ -30,11 +31,13 @@ import {
 
 interface AuthLockScreenProps {
   expectedHash: string;
+  configuredSalt?: string;
   onAuthenticated: () => void;
 }
 
 export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   expectedHash,
+  configuredSalt,
   onAuthenticated,
 }) => {
   const [password, setPassword] = useState('');
@@ -154,8 +157,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     setBiometricError(null);
 
     try {
-      const computed = await sha256Hash(password);
-      const isMatch = computed.toLowerCase().trim() === expectedHash.toLowerCase().trim();
+      const isMatch = await verifyPasswordHash(password, expectedHash, configuredSalt);
 
       if (isMatch) {
         authenticateSession();
