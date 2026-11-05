@@ -118,9 +118,11 @@ export const Header: React.FC<HeaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   const [newSaveName, setNewSaveName] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // Biometric / WebAuthn settings state
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
@@ -237,14 +239,21 @@ export const Header: React.FC<HeaderProps> = ({
       ) {
         setIsToolsMenuOpen(false);
       }
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsExportMenuOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsToolsMenuOpen(false);
+        setIsExportMenuOpen(false);
         setIsMobileMenuOpen(false);
       }
     };
-    if (isToolsMenuOpen || isMobileMenuOpen) {
+    if (isToolsMenuOpen || isExportMenuOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
       return () => {
@@ -252,17 +261,25 @@ export const Header: React.FC<HeaderProps> = ({
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isToolsMenuOpen, isMobileMenuOpen]);
+  }, [isToolsMenuOpen, isExportMenuOpen, isMobileMenuOpen]);
 
-  // Listen for programmatic toggle of tools menu (e.g. from interactive tour Step 19)
+  // Listen for programmatic toggle of tools menu & export menu (from interactive tour)
   useEffect(() => {
     const handleSetToolsMenu = (e: Event) => {
       const customEvent = e as CustomEvent<{ open?: boolean }>;
-      setIsToolsMenuOpen(Boolean(customEvent.detail?.open));
+      const open = Boolean(customEvent.detail?.open);
+      setIsToolsMenuOpen(open);
+      if (!open) setIsExportMenuOpen(false);
+    };
+    const handleSetExportMenu = (e: Event) => {
+      const customEvent = e as CustomEvent<{ open?: boolean }>;
+      setIsExportMenuOpen(Boolean(customEvent.detail?.open));
     };
     window.addEventListener('quantporto:set-tools-menu', handleSetToolsMenu);
+    window.addEventListener('quantporto:set-export-menu', handleSetExportMenu);
     return () => {
       window.removeEventListener('quantporto:set-tools-menu', handleSetToolsMenu);
+      window.removeEventListener('quantporto:set-export-menu', handleSetExportMenu);
     };
   }, []);
 
@@ -525,23 +542,192 @@ export const Header: React.FC<HeaderProps> = ({
                 </kbd>
               </button>
 
-              {/* Desktop-only Unified Tools & Settings Dropdown */}
+              {/* Desktop Menu 1: Ekspor & Dokumen */}
+              <div ref={exportMenuRef} className="relative hidden lg:block">
+                <button
+                  id="tour-export-actions"
+                  type="button"
+                  aria-expanded={isExportMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setIsExportMenuOpen((prev) => !prev);
+                    setIsToolsMenuOpen(false);
+                  }}
+                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                    isExportMenuOpen
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'ui-subtle ui-text-secondary hover:opacity-80'
+                  }`}
+                  title="Ekspor Factsheet A4, Slip Order Broker, dan Cadangan Data"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Ekspor</span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${
+                      isExportMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {isExportMenuOpen && (
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2 rounded-xl p-3 text-xs shadow-md">
+                    <div className="ui-border flex items-center justify-between border-b pb-2">
+                      <span className="ui-text-main font-bold">
+                        Dokumen &amp; Ekspor
+                      </span>
+                      <span className="ui-text-muted font-mono text-[10px]">
+                        Laporan
+                      </span>
+                    </div>
+
+                    {/* Factsheet Report */}
+                    {onOpenFactsheet && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          onOpenFactsheet();
+                        }}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Factsheet Portofolio</span>
+                        </div>
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          A4 / PNG
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Broker Order Slips */}
+                    {onOpenOrderSlip && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          onOpenOrderSlip();
+                        }}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                          <span>Slip Order Broker</span>
+                        </div>
+                        <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
+                          Multi-App
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Share Link */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCopyShareUrl();
+                        setTimeout(() => setIsExportMenuOpen(false), 800);
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {shareCopied ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        ) : (
+                          <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                        )}
+                        <span>
+                          {shareCopied
+                            ? 'Tautan Tersalin ke Clipboard!'
+                            : 'Bagikan Link Portofolio'}
+                        </span>
+                      </div>
+                      <span className="ui-text-muted font-mono text-[10px]">
+                        #porto
+                      </span>
+                    </button>
+
+                    {/* Transfer Data & Backup */}
+                    {onOpenDataTransfer && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          onOpenDataTransfer();
+                        }}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 border border-emerald-500/30 bg-emerald-500/5 mt-1"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Database className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="font-semibold">Transfer &amp; Backup Data</span>
+                        </div>
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          Teks / JSON
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Quick Copy Config & File Backup */}
+                    {onQuickCopyConfig && (
+                      <button
+                        type="button"
+                        onClick={onQuickCopyConfig}
+                        className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-md p-1.5 text-[11px] hover:opacity-80 mt-1"
+                        title="Salin seluruh konfigurasi aplikasi sebagai teks JSON ke clipboard"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {quickCopyFeedback ? (
+                            <Check className="h-3 w-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                          <span>{quickCopyFeedback ? 'Config Tersalin!' : 'Salin Config Teks'}</span>
+                        </div>
+                        <span className="font-mono text-[10px] ui-text-muted">JSON</span>
+                      </button>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-1 border-t ui-border">
+                      <button
+                        type="button"
+                        onClick={onExportJson}
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>Export File</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                      >
+                        <Upload className="h-3 w-3" />
+                        <span>Import File</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Menu 2: Pengaturan & Pasar */}
               <div ref={toolsMenuRef} className="relative hidden lg:block">
                 <button
                   id="tour-tools-menu"
                   type="button"
                   aria-expanded={isToolsMenuOpen}
                   aria-haspopup="menu"
-                  onClick={() => setIsToolsMenuOpen((prev) => !prev)}
+                  onClick={() => {
+                    setIsToolsMenuOpen((prev) => !prev);
+                    setIsExportMenuOpen(false);
+                  }}
                   className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
-                  title="Menu Kurs USD, Promo RDPT, Sinkronisasi Harga, Simpan, dan Bagikan"
+                  title="Menu Kurs USD, Promo RDPT, Sinkronisasi Harga Live, Sidik Jari, dan Reset"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>Alat &amp; Pengaturan</span>
+                  <span>Pengaturan</span>
                   <span className="font-mono text-[10px] ui-text-muted">
                     (${Math.round(usdIdrRate / 1000)}k)
                   </span>
@@ -556,7 +742,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2.5 rounded-xl p-3 text-xs shadow-md">
                     <div className="ui-border flex items-center justify-between border-b pb-2">
                       <span className="ui-text-main font-bold">
-                        Alat &amp; Pengaturan
+                        Pengaturan &amp; Pasar
                       </span>
                       <span className="ui-text-muted font-mono text-[10px]">
                         QuantPorto
@@ -659,7 +845,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                           <div className="flex items-center justify-between gap-1 text-[11px] pt-0.5">
                             <span className="ui-text-muted text-[10px] truncate max-w-[150px]">
-                              {hasBiometric ? 'Terdaftar di perangkat ini' : 'Belum didaftarkan'}
+                              {hasBiometric ? 'Terdaftar di perangkat' : 'Belum didaftarkan'}
                             </span>
                             {hasBiometric ? (
                               <button
@@ -706,128 +892,6 @@ export const Header: React.FC<HeaderProps> = ({
                           {savedPortfolios.length}
                         </span>
                       </button>
-
-                      {/* Share Link */}
-                      <button
-                        type="button"
-                        onClick={onCopyShareUrl}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          {shareCopied ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          ) : (
-                            <Share2 className="h-3.5 w-3.5" />
-                          )}
-                          <span>
-                            {shareCopied
-                              ? 'Tautan Tersalin ke Clipboard!'
-                              : 'Bagikan Link Portofolio'}
-                          </span>
-                        </div>
-                        <span className="ui-text-muted font-mono text-[10px]">
-                          #porto
-                        </span>
-                      </button>
-
-                      {/* Institutional Factsheet & Broker Order Slips */}
-                      <div id="tour-export-actions" className="space-y-1.5">
-                        {onOpenFactsheet && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsToolsMenuOpen(false);
-                              onOpenFactsheet();
-                            }}
-                            className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                              <span>Factsheet Portofolio</span>
-                            </div>
-                            <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold ui-text-secondary">
-                              A4 / PNG
-                            </span>
-                          </button>
-                        )}
-
-                        {onOpenOrderSlip && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsToolsMenuOpen(false);
-                              onOpenOrderSlip();
-                            }}
-                            className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5 text-sky-500" />
-                              <span>Slip Order Broker</span>
-                            </div>
-                            <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
-                              Multi-App
-                            </span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Transfer Data & Backup */}
-                      {onOpenDataTransfer && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsToolsMenuOpen(false);
-                            onOpenDataTransfer();
-                          }}
-                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 border border-emerald-500/30 bg-emerald-500/5 mt-1"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <Database className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="font-semibold">Transfer & Backup Data</span>
-                          </div>
-                          <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                            Teks / JSON
-                          </span>
-                        </button>
-                      )}
-
-                      {/* Quick Copy Config & File Backup */}
-                      {onQuickCopyConfig && (
-                        <button
-                          type="button"
-                          onClick={onQuickCopyConfig}
-                          className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-md p-1.5 text-[11px] hover:opacity-80 mt-1"
-                          title="Salin seluruh konfigurasi aplikasi sebagai teks JSON ke clipboard"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            {quickCopyFeedback ? (
-                              <Check className="h-3 w-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                            <span>{quickCopyFeedback ? 'Config Tersalin!' : 'Salin Config Teks'}</span>
-                          </div>
-                          <span className="font-mono text-[10px] ui-text-muted">JSON</span>
-                        </button>
-                      )}
-                      <div className="grid grid-cols-2 gap-1.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={onExportJson}
-                          className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
-                        >
-                          <Download className="h-3 w-3" />
-                          <span>Export Backup</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
-                        >
-                          <Upload className="h-3 w-3" />
-                          <span>Import Backup</span>
-                        </button>
-                      </div>
 
                       {/* Reset All to Initial Settings */}
                       {onOpenResetConfirm && (
@@ -922,212 +986,271 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Collapsible Mobile Tools Drawer (< lg) */}
+          {/* Categorized Mobile Tools & Navigation Drawer (< lg) */}
           {isMobileMenuOpen && (
-            <div className="ui-border mt-2.5 space-y-2.5 border-t pt-2.5 lg:hidden">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {/* USD/IDR Input */}
-                <div className="ui-subtle flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs">
-                  <span className="ui-text-muted font-medium">Kurs USD:</span>
-                  <FormattedNumberInput
-                    step={100}
-                    min={1000}
-                    value={usdIdrRate}
-                    onChange={(val) => setUsdIdrRate(val)}
-                    className="ui-text-main w-16 bg-transparent text-right font-mono font-bold focus:outline-none"
-                    ariaLabel="USD to IDR Exchange Rate Mobile"
-                  />
-                </div>
+            <div className="ui-border mt-2.5 space-y-3.5 border-t pt-3 lg:hidden max-h-[75vh] overflow-y-auto">
+              {/* Category 1: Aksi Cepat & Navigasi */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
+                  Aksi Cepat
+                </span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenRecommender();
+                    }}
+                    className="flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white shadow-2xs"
+                  >
+                    <Compass className="h-3.5 w-3.5 shrink-0" />
+                    <span>Tanya Quant</span>
+                  </button>
 
-                {/* RDPT Promo Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setRdptPromoActive(!rdptPromoActive)}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
-                    rdptPromoActive
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                      : 'ui-subtle ui-text-secondary'
-                  }`}
-                >
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Promo RDPT +3%</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onStartInteractiveTour();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Panduan</span>
+                  </button>
 
-                {/* Sync Live Prices */}
-                <button
-                  type="button"
-                  onClick={onRefreshLivePrices}
-                  disabled={isFetchingPrices}
-                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
-                  title={priceSourceText || undefined}
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin' : ''}`}
-                  />
-                  <span>
-                    {isFetchingPrices
-                      ? 'Syncing...'
-                      : lastUpdatedText
-                        ? `Sync (${lastUpdatedText})`
-                        : 'Sync Harga Live'}
-                  </span>
-                </button>
-
-                {/* Saved Portfolios */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    dialogRef.current?.showModal();
-                  }}
-                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                >
-                  <BookmarkCheck className="h-3.5 w-3.5" />
-                  <span>Saved ({savedPortfolios.length})</span>
-                </button>
-
-                {/* Share URL */}
-                <button
-                  type="button"
-                  onClick={onCopyShareUrl}
-                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                >
-                  {shareCopied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>Link Tersalin</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="h-3.5 w-3.5" />
-                      <span>Bagikan Link</span>
-                    </>
+                  {onLockApp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onLockApp();
+                      }}
+                      className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+                    >
+                      <Lock className="h-3.5 w-3.5 shrink-0" />
+                      <span>Kunci Sesi</span>
+                    </button>
                   )}
-                </button>
+                </div>
+              </div>
 
-                {/* Interactive Spotlight Tour Mobile */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onStartInteractiveTour();
-                  }}
-                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
-                >
-                  <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Panduan Interaktif</span>
-                </button>
-
-                {/* Factsheet Report Mobile */}
-                {onOpenFactsheet && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onOpenFactsheet();
-                    }}
-                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5" />
-                    <span>Factsheet A4</span>
-                  </button>
-                )}
-
-                {/* Broker Order Slip Mobile */}
-                {onOpenOrderSlip && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onOpenOrderSlip();
-                    }}
-                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-sky-500 dark:text-sky-400"
-                  >
-                    <Building2 className="h-3.5 w-3.5" />
-                    <span>Slip Broker</span>
-                  </button>
-                )}
-
-                {/* Lock App Mobile */}
-                {onLockApp && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onLockApp();
-                    }}
-                    className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400"
-                  >
-                    <Lock className="h-3.5 w-3.5" />
-                    <span>Kunci Sesi</span>
-                  </button>
-                )}
-
-                {/* WebAuthn Biometric Settings Mobile */}
-                {isBiometricSupported && (
-                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
+              {/* Category 2: Dokumen & Ekspor */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
+                  Dokumen &amp; Ekspor
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {onOpenFactsheet && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenFactsheet();
+                      }}
+                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
+                    >
                       <div className="flex items-center gap-1.5">
-                        <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
-                        <span className="ui-text-main font-semibold">Login Sidik Jari:</span>
+                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Factsheet A4</span>
                       </div>
-                      <span
-                        className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                          hasBiometric
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-zinc-500/15 text-zinc-500'
-                        }`}
-                      >
-                        {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
-                      </span>
-                    </div>
+                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">PNG</span>
+                    </button>
+                  )}
 
-                    <div className="flex items-center justify-between text-xs pt-0.5">
-                      <span className="ui-text-muted text-[11px]">
-                        {hasBiometric ? 'Terdaftar di perangkat ini' : 'Belum didaftarkan'}
-                      </span>
-                      {hasBiometric ? (
-                        <button
-                          type="button"
-                          onClick={handleRevokeBiometric}
-                          className="text-rose-500 hover:text-rose-400 font-semibold underline text-xs"
-                        >
-                          Hapus Sidik Jari
-                        </button>
+                  {onOpenOrderSlip && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenOrderSlip();
+                      }}
+                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                        <span>Slip Broker</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-sky-500 font-bold">App</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={onCopyShareUrl}
+                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {shareCopied ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
                       ) : (
-                        <button
-                          type="button"
-                          onClick={handleRegisterBiometric}
-                          disabled={isRegisteringBiometric}
-                          className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline text-xs disabled:opacity-50"
+                        <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                      )}
+                      <span>{shareCopied ? 'Link Tersalin!' : 'Bagikan Link'}</span>
+                    </div>
+                    <span className="text-[10px] font-mono ui-text-muted">#porto</span>
+                  </button>
+
+                  {onOpenDataTransfer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenDataTransfer();
+                      }}
+                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border border-emerald-500/30 px-2.5 py-2 text-xs font-semibold"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Database className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>Transfer Data</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">JSON</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Category 3: Pasar & Pengaturan */}
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
+                  Pasar &amp; Pengaturan
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* USD/IDR Input */}
+                  <div className="ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
+                    <span className="ui-text-muted font-medium">Kurs USD:</span>
+                    <FormattedNumberInput
+                      step={100}
+                      min={1000}
+                      value={usdIdrRate}
+                      onChange={(val) => setUsdIdrRate(val)}
+                      className="ui-text-main w-16 bg-transparent text-right font-mono font-bold focus:outline-none"
+                      ariaLabel="USD to IDR Exchange Rate Mobile"
+                    />
+                  </div>
+
+                  {/* RDPT Promo Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setRdptPromoActive(!rdptPromoActive)}
+                    className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                      rdptPromoActive
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                        : 'ui-subtle ui-text-secondary'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Promo RDPT</span>
+                    </div>
+                    <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                      {rdptPromoActive ? '+3%' : 'OFF'}
+                    </span>
+                  </button>
+
+                  {/* Sync Live Prices */}
+                  <button
+                    type="button"
+                    onClick={onRefreshLivePrices}
+                    disabled={isFetchingPrices}
+                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
+                    title={priceSourceText || undefined}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-emerald-600' : ''}`}
+                      />
+                      <span>Sync Harga</span>
+                    </div>
+                    <span className="text-[10px] font-mono ui-text-muted truncate max-w-[70px]">
+                      {isFetchingPrices ? 'Syncing...' : lastUpdatedText || '5Y'}
+                    </span>
+                  </button>
+
+                  {/* Saved Portfolios */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      dialogRef.current?.showModal();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Saved</span>
+                    </div>
+                    <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                      {savedPortfolios.length}
+                    </span>
+                  </button>
+
+                  {/* WebAuthn Biometric Settings Mobile */}
+                  {isBiometricSupported && (
+                    <div className="col-span-2 ui-subtle rounded-lg border p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="ui-text-main font-semibold">Login Sidik Jari:</span>
+                        </div>
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                            hasBiometric
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-zinc-500/15 text-zinc-500'
+                          }`}
                         >
-                          {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
-                        </button>
+                          {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-0.5">
+                        <span className="ui-text-muted text-[11px]">
+                          {hasBiometric ? 'Terdaftar di perangkat' : 'Belum didaftarkan'}
+                        </span>
+                        {hasBiometric ? (
+                          <button
+                            type="button"
+                            onClick={handleRevokeBiometric}
+                            className="text-rose-500 hover:text-rose-400 font-semibold underline text-xs"
+                          >
+                            Hapus Sidik Jari
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleRegisterBiometric}
+                            disabled={isRegisteringBiometric}
+                            className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline text-xs disabled:opacity-50"
+                          >
+                            {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
+                          </button>
+                        )}
+                      </div>
+
+                      {biometricFeedback && (
+                        <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
+                          {biometricFeedback}
+                        </p>
                       )}
                     </div>
+                  )}
 
-                    {biometricFeedback && (
-                      <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
-                        {biometricFeedback}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Reset All to Initial Settings Mobile */}
-                {onOpenResetConfirm && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onOpenResetConfirm();
-                    }}
-                    className="col-span-2 sm:col-span-3 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition mt-1"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    <span>Reset Seluruh Aplikasi ke Kondisi Awal</span>
-                  </button>
-                )}
+                  {/* Reset All to Initial Settings Mobile */}
+                  {onOpenResetConfirm && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        onOpenResetConfirm();
+                      }}
+                      className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition mt-0.5"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      <span>Reset Seluruh Aplikasi ke Kondisi Awal</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1368,18 +1491,19 @@ export const Header: React.FC<HeaderProps> = ({
         </dialog>
       </header>
 
-      {/* Thumb-Friendly Mobile Bottom Tab Navigation Bar (< lg) */}
+      {/* Thumb-Friendly Ergonomic 4-Tab Mobile Bottom Navigation Bar (< lg) */}
       <nav
         aria-label="Utama (Mobile)"
-        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-xs lg:hidden"
+        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-md lg:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
           <button
             type="button"
             onClick={() => {
               setActiveTab('builder');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            aria-current={activeTab === 'builder' ? 'page' : undefined}
             className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
               activeTab === 'builder'
                 ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
@@ -1387,7 +1511,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <BarChart3 className="h-4 w-4" />
-            <span>1. Builder</span>
+            <span>Builder</span>
           </button>
 
           <button
@@ -1396,14 +1520,25 @@ export const Header: React.FC<HeaderProps> = ({
               setActiveTab('rebalancer');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+            aria-current={activeTab === 'rebalancer' ? 'page' : undefined}
+            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
               activeTab === 'rebalancer'
                 ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
                 : 'ui-text-muted hover:ui-text-main'
             }`}
           >
-            <Scale className="h-4 w-4" />
-            <span>2. Rebalancer</span>
+            <div className="relative">
+              <Scale className="h-4 w-4" />
+              {(rebalanceBreachedCount ?? 0) > 0 && (
+                <span
+                  className="absolute -top-1 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[8px] font-bold text-zinc-950 ring-2 ring-white dark:ring-zinc-900"
+                  title={`${rebalanceBreachedCount} aset drift`}
+                >
+                  {rebalanceBreachedCount}
+                </span>
+              )}
+            </div>
+            <span>Rebalance</span>
           </button>
 
           <button
@@ -1412,6 +1547,7 @@ export const Header: React.FC<HeaderProps> = ({
               setActiveTab('roadmap');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            aria-current={activeTab === 'roadmap' ? 'page' : undefined}
             className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
               activeTab === 'roadmap'
                 ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
@@ -1419,7 +1555,24 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <TrendingUp className="h-4 w-4" />
-            <span>3. Simulator</span>
+            <span>Simulator</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen((prev) => !prev);
+            }}
+            aria-expanded={isMobileMenuOpen}
+            aria-label="Buka menu pengaturan & dokumen"
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+              isMobileMenuOpen
+                ? 'bg-emerald-500/20 font-bold text-emerald-700 dark:text-emerald-300'
+                : 'ui-text-muted hover:ui-text-main'
+            }`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Menu</span>
           </button>
         </div>
       </nav>

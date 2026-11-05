@@ -212,6 +212,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const [optionsActiveTab, setOptionsActiveTab] = useState<'crisis' | 'broker' | 'balance'>('crisis');
   const [isSyncingFng, setIsSyncingFng] = useState(false);
   const [fngSyncMessage, setFngSyncMessage] = useState<string | null>(null);
   const [showDeficitConfirmModal, setShowDeficitConfirmModal] = useState(false);
@@ -1057,7 +1058,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </button>
 
               {isOptionsMenuOpen && (
-                <div className="ui-card absolute right-0 z-50 mt-1.5 w-80 max-w-[90vw] space-y-3 rounded-xl p-3.5 text-xs shadow-md border ui-border">
+                <div className="ui-card absolute right-0 z-50 mt-1.5 w-84 max-w-[92vw] space-y-2.5 rounded-xl p-3.5 text-xs shadow-md border ui-border">
                   <div className="ui-border flex items-center justify-between border-b pb-2">
                     <span className="ui-text-main font-bold">
                       Opsi &amp; Simulasi Lanjutan
@@ -1067,436 +1068,475 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     </span>
                   </div>
 
-                  {/* Section 1: Simulasi Krisis & Crash Stress-Test (Preserves #tour-stress-scenarios!) */}
-                  <div id="tour-stress-scenarios" className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-[11px] font-semibold ui-text-main">
-                        <Activity className="h-3 w-3 text-amber-500" />
-                        <span>Simulasi Krisis &amp; Crash Pasar:</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowShockSliders(!showShockSliders)}
-                        className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline"
-                      >
-                        {showShockSliders ? 'Tutup Sliders' : 'Slider Custom'}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => onApplyShockScenario('video-bull-3x')}
-                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
-                      >
-                        <TrendingUp className="h-3 w-3 text-emerald-500" />
-                        <span>Bull 3x (+200%)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onApplyShockScenario('video-crash-50')}
-                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
-                      >
-                        <TrendingDown className="h-3 w-3 text-rose-500" />
-                        <span>Crash -50% (Dip)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onApplyShockScenario('global-crisis')}
-                        className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
-                      >
-                        <span>Krisis Global (-35%)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onApplyShockScenario('reset')}
-                        className="ui-subtle ui-text-muted flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        <span>Reset (0%)</span>
-                      </button>
-                    </div>
-
-                    {/* Feature 2: Historical Macro Crisis Presets */}
-                    <div className="pt-1.5">
-                      <span className="text-[10px] ui-text-muted block mb-1 font-medium">
-                        Krisis Historis Nyata:
-                      </span>
-                      <div className="grid grid-cols-3 gap-1 text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => onApplyShockScenario('gfc-2008')}
-                          className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1 rounded hover:opacity-80 transition text-center"
-                          title="2008 GFC: IHSG -55%, S&P500 -50%, Emas +25%"
-                        >
-                          <span className="font-bold text-rose-500">2008 GFC</span>
-                          <span className="text-[9px] ui-text-muted">IHSG -55%</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onApplyShockScenario('covid-2020')}
-                          className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1 rounded hover:opacity-80 transition text-center"
-                          title="COVID 2020 Crash: IHSG -37%, US -34%, Crypto -50%"
-                        >
-                          <span className="font-bold text-amber-500">2020 COVID</span>
-                          <span className="text-[9px] ui-text-muted">Crash -37%</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onApplyShockScenario('crypto-tech-winter-2022')}
-                          className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1 rounded hover:opacity-80 transition text-center"
-                          title="2022 Winter: Crypto -75%, Tech -33%, IHSG +4%"
-                        >
-                          <span className="font-bold text-sky-500">2022 Winter</span>
-                          <span className="text-[9px] ui-text-muted">Crypto -75%</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 2: Data Input & Penyesuaian Saldo */}
-                  <div className="ui-border border-t pt-2 space-y-1">
-                    <span className="text-[11px] font-semibold ui-text-main block mb-1">
-                      Manipulasi Saldo &amp; Portofolio:
-                    </span>
+                  {/* 3 Categorized Tabs Header */}
+                  <div className="ui-subtle grid grid-cols-3 gap-0.5 rounded-lg p-0.5 border text-center text-[11px]">
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOptionsMenuOpen(false);
-                        setIsHoldingsTextModalOpen(true);
-                      }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      onClick={() => setOptionsActiveTab('crisis')}
+                      className={`rounded py-1 font-semibold transition flex items-center justify-center gap-1 ${
+                        optionsActiveTab === 'crisis'
+                          ? 'ui-card ui-text-main shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>Import / Export Teks (Excel)</span>
-                      </div>
-                      <span className="ui-text-muted font-mono text-[10px]">TSV/CSV</span>
+                      <Activity className="h-3 w-3 text-amber-500" />
+                      <span>Krisis</span>
                     </button>
-
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOptionsMenuOpen(false);
-                        onClearHoldingsForManualInput();
-                      }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      onClick={() => setOptionsActiveTab('broker')}
+                      className={`rounded py-1 font-semibold transition flex items-center justify-center gap-1 ${
+                        optionsActiveTab === 'broker'
+                          ? 'ui-card ui-text-main shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
-                        <span>Isi Manual (Kosongkan ke Rp 0)</span>
-                      </div>
-                      <span className="ui-text-muted font-mono text-[10px]">Reset</span>
+                      <SlidersHorizontal className="h-3 w-3 text-sky-500" />
+                      <span>Aturan &amp; TAA</span>
                     </button>
-
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOptionsMenuOpen(false);
-                        onLoadVideo1BExample();
-                      }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      onClick={() => setOptionsActiveTab('balance')}
+                      className={`rounded py-1 font-semibold transition flex items-center justify-center gap-1 ${
+                        optionsActiveTab === 'balance'
+                          ? 'ui-card ui-text-main shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <Coins className="h-3.5 w-3.5 ui-text-muted" />
-                        <span>Muat Contoh Video Rp 1 Miliar</span>
-                      </div>
-                      <span className="ui-text-muted font-mono text-[10px]">Demo</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsOptionsMenuOpen(false);
-                        onApplyPeerDiversification();
-                      }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Split className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Split Diversifikasi Sub-Bank</span>
-                      </div>
-                      <span className="ui-text-muted font-mono text-[10px]">Rekening</span>
+                      <Coins className="h-3 w-3 text-emerald-500" />
+                      <span>Kelola Saldo</span>
                     </button>
                   </div>
 
-                  {/* Section 3: Pengaturan Eksekusi & Filter */}
-                  <div className="ui-border border-t pt-2 space-y-1.5">
-                    <span className="text-[11px] font-semibold ui-text-main block">
-                      Aturan Eksekusi Broker:
-                    </span>
-                    {setEnableIdxLotRounding && (
-                      <button
-                        type="button"
-                        onClick={() => setEnableIdxLotRounding(!enableIdxLotRounding)}
-                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
-                          enableIdxLotRounding
-                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
-                            : 'ui-subtle ui-text-secondary'
-                        }`}
-                      >
-                        <span>Bulatkan Lot BEI (100 lbr)</span>
-                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
-                          {enableIdxLotRounding ? 'ON' : 'OFF'}
-                        </span>
-                      </button>
-                    )}
-
-                    {setEnableBrokerFees && (
-                      <button
-                        type="button"
-                        onClick={() => setEnableBrokerFees(!enableBrokerFees)}
-                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
-                          enableBrokerFees
-                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
-                            : 'ui-subtle ui-text-secondary'
-                        }`}
-                      >
-                        <span>Estimasi Fee Broker &amp; Pajak</span>
-                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
-                          {enableBrokerFees ? 'ON' : 'OFF'}
-                        </span>
-                      </button>
-                    )}
-
-                    {setFilterDustTrades && (
-                      <button
-                        type="button"
-                        onClick={() => setFilterDustTrades(!filterDustTrades)}
-                        className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
-                          filterDustTrades
-                            ? 'bg-zinc-500/10 ui-text-main font-semibold'
-                            : 'ui-subtle ui-text-secondary'
-                        }`}
-                      >
-                        <span>Saring Order Receh (&lt; Rp 25rb)</span>
-                        <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
-                          {filterDustTrades ? 'ON' : 'OFF'}
-                        </span>
-                      </button>
-                    )}
-
-                    {anyPriceModified && onResetAllAssetPrices && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsOptionsMenuOpen(false);
-                          onResetAllAssetPrices();
-                        }}
-                        className="flex w-full items-center justify-between rounded-lg p-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition mt-1"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          <span>Reset Semua Harga Spot Pasar</span>
-                        </div>
-                        <span className="text-[10px] uppercase font-mono">Reset</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Section 4: Kalkulator Skala Cepat */}
-                  <div className="ui-border border-t pt-2 space-y-1.5">
-                    <span className="text-[11px] font-semibold ui-text-main block">
-                      Skalakan Total Portofolio:
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="ui-subtle flex flex-1 items-center gap-1 rounded-md border px-2 py-1">
-                        <span className="ui-text-muted font-mono text-[10px]">Rp</span>
-                        <FormattedNumberInput
-                          step={10_000_000}
-                          min={0}
-                          value={quickTotalIdr}
-                          onChange={(val) => setQuickTotalIdr(val)}
-                          className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
-                          ariaLabel="Quick Scale Total Value"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onScaleTotalHoldingsIdr(quickTotalIdr, 'target');
-                          setIsOptionsMenuOpen(false);
-                        }}
-                        className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-500 shrink-0"
-                      >
-                        Bagi Target
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1 text-[10px]">
-                      {[50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map(
-                        (presetTotal) => (
-                          <button
-                            key={presetTotal}
-                            type="button"
-                            onClick={() => setQuickTotalIdr(presetTotal)}
-                            className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
-                          >
-                            {formatIdr(presetTotal, true)}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Section 5: Dynamic Valuation Band & Tactical Asset Allocation */}
-                  {tacticalConfig && setTacticalConfig && (
-                    <div className="ui-border border-t pt-2 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Target className="h-3.5 w-3.5 text-emerald-500" />
+                  {/* TAB 1: KRISIS & STRESS-TEST */}
+                  {optionsActiveTab === 'crisis' && (
+                    <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-0.5">
+                      {/* Section 1: Simulasi Krisis Video (Preserves #tour-stress-scenarios!) */}
+                      <div id="tour-stress-scenarios" className="space-y-1.5">
+                        <div className="flex items-center justify-between">
                           <span className="text-[11px] font-semibold ui-text-main">
-                            Valuation Band (TAA):
+                            Skenario Video Edukasi:
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowShockSliders(!showShockSliders)}
+                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline"
+                          >
+                            {showShockSliders ? 'Tutup Sliders' : 'Slider Custom'}
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTacticalConfig({
-                              ...tacticalConfig,
-                              enabled: !tacticalConfig.enabled,
-                            })
-                          }
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold transition ${
-                            tacticalConfig.enabled
-                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                              : 'ui-subtle ui-text-muted'
-                          }`}
-                        >
-                          {tacticalConfig.enabled ? 'ON' : 'OFF'}
-                        </button>
+
+                        <div className="grid grid-cols-2 gap-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => onApplyShockScenario('video-bull-3x')}
+                            className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                          >
+                            <TrendingUp className="h-3 w-3 text-emerald-500" />
+                            <span>Bull 3x (+200%)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApplyShockScenario('video-crash-50')}
+                            className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                          >
+                            <TrendingDown className="h-3 w-3 text-rose-500" />
+                            <span>Crash -50% (Dip)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApplyShockScenario('global-crisis')}
+                            className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                          >
+                            <span>Krisis Global (-35%)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApplyShockScenario('reset')}
+                            className="ui-subtle ui-text-muted flex items-center justify-center gap-1 rounded-md p-1.5 hover:opacity-80 transition"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Reset (0%)</span>
+                          </button>
+                        </div>
+
+                        {/* Historical Macro Crisis Presets */}
+                        <div className="pt-1">
+                          <span className="text-[10px] ui-text-muted block mb-1 font-medium">
+                            Krisis Historis Nyata:
+                          </span>
+                          <div className="grid grid-cols-3 gap-1 text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => onApplyShockScenario('gfc-2008')}
+                              className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1.5 rounded hover:opacity-80 transition text-center"
+                              title="2008 GFC: IHSG -55%, S&P500 -50%, Emas +25%"
+                            >
+                              <span className="font-bold text-rose-500">2008 GFC</span>
+                              <span className="text-[9px] ui-text-muted">IHSG -55%</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onApplyShockScenario('covid-2020')}
+                              className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1.5 rounded hover:opacity-80 transition text-center"
+                              title="COVID 2020 Crash: IHSG -37%, US -34%, Crypto -50%"
+                            >
+                              <span className="font-bold text-amber-500">2020 COVID</span>
+                              <span className="text-[9px] ui-text-muted">Crash -37%</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onApplyShockScenario('crypto-tech-winter-2022')}
+                              className="ui-subtle ui-text-main flex flex-col items-center justify-center p-1.5 rounded hover:opacity-80 transition text-center"
+                              title="2022 Winter: Crypto -75%, Tech -33%, IHSG +4%"
+                            >
+                              <span className="font-bold text-sky-500">2022 Winter</span>
+                              <span className="text-[9px] ui-text-muted">Crypto -75%</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: ATURAN BROKER & TAA TACTICAL VALUATION */}
+                  {optionsActiveTab === 'broker' && (
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-0.5">
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold ui-text-main block">
+                          Aturan Eksekusi Broker:
+                        </span>
+                        {setEnableIdxLotRounding && (
+                          <button
+                            type="button"
+                            onClick={() => setEnableIdxLotRounding(!enableIdxLotRounding)}
+                            className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                              enableIdxLotRounding
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                                : 'ui-subtle ui-text-secondary'
+                            }`}
+                          >
+                            <span>Bulatkan Lot BEI (100 lbr)</span>
+                            <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                              {enableIdxLotRounding ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        )}
+
+                        {setEnableBrokerFees && (
+                          <button
+                            type="button"
+                            onClick={() => setEnableBrokerFees(!enableBrokerFees)}
+                            className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                              enableBrokerFees
+                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold'
+                                : 'ui-subtle ui-text-secondary'
+                            }`}
+                          >
+                            <span>Estimasi Fee Broker &amp; Pajak</span>
+                            <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                              {enableBrokerFees ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        )}
+
+                        {setFilterDustTrades && (
+                          <button
+                            type="button"
+                            onClick={() => setFilterDustTrades(!filterDustTrades)}
+                            className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                              filterDustTrades
+                                ? 'bg-zinc-500/10 ui-text-main font-semibold'
+                                : 'ui-subtle ui-text-secondary'
+                            }`}
+                          >
+                            <span>Saring Order Receh (&lt; Rp 25rb)</span>
+                            <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                              {filterDustTrades ? 'ON' : 'OFF'}
+                            </span>
+                          </button>
+                        )}
+
+                        {anyPriceModified && onResetAllAssetPrices && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsOptionsMenuOpen(false);
+                              onResetAllAssetPrices();
+                            }}
+                            className="flex w-full items-center justify-between rounded-lg p-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition mt-1"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              <span>Reset Semua Harga Spot Pasar</span>
+                            </div>
+                            <span className="text-[10px] uppercase font-mono">Reset</span>
+                          </button>
+                        )}
                       </div>
 
-                      {tacticalConfig.enabled && (
-                        <div className="space-y-2 pt-1 text-[11px]">
-                          {/* Aggressiveness pills */}
+                      {/* Tactical Asset Allocation (Valuation Band) */}
+                      {tacticalConfig && setTacticalConfig && (
+                        <div className="ui-border border-t pt-2 space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="ui-text-muted text-[10px]">Agresivitas Tilt:</span>
-                            <div className="flex gap-1">
-                              {[0.1, 0.15, 0.25].map((val) => (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() =>
+                            <div className="flex items-center gap-1.5">
+                              <Target className="h-3.5 w-3.5 text-emerald-500" />
+                              <span className="text-[11px] font-semibold ui-text-main">
+                                Valuation Band (TAA):
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTacticalConfig({
+                                  ...tacticalConfig,
+                                  enabled: !tacticalConfig.enabled,
+                                })
+                              }
+                              className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold transition ${
+                                tacticalConfig.enabled
+                                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                  : 'ui-subtle ui-text-muted'
+                              }`}
+                            >
+                              {tacticalConfig.enabled ? 'ON' : 'OFF'}
+                            </button>
+                          </div>
+
+                          {tacticalConfig.enabled && (
+                            <div className="space-y-2 pt-1 text-[11px]">
+                              {/* Aggressiveness pills */}
+                              <div className="flex items-center justify-between">
+                                <span className="ui-text-muted text-[10px]">Agresivitas Tilt:</span>
+                                <div className="flex gap-1">
+                                  {[0.1, 0.15, 0.25].map((val) => (
+                                    <button
+                                      key={val}
+                                      type="button"
+                                      onClick={() =>
+                                        setTacticalConfig({
+                                          ...tacticalConfig,
+                                          aggressiveness: val,
+                                        })
+                                      }
+                                      className={`rounded px-1.5 py-0.5 text-[10px] font-mono transition ${
+                                        tacticalConfig.aggressiveness === val
+                                          ? 'bg-emerald-600 text-white font-bold'
+                                          : 'ui-subtle ui-text-muted hover:ui-text-main'
+                                      }`}
+                                    >
+                                      ±{(val * 100).toFixed(0)}%
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Crypto slider & sync */}
+                              <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="font-semibold ui-text-main">Crypto Sentiment:</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-mono font-bold">{tacticalConfig.cryptoScore}/100</span>
+                                    <button
+                                      type="button"
+                                      onClick={handleSyncCryptoFearAndGreed}
+                                      disabled={isSyncingFng}
+                                      className="text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                                      title="Tarik data live dari alternative.me API"
+                                    >
+                                      <RefreshCw className={`h-2.5 w-2.5 ${isSyncingFng ? 'animate-spin' : ''}`} />
+                                      {isSyncingFng ? 'Sync...' : 'Live'}
+                                    </button>
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={tacticalConfig.cryptoScore}
+                                  onChange={(e) =>
                                     setTacticalConfig({
                                       ...tacticalConfig,
-                                      aggressiveness: val,
+                                      cryptoScore: parseInt(e.target.value, 10),
                                     })
                                   }
-                                  className={`rounded px-1.5 py-0.5 text-[10px] font-mono transition ${
-                                    tacticalConfig.aggressiveness === val
-                                      ? 'bg-emerald-600 text-white font-bold'
-                                      : 'ui-subtle ui-text-muted hover:ui-text-main'
-                                  }`}
-                                >
-                                  ±{(val * 100).toFixed(0)}%
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                                  aria-label="Skor sentimen kripto"
+                                  className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                                />
+                                <div className="flex justify-between text-[9px] ui-text-muted">
+                                  <span>0 Fear (+tilt)</span>
+                                  <span>50 Netral</span>
+                                  <span>100 Greed (-trim)</span>
+                                </div>
+                                {fngSyncMessage && (
+                                  <div className="text-[9px] text-emerald-600 dark:text-emerald-400 italic">
+                                    {fngSyncMessage}
+                                  </div>
+                                )}
+                              </div>
 
-                          {/* Crypto slider & sync */}
-                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="font-semibold ui-text-main">Crypto Sentiment:</span>
-                              <div className="flex items-center gap-1">
-                                <span className="font-mono font-bold">{tacticalConfig.cryptoScore}/100</span>
-                                <button
-                                  type="button"
-                                  onClick={handleSyncCryptoFearAndGreed}
-                                  disabled={isSyncingFng}
-                                  className="text-[9px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-                                  title="Tarik data live dari alternative.me API"
-                                >
-                                  <RefreshCw className={`h-2.5 w-2.5 ${isSyncingFng ? 'animate-spin' : ''}`} />
-                                  {isSyncingFng ? 'Sync...' : 'Live'}
-                                </button>
+                              {/* US Equity slider */}
+                              <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="font-semibold ui-text-main">US Equity:</span>
+                                  <span className="font-mono font-bold">{tacticalConfig.usEquityScore}/100</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={tacticalConfig.usEquityScore}
+                                  onChange={(e) =>
+                                    setTacticalConfig({
+                                      ...tacticalConfig,
+                                      usEquityScore: parseInt(e.target.value, 10),
+                                    })
+                                  }
+                                  aria-label="Skor valuasi saham AS"
+                                  className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                                />
+                              </div>
+
+                              {/* IDX Equity slider */}
+                              <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="font-semibold ui-text-main">IHSG / Domestik:</span>
+                                  <span className="font-mono font-bold">{tacticalConfig.idxEquityScore}/100</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={tacticalConfig.idxEquityScore}
+                                  onChange={(e) =>
+                                    setTacticalConfig({
+                                      ...tacticalConfig,
+                                      idxEquityScore: parseInt(e.target.value, 10),
+                                    })
+                                  }
+                                  aria-label="Skor valuasi IHSG"
+                                  className="w-full accent-emerald-500 h-1.5 cursor-pointer"
+                                />
                               </div>
                             </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={tacticalConfig.cryptoScore}
-                              onChange={(e) =>
-                                setTacticalConfig({
-                                  ...tacticalConfig,
-                                  cryptoScore: parseInt(e.target.value, 10),
-                                })
-                              }
-                              aria-label="Skor sentimen kripto"
-                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[9px] ui-text-muted">
-                              <span>0 Fear (+tilt)</span>
-                              <span>50 Netral</span>
-                              <span>100 Greed (-trim)</span>
-                            </div>
-                            {fngSyncMessage && (
-                              <div className="text-[9px] text-emerald-600 dark:text-emerald-400 italic">
-                                {fngSyncMessage}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* US Equity slider */}
-                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="font-semibold ui-text-main">US Equity (S&amp;P 500 / Tech):</span>
-                              <span className="font-mono font-bold">{tacticalConfig.usEquityScore}/100</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={tacticalConfig.usEquityScore}
-                              onChange={(e) =>
-                                setTacticalConfig({
-                                  ...tacticalConfig,
-                                  usEquityScore: parseInt(e.target.value, 10),
-                                })
-                              }
-                              aria-label="Skor valuasi saham AS"
-                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[9px] ui-text-muted">
-                              <span>Diskon Valuasi</span>
-                              <span>Wajar</span>
-                              <span>Overbought</span>
-                            </div>
-                          </div>
-
-                          {/* IDX Equity slider */}
-                          <div className="space-y-1 rounded bg-black/5 dark:bg-white/5 p-2">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="font-semibold ui-text-main">IHSG / Saham Domestik:</span>
-                              <span className="font-mono font-bold">{tacticalConfig.idxEquityScore}/100</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={tacticalConfig.idxEquityScore}
-                              onChange={(e) =>
-                                setTacticalConfig({
-                                  ...tacticalConfig,
-                                  idxEquityScore: parseInt(e.target.value, 10),
-                                })
-                              }
-                              aria-label="Skor valuasi IHSG"
-                              className="w-full accent-emerald-500 h-1.5 cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[9px] ui-text-muted">
-                              <span>Diskon Valuasi</span>
-                              <span>Wajar</span>
-                              <span>Overbought</span>
-                            </div>
-                          </div>
-
-                          <p className="text-[9px] ui-text-muted italic">
-                            Catatan: Tilt bobot otomatis didanai dari aset defensif (Kas/RDPT) secara zero-sum tanpa mengubah total 100%.
-                          </p>
+                          )}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: KELOLA SALDO & SKALA */}
+                  {optionsActiveTab === 'balance' && (
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-0.5">
+                      {/* Skala Cepat */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-semibold ui-text-main block">
+                          Skalakan Total Portofolio:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="ui-subtle flex flex-1 items-center gap-1 rounded-md border px-2 py-1">
+                            <span className="ui-text-muted font-mono text-[10px]">Rp</span>
+                            <FormattedNumberInput
+                              step={10_000_000}
+                              min={0}
+                              value={quickTotalIdr}
+                              onChange={(val) => setQuickTotalIdr(val)}
+                              className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
+                              ariaLabel="Quick Scale Total Value"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onScaleTotalHoldingsIdr(quickTotalIdr, 'target');
+                              setIsOptionsMenuOpen(false);
+                            }}
+                            className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-500 shrink-0"
+                          >
+                            Bagi Target
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 text-[10px]">
+                          {[50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map(
+                            (presetTotal) => (
+                              <button
+                                key={presetTotal}
+                                type="button"
+                                onClick={() => setQuickTotalIdr(presetTotal)}
+                                className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
+                              >
+                                {formatIdr(presetTotal, true)}
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Manipulasi Saldo */}
+                      <div className="ui-border border-t pt-2 space-y-1">
+                        <span className="text-[11px] font-semibold ui-text-main block mb-1">
+                          Aksi Saldo &amp; Portofolio:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOptionsMenuOpen(false);
+                            setIsHoldingsTextModalOpen(true);
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+                            <span>Import / Export Teks (Excel)</span>
+                          </div>
+                          <span className="ui-text-muted font-mono text-[10px]">TSV/CSV</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOptionsMenuOpen(false);
+                            onClearHoldingsForManualInput();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
+                            <span>Isi Manual (Kosongkan ke Rp 0)</span>
+                          </div>
+                          <span className="ui-text-muted font-mono text-[10px]">Reset</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOptionsMenuOpen(false);
+                            onLoadVideo1BExample();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Coins className="h-3.5 w-3.5 ui-text-muted" />
+                            <span>Muat Contoh Video Rp 1 Miliar</span>
+                          </div>
+                          <span className="ui-text-muted font-mono text-[10px]">Demo</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOptionsMenuOpen(false);
+                            onApplyPeerDiversification();
+                          }}
+                          className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Split className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>Split Diversifikasi Sub-Bank</span>
+                          </div>
+                          <span className="ui-text-muted font-mono text-[10px]">Rekening</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1803,21 +1843,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               )}
             </button>
 
-            {/* Smart DCA Shortcut Button */}
-            <button
-              type="button"
-              onClick={() => setRebalancerSubMode('smart-dca')}
-              className="col-span-2 flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition mt-0.5"
-              title="Buka Smart DCA Advisor: Akumulasi cerdas berbasis metrik valuasi pasar & defisit bobot"
-            >
-              <div className="flex items-center gap-1.5">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-amber-500" />
-                <span>Beralih ke Smart DCA Advisor (2-Pillar Akumulasi)</span>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 px-1.5 py-0.5 rounded">
-                Buka ➔
-              </span>
-            </button>
+
           </div>
 
           <div className="ui-text-muted mt-2 text-[11px] leading-snug">

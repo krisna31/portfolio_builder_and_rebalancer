@@ -32,6 +32,8 @@ import {
   Share2,
   Copy,
   Check,
+  RotateCcw,
+  Banknote,
 } from 'lucide-react';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 
@@ -463,6 +465,69 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
           )}
         </button>
       </div>
+
+      {/* In-Page Quick Jump Sub-Navigation Pills */}
+      <nav
+        aria-label="Navigasi Bagian Roadmap"
+        className="sticky top-14 z-20 -mx-1 px-1 py-1.5 sm:px-2 rounded-xl ui-card border ui-border shadow-xs"
+      >
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5">
+          <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider px-1">
+            Lompat ke:
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-roadmap-calculator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Target className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>1. Proyeksi Rp10M</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-dividend-retirement')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Calculator className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>2. Pensiun 4% SWR</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('roadmap-reverse-dca')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Coins className="h-3.5 w-3.5 text-amber-500" />
+            <span>3. Reverse DCA</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('roadmap-dividends')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Banknote className="h-3.5 w-3.5 text-emerald-500" />
+            <span>4. Dividen Pasif</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-backtest-frequency')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-sky-500" />
+            <span>5. Backtest 5Y</span>
+          </button>
+        </div>
+      </nav>
+
       <section id="tour-roadmap-calculator" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 5 Cols: Wealth Simulator Parameters */}
         <div className="ui-card space-y-4 rounded-xl p-5 lg:col-span-5">
@@ -1255,7 +1320,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* FEATURE 3: REVERSE DCA GOAL SOLVER */}
-      <section className="ui-card rounded-xl p-5 border border-zinc-500/20">
+      <section id="roadmap-reverse-dca" className="ui-card rounded-xl p-5 border border-zinc-500/20">
         <div className="ui-border flex flex-col gap-3 border-b border-zinc-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -1350,7 +1415,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* DIVIDEND YIELD & PASSIVE CASHFLOW ESTIMATOR */}
-      <section className="ui-card rounded-xl p-5">
+      <section id="roadmap-dividends" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">

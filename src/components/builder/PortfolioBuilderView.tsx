@@ -667,34 +667,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onOpenRecommender}
-                  className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
-                >
-                  <Compass className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Cari Portfolio Ideal Saya (Kuis Quant)</span>
-                </button>
-
-                {onOpenFactsheet && (
-                  <button
-                    type="button"
-                    onClick={onOpenFactsheet}
-                    className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg border ui-border px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
-                    title="Buka Factsheet 1-Halaman Siap Cetak A4 & Unduh PNG"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Factsheet Portofolio (A4)</span>
-                  </button>
-                )}
-
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={onGoToRebalancer}
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500 shadow-xs"
                 >
-                  <span>Gunakan di Rebalancer</span>
+                  <span>Lanjut ke Rebalancer</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -1204,201 +1183,221 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Quick Example Button: Ubah BBCA &rarr; PTBA */}
-            <button
-              type="button"
-              onClick={onQuickSwapBbcaToPtba}
-              className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition ${
-                slotMap.BBCA === 'PTBA'
-                  ? 'border-emerald-500 bg-emerald-600 text-white'
-                  : 'ui-subtle ui-text-main hover:opacity-80'
-              }`}
-            >
-              <Repeat className="h-3 w-3" />
-              <span>Contoh Custom: Ubah BBCA &rarr; PTBA</span>
-            </button>
+          <div className="space-y-2.5">
+            {/* Tier 1: Filter Strategi & Slot Benchmark */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-0.5">
+                  Filter:
+                </span>
+                {/* Archetype Filter Segmented Control */}
+                <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setArchetypeFilter('all')}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      archetypeFilter === 'all'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    Semua ({showDominated25 ? 25 : 15})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArchetypeFilter('business-owner')}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                      archetypeFilter === 'business-owner'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    <Briefcase className="h-3 w-3" />
+                    <span>&lt;10% DD</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArchetypeFilter('hybrid-conviction')}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                      archetypeFilter === 'hybrid-conviction'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    <Scale className="h-3 w-3" />
+                    <span>Risk Budgeting</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArchetypeFilter('full-time-investor')}
+                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                      archetypeFilter === 'full-time-investor'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    <Flame className="h-3 w-3" />
+                    <span>&gt;18% CAGR</span>
+                  </button>
+                </div>
 
-            {isSlotMapCustomized && (
-              <button
-                type="button"
-                onClick={onResetSlotMap}
-                className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium hover:opacity-80"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Reset 8 Benchmark Video</span>
-              </button>
-            )}
-
-            {/* Archetype Filter Segmented Control */}
-            <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
-              <button
-                type="button"
-                onClick={() => setArchetypeFilter('all')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
-                  archetypeFilter === 'all'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                Semua ({showDominated25 ? 25 : 15})
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchetypeFilter('business-owner')}
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
-                  archetypeFilter === 'business-owner'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                <Briefcase className="h-3 w-3" />
-                <span>&lt;10% DD</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchetypeFilter('hybrid-conviction')}
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
-                  archetypeFilter === 'hybrid-conviction'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                <Scale className="h-3 w-3" />
-                <span>Risk Budgeting</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchetypeFilter('full-time-investor')}
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
-                  archetypeFilter === 'full-time-investor'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                <Flame className="h-3 w-3" />
-                <span>&gt;18% CAGR</span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowDominated25(!showDominated25)}
-              className="ui-subtle ui-text-muted flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition"
-            >
-              {showDominated25 ? (
-                <EyeOff className="h-3 w-3" />
-              ) : (
-                <Eye className="h-3 w-3" />
-              )}
-              <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
-            </button>
-
-            {/* 3-Mode Cell Value Display Selector (% + Rp | % Bobot | Rp Nominal) */}
-            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
-              {(
-                [
-                  { id: 'both', label: '% + Rp' },
-                  { id: 'percent', label: '% Saja' },
-                  { id: 'nominal', label: 'Rp Juta' },
-                ] as const
-              ).map((mode) => (
                 <button
-                  key={mode.id}
                   type="button"
-                  onClick={() => setCellDisplayMode(mode.id)}
-                  title={`Tampilkan pembagian porsi aset dari Modal Awal ${formatIdr(
-                    initialCapitalIdr,
-                    true
-                  )}`}
-                  className={`rounded-md px-2 py-1 font-medium transition ${
-                    cellDisplayMode === mode.id
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:ui-text-main'
+                  onClick={() => setShowDominated25(!showDominated25)}
+                  className="ui-subtle ui-text-muted flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition"
+                >
+                  {showDominated25 ? (
+                    <EyeOff className="h-3 w-3" />
+                  ) : (
+                    <Eye className="h-3 w-3" />
+                  )}
+                  <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
+                </button>
+              </div>
+
+              {/* Slot Benchmark Customization */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={onQuickSwapBbcaToPtba}
+                  className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition ${
+                    slotMap.BBCA === 'PTBA'
+                      ? 'border-emerald-500 bg-emerald-600 text-white'
+                      : 'ui-subtle ui-text-main hover:opacity-80'
                   }`}
                 >
-                  {mode.label}
+                  <Repeat className="h-3 w-3" />
+                  <span>Contoh: Ubah BBCA &rarr; PTBA</span>
                 </button>
-              ))}
+
+                {isSlotMapCustomized && (
+                  <button
+                    type="button"
+                    onClick={onResetSlotMap}
+                    className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium hover:opacity-80"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Reset 8 Benchmark</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Quick Sorting Selector */}
-            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
-              <span className="ui-text-muted px-1.5 text-[10px] font-medium hidden sm:inline">
-                Sort:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleToggleTableSort('rank')}
-                className={`rounded px-2 py-1 font-medium transition ${
-                  tableSortKey === 'rank'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                Rank {tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleTableSort('cagr')}
-                className={`rounded px-2 py-1 font-medium transition ${
-                  tableSortKey === 'cagr'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                CAGR {tableSortKey === 'cagr' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleTableSort('maxDrawdown')}
-                className={`rounded px-2 py-1 font-medium transition ${
-                  tableSortKey === 'maxDrawdown'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                Max DD {tableSortKey === 'maxDrawdown' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleTableSort('calmar')}
-                className={`rounded px-2 py-1 font-medium transition ${
-                  tableSortKey === 'calmar'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                Calmar {tableSortKey === 'calmar' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
-              </button>
-            </div>
+            {/* Tier 2: Tampilan Nilai Sel & Urutan / View Mode */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              {/* Left: 3-Mode Cell Value Display Selector (% + Rp | % Bobot | Rp Nominal) */}
+              <div className="flex items-center gap-1.5">
+                <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
+                  Tampilan:
+                </span>
+                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
+                  {(
+                    [
+                      { id: 'both', label: '% + Rp' },
+                      { id: 'percent', label: '% Saja' },
+                      { id: 'nominal', label: 'Rp Juta' },
+                    ] as const
+                  ).map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => setCellDisplayMode(mode.id)}
+                      title={`Tampilkan pembagian porsi aset dari Modal Awal ${formatIdr(
+                        initialCapitalIdr,
+                        true
+                      )}`}
+                      className={`rounded-md px-2 py-1 font-medium transition ${
+                        cellDisplayMode === mode.id
+                          ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Hybrid Table vs Mobile Card View Toggle */}
-            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
-              <button
-                type="button"
-                onClick={() => setTableViewMode('table')}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
-                  tableViewMode === 'table'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                <Table2 className="h-3 w-3" />
-                <span>Tabel</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTableViewMode('cards')}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
-                  tableViewMode === 'cards'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted hover:ui-text-main'
-                }`}
-              >
-                <LayoutGrid className="h-3 w-3" />
-                <span>Kartu</span>
-              </button>
+              {/* Right: Quick Sorting Selector & Table/Cards Mode */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
+                  <span className="ui-text-muted px-1.5 text-[10px] font-medium hidden sm:inline">
+                    Sort:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTableSort('rank')}
+                    className={`rounded px-2 py-1 font-medium transition ${
+                      tableSortKey === 'rank'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    Rank {tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTableSort('cagr')}
+                    className={`rounded px-2 py-1 font-medium transition ${
+                      tableSortKey === 'cagr'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    CAGR {tableSortKey === 'cagr' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTableSort('maxDrawdown')}
+                    className={`rounded px-2 py-1 font-medium transition ${
+                      tableSortKey === 'maxDrawdown'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    Max DD {tableSortKey === 'maxDrawdown' ? (tableSortOrder === 'asc' ? '↑' : '↓') : ''}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTableSort('calmar')}
+                    className={`rounded px-2 py-1 font-medium transition ${
+                      tableSortKey === 'calmar'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    Calmar {tableSortKey === 'calmar' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
+                  </button>
+                </div>
+
+                {/* Hybrid Table vs Mobile Card View Toggle */}
+                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setTableViewMode('table')}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                      tableViewMode === 'table'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    <Table2 className="h-3 w-3" />
+                    <span>Tabel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTableViewMode('cards')}
+                    className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                      tableViewMode === 'cards'
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    <LayoutGrid className="h-3 w-3" />
+                    <span>Kartu</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
