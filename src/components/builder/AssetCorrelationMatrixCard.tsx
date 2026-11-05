@@ -161,11 +161,11 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
 
   // Popular comparison shortcuts
   const popularPairs: Array<{ idA: string; idB: string; label: string }> = [
-    { idA: 'SPY', idB: 'GLD', label: 'SPY ⚡ GLD (Saham vs Emas)' },
-    { idA: 'SPY', idB: 'RDPT', label: 'SPY ⚡ RDPT (Saham vs Obligasi)' },
-    { idA: 'BTC', idB: 'SPY', label: 'BTC ⚡ SPY (Kripto vs Saham AS)' },
-    { idA: 'BTC', idB: 'RDPT', label: 'BTC ⚡ RDPT (Kripto vs Obligasi)' },
-    { idA: 'RDPU', idB: 'BTC', label: 'RDPU ⚡ BTC (Pasar Uang vs Kripto)' },
+    { idA: 'SPY', idB: 'GLD', label: 'SPY vs GLD (Saham vs Emas)' },
+    { idA: 'SPY', idB: 'RDPT', label: 'SPY vs RDPT (Saham vs Obligasi)' },
+    { idA: 'BTC', idB: 'SPY', label: 'BTC vs SPY (Kripto vs Saham AS)' },
+    { idA: 'BTC', idB: 'RDPT', label: 'BTC vs RDPT (Kripto vs Obligasi)' },
+    { idA: 'RDPU', idB: 'BTC', label: 'RDPU vs BTC (Pasar Uang vs Kripto)' },
   ];
 
   return (
@@ -201,7 +201,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Skor Diversifikasi: <strong>{divScore.score}%</strong></span>
+            <span>Skor Diversifikasi: <strong className="font-mono tabular-nums">{divScore.score}%</strong></span>
             <span className="hidden sm:inline opacity-75">({divScore.label})</span>
           </div>
 
@@ -255,7 +255,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
           {viewScope === 'active' && activeAssets.length < 2 && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2">
               <span>
-                💡 Portofolio aktif Anda saat ini hanya memiliki {activeAssets.length} aset dengan bobot &gt; 0%.
+                Portofolio aktif Anda saat ini hanya memiliki {activeAssets.length} aset dengan bobot &gt; 0%.
                 Matriks korelasi memerlukan minimal 2 aset. Menampilkan 8 aset benchmark video sebagai referensi kuantitatif.
               </span>
               <button
@@ -277,7 +277,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                   <table className="w-full text-center border-collapse text-xs">
                     <thead>
                       <tr>
-                        <th className="p-2.5 text-left font-semibold ui-text-muted text-[11px] uppercase tracking-wider w-24">
+                        <th scope="col" className="p-2.5 text-left font-semibold ui-text-muted text-[11px] uppercase tracking-wider w-24">
                           Aset
                         </th>
                         {displayAssets.map((colAsset) => {
@@ -286,6 +286,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                           return (
                             <th
                               key={colAsset.id}
+                              scope="col"
                               className={`p-2 text-center text-xs transition-colors min-w-[56px] sm:min-w-[64px] ${
                                 isHighlighted
                                   ? 'font-bold text-emerald-600 dark:text-emerald-400'
@@ -312,7 +313,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                         return (
                           <tr key={rowAsset.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                             {/* Row Header */}
-                            <td className="p-2 text-left">
+                            <th scope="row" className="p-2 text-left font-normal">
                               <div
                                 className={`flex items-center gap-2 font-mono text-xs ${
                                   isRowHighlighted
@@ -326,7 +327,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                                 />
                                 <span>{rowAsset.symbol}</span>
                               </div>
-                            </td>
+                            </th>
 
                             {/* Matrix Cells */}
                             {displayAssets.map((colAsset) => {
@@ -339,8 +340,16 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                               return (
                                 <td
                                   key={colAsset.id}
+                                  tabIndex={0}
+                                  role="button"
                                   onClick={() => setSelectedPair([rowAsset.id, colAsset.id])}
-                                  className={`p-2 transition-all cursor-pointer rounded-md text-xs font-mono select-none ${getCellColorClass(
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setSelectedPair([rowAsset.id, colAsset.id]);
+                                    }
+                                  }}
+                                  className={`p-2 transition-all cursor-pointer rounded-md text-xs font-mono tabular-nums select-none ${getCellColorClass(
                                     corr,
                                     isSelf
                                   )} ${
@@ -383,7 +392,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                     </div>
                   </div>
                   <span className="italic text-[11px] text-emerald-600 dark:text-emerald-400">
-                    💡 Klik sel mana saja untuk analisis detail
+                    Klik sel mana saja untuk analisis detail
                   </span>
                 </div>
               </div>

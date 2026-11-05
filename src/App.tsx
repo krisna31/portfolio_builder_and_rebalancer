@@ -2899,7 +2899,7 @@ export function App() {
 
         <React.Suspense
           fallback={
-            <div className="flex flex-col items-center justify-center py-24 min-h-[400px] gap-3 text-slate-400">
+            <div className="flex flex-col items-center justify-center py-24 min-h-[400px] gap-3 ui-text-muted">
               <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
               <span className="text-xs font-mono">Memuat Modul QuantPorto...</span>
             </div>
@@ -3102,7 +3102,7 @@ export function App() {
             <button
               type="button"
               onClick={() => setBackupToast(null)}
-              className="ui-text-muted hover:opacity-80 p-0.5"
+              className="ui-text-muted hover:opacity-80 p-1.5 rounded"
               aria-label="Tutup notifikasi"
             >
               <X className="h-3.5 w-3.5" />

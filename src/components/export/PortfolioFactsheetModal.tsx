@@ -304,43 +304,43 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Factsheet Theme Selector */}
-            <div className="flex items-center rounded-lg bg-slate-800 p-0.5 border border-slate-700">
+            <div className="flex items-center rounded-lg ui-card p-0.5 border ui-border">
               <button
                 type="button"
                 onClick={() => setSheetTheme('light')}
                 className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                   isLight
-                    ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
                 title="Gaya Putih Institusional (Bersih, Kontras Tinggi, Standar A4)"
               >
-                <span>⚪ Putih</span>
+                <span>Putih (Cetak)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSheetTheme('dark')}
                 className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                   !isLight
-                    ? 'bg-slate-950 text-white shadow-sm font-semibold border border-slate-700'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
                 title="Gaya Dark Eksekutif (Latar Gelap Modern)"
               >
-                <span>⚫ Dark</span>
+                <span>Gelap</span>
               </button>
             </div>
 
             <button
               type="button"
               onClick={handleCopySummaryText}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-secondary ui-card hover:ui-subtle hover:ui-text-main rounded-lg transition-colors border ui-border"
               title="Salin ringkasan teks untuk WhatsApp atau catatan"
             >
               {copyStatus ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">{copyStatus}</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-600 dark:text-emerald-400">{copyStatus}</span>
                 </>
               ) : (
                 <>
@@ -354,10 +354,10 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
               type="button"
               onClick={handleDownloadPng}
               disabled={isExportingPng}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg transition-colors border border-slate-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-secondary ui-card hover:ui-subtle hover:ui-text-main rounded-lg transition-colors border ui-border disabled:opacity-50"
               title="Download gambar resolusi tinggi (PNG)"
             >
-              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
               <span>{isExportingPng ? 'Memproses...' : 'Download PNG'}</span>
             </button>
 
@@ -374,7 +374,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors ml-1"
+              className="p-1.5 ui-text-muted hover:ui-text-main hover:ui-card rounded-lg transition-colors ml-1"
               aria-label="Tutup modal"
             >
               <X className="w-5 h-5" />
@@ -451,7 +451,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     Annual Return (CAGR)
                   </div>
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
                     +{formatPercent(solvedMetrics.cagr)}
                   </div>
                   <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
@@ -467,7 +467,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     Max Historical Drawdown
                   </div>
-                  <div className="text-base font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                  <div className="text-base font-bold font-mono tabular-nums text-rose-600 dark:text-rose-400 mt-0.5">
                     -{formatPercent(solvedMetrics.maxDrawdown)}
                   </div>
                   <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
@@ -483,7 +483,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     Calmar Ratio
                   </div>
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
                     {calmarRatio}x
                   </div>
                   <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
@@ -499,7 +499,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                     Waktu Menuju Goal
                   </div>
-                  <div className="text-base font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                  <div className="text-base font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-0.5">
                     {simulation.reachedGoal
                       ? `${simulation.yearsToGoal} thn ${simulation.monthsToGoal} bln`
                       : '> 45 thn'}
@@ -573,12 +573,12 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                           : 'bg-slate-950/80 text-slate-400 border-slate-800'
                       }`}
                     >
-                      <th className="py-1.5 px-3 font-semibold">Aset</th>
-                      <th className="py-1.5 px-3 font-semibold">Kelas</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Bobot</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Nominal Alokasi</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">CAGR 5Y</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Max DD</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold">Aset</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold">Kelas</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Bobot</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Nominal Alokasi</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">CAGR 5Y</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Max DD</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
@@ -658,10 +658,10 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                           : 'bg-slate-950/80 text-slate-400 border-slate-800'
                       }`}
                     >
-                      <th className="py-1.5 px-3 font-semibold">Horison</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Total Modal Pokok</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Estimasi Nilai Akhir</th>
-                      <th className="py-1.5 px-3 font-semibold text-right">Estimasi Keuntungan</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold">Horison</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Total Modal Pokok</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Estimasi Nilai Akhir</th>
+                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Estimasi Keuntungan</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>

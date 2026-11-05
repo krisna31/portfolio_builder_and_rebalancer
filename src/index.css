@@ -99,6 +99,16 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-page);
     color: var(--text-main);
+    overflow-wrap: break-word;
+  }
+
+  /* Balanced headline wrapping for cleaner institutional typography (Modern Web Guidance: typography) */
+  h1,
+  h2,
+  h3,
+  h4,
+  th {
+    text-wrap: balance;
   }
 
   code, pre, .font-mono {
@@ -112,6 +122,39 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
+  }
+}
+
+/* Prevent scroll gestures inside modal dialogs or over backdrops from chaining to the underlying page
+   (Modern Web Guidance: prevent-page-scroll-under-modal-dialog) */
+dialog:modal,
+[role="dialog"][aria-modal="true"] {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.35s ease-in-out;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Tone down persistent spin/pulse animations when user requests reduced motion (Modern Web Guidance: motion) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
   }
 }
 

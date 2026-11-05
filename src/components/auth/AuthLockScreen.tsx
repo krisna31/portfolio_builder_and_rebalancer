@@ -253,16 +253,16 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
               </div>
 
               <div>
-                <h2 className="text-base font-bold text-white">
+                <h2 className="text-base font-bold ui-text-main">
                   Aktifkan Login Sidik Jari?
                 </h2>
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                <p className="text-xs ui-text-secondary mt-1.5 leading-relaxed">
                   Buka kunci dashboard pada browser ini langsung dengan sensor sidik jari (Windows Hello / Touch ID) tanpa mengetik kata sandi lagi.
                 </p>
               </div>
 
               {registerError && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs text-left">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs text-left">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{registerError}</span>
                 </div>
@@ -285,7 +285,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   type="button"
                   onClick={handleSkipRegistration}
                   disabled={isRegisteringBiometric}
-                  className="w-full flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs py-2 rounded-xl transition"
+                  className="w-full flex items-center justify-center gap-1.5 ui-subtle border ui-border ui-text-secondary hover:ui-text-main font-medium text-xs py-2 rounded-xl transition"
                 >
                   <span>Lewati (Lanjut ke Dashboard)</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -304,10 +304,10 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     onClick={handleBiometricLogin}
                     disabled={isVerifyingBiometric || lockoutSec > 0}
                     aria-label="Masuk dengan Sidik Jari atau Biometrik"
-                    className="w-full py-3 px-4 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
+                    className="w-full py-3 px-4 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-700 dark:text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
                   >
                     <Fingerprint
-                      className={`w-5 h-5 text-emerald-400 ${
+                      className={`w-5 h-5 text-emerald-600 dark:text-emerald-400 ${
                         isVerifyingBiometric ? 'animate-pulse' : ''
                       }`}
                     />
@@ -317,18 +317,18 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   </button>
 
                   {biometricError && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
                       <AlertCircle className="w-4 h-4 shrink-0" />
                       <span>{biometricError}</span>
                     </div>
                   )}
 
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-slate-800" />
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+                    <div className="flex-1 border-t ui-border" />
+                    <span className="text-[10px] ui-text-muted uppercase tracking-wider font-medium">
                       atau gunakan kata sandi
                     </span>
-                    <div className="flex-1 h-px bg-slate-800" />
+                    <div className="flex-1 border-t ui-border" />
                   </div>
                 </div>
               )}
@@ -374,18 +374,18 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
 
                 {/* Error / Lockout Banner */}
                 {lockoutSec > 0 ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs">
                     <Clock className="w-4 h-4 shrink-0" />
                     <span>
                       Terlalu banyak percobaan. Silakan tunggu{' '}
-                      <strong className="font-mono font-bold text-amber-300">
+                      <strong className="font-mono font-bold text-amber-800 dark:text-amber-300">
                         {lockoutSec} detik
                       </strong>{' '}
                       lagi.
                     </span>
                   </div>
                 ) : errorMessage ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{errorMessage}</span>
                   </div>

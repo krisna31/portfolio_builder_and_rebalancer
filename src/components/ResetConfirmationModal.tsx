@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, RotateCcw, X, ShieldAlert } from 'lucide-react';
 
 export interface ResetConfirmationModalProps {
@@ -12,19 +12,38 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
   onClose,
   onConfirmReset,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+    >
       <div className="relative w-full max-w-md ui-card border ui-border rounded-xl shadow-lg overflow-hidden ui-text-main">
         {/* Header with warning accent */}
         <div className="flex items-center justify-between p-4 border-b ui-border bg-rose-500/10">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-rose-500" />
+              <AlertTriangle className="w-4 h-4 text-rose-500" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold ui-text-main">
+              <h2 id="reset-modal-title" className="text-sm font-semibold ui-text-main">
                 Reset Semua ke Kondisi Awal?
               </h2>
               <p className="text-xs ui-text-muted">
@@ -34,6 +53,7 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 ui-text-muted hover:ui-text-main hover:ui-subtle rounded-md transition-colors"
             aria-label="Tutup dialog"
@@ -58,7 +78,7 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
             <div className="flex items-start gap-2">
               <span className="text-rose-500 font-bold">•</span>
               <span>
-                <strong className="ui-text-main">Asumsi Keuangan:</strong> Modal awal Rp 100 Jt, Target Rp 10 Miliar, DCA Rp 5 Jt/bln, Kurs USD Rp 18.000.
+                <strong className="ui-text-main">Asumsi Keuangan:</strong> Modal awal Rp 100 Jt, Target Rp 1 Miliar, DCA Rp 3 Jt/bln, Kurs USD Rp 18.000.
               </span>
             </div>
             <div className="flex items-start gap-2">

@@ -215,16 +215,16 @@ export const CoinMarketCapIndicatorTable: React.FC<
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b ui-border bg-black/5 dark:bg-white/[0.03] text-[11px] font-semibold ui-text-muted uppercase tracking-wider">
-                <th className="py-3 px-3.5 w-10 text-center">#</th>
-                <th className="py-3 px-3.5 min-w-[240px]">Indicator &amp; Source</th>
-                <th className="py-3 px-3.5 text-right min-w-[110px]">
+                <th scope="col" className="py-3 px-3.5 w-10 text-center">#</th>
+                <th scope="col" className="py-3 px-3.5 min-w-[240px]">Indicator &amp; Source</th>
+                <th scope="col" className="py-3 px-3.5 text-right min-w-[110px]">
                   Current
                 </th>
-                <th className="py-3 px-3.5 text-right min-w-[95px]">24h %</th>
-                <th className="py-3 px-3.5 text-right min-w-[130px]">
+                <th scope="col" className="py-3 px-3.5 text-right min-w-[95px]">24h %</th>
+                <th scope="col" className="py-3 px-3.5 text-right min-w-[130px]">
                   Reference
                 </th>
-                <th className="py-3 px-3.5 w-24 text-center">Triggered</th>
+                <th scope="col" className="py-3 px-3.5 w-24 text-center">Triggered</th>
               </tr>
             </thead>
             <tbody className="divide-y ui-border font-sans">
@@ -363,6 +363,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             step="any"
                             value={editCurrentVal}
                             onChange={(e) => setEditCurrentVal(e.target.value)}
+                            aria-label={`Nilai saat ini ${ind.name}`}
                             className="w-20 px-1.5 py-0.5 rounded border ui-border text-right text-xs bg-white dark:bg-zinc-900 ui-text-main"
                           />
                         </div>
@@ -419,33 +420,38 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             step="any"
                             value={editRefVal}
                             onChange={(e) => setEditRefVal(e.target.value)}
+                            aria-label={`Ambang acuan ${ind.name}`}
                             className="w-16 px-1.5 py-0.5 rounded border ui-border text-right text-xs bg-white dark:bg-zinc-900 ui-text-main"
                           />
                           <button
                             type="button"
                             onClick={() => handleSaveEdit(ind)}
-                            className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600"
+                            className="p-1.5 rounded bg-emerald-500 text-white hover:bg-emerald-600"
                             title="Simpan"
+                            aria-label="Simpan"
                           >
                             <Check className="w-3 h-3" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditingIndicatorId(null)}
-                            className="p-1 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-muted hover:ui-text-main"
+                            className="p-1.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-muted hover:ui-text-main"
                             title="Batal"
+                            aria-label="Batal"
                           >
                             <X className="w-3 h-3" />
                           </button>
                         </div>
                       ) : (
-                        <span
+                        <button
+                          type="button"
                           onClick={() => startEditing(ind)}
-                          className="ui-text-muted cursor-pointer hover:underline"
+                          disabled={readOnly}
+                          className="ui-text-muted cursor-pointer hover:underline font-mono"
                           title="Klik untuk menyesuaikan batas acuan pemicu sinyal"
                         >
                           {ind.formattedReference}
-                        </span>
+                        </button>
                       )}
                     </td>
 
@@ -479,7 +485,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
         {/* Data Source Transparency & Verification Footer */}
         <div className="border-t ui-border bg-black/[0.02] dark:bg-white/[0.02] p-3 text-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 ui-text-secondary">
               <Database className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span className="font-medium text-[11px]">
                 Transparansi Sumber: {confluence.dataSources?.length || confluence.indicators.length} sumber data terverifikasi

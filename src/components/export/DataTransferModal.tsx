@@ -168,6 +168,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="ui-subtle ui-text-muted hover:ui-text-main rounded-lg p-1.5 transition"
             aria-label="Tutup"
@@ -276,6 +277,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
                   readOnly
                   value={exportText}
                   rows={11}
+                  aria-label="Teks konfigurasi ekspor"
                   className="ui-subtle ui-border ui-text-main w-full rounded-xl border p-3 font-mono text-[11px] leading-relaxed focus:outline-none"
                   spellCheck={false}
                 />
@@ -295,7 +297,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
             /* IMPORT TAB */
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="ui-text-main text-xs font-semibold">
+                <label htmlFor="data-transfer-import-textarea" className="ui-text-main text-xs font-semibold">
                   Tempelkan Teks Backup (JSON atau Token Base64):
                 </label>
                 <div className="flex items-center gap-2">
@@ -340,6 +342,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
               {/* Textarea for import */}
               <div className="relative">
                 <textarea
+                  id="data-transfer-import-textarea"
                   value={importText}
                   onChange={(e) => {
                     setImportText(e.target.value);
@@ -357,8 +360,9 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
                       setImportText('');
                       setConfirmOverwritePrompt(false);
                     }}
-                    className="absolute top-2 right-2 rounded p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                    className="absolute top-2 right-2 rounded p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
                     title="Kosongkan teks"
+                    aria-label="Kosongkan teks"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

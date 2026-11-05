@@ -93,7 +93,7 @@ export const RebalanceExecutionGuideModal: React.FC<
             <div>
               <h2
                 id="guide-modal-title"
-                className="text-base sm:text-lg font-bold text-white flex items-center gap-2"
+                className="text-base sm:text-lg font-bold ui-text-main flex items-center gap-2"
               >
                 <span>Buku Panduan & SOP Eksekusi Rebalancer</span>
               </h2>
@@ -156,16 +156,16 @@ export const RebalanceExecutionGuideModal: React.FC<
             <div className="space-y-5 animate-in fade-in duration-150">
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                 <div className="flex items-start gap-3">
-                  <Coins className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <Coins className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-sm font-bold text-emerald-300">
+                    <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
                       Baru Mau Mulai Belanja Aset dari Kas Rp 0?
                     </h3>
                     <p className="text-xs ui-text-secondary mt-1">
                       Menu Rebalancer tidak hanya untuk investor lama. Jika Anda baru mulai dari nol,
                       sistem akan menyusun <strong>daftar belanja perdana yang presisi</strong> sesuai bobot
-                      target racikan <strong className="text-white">{activePortfolioName}</strong> dengan modal{' '}
-                      <strong className="text-white">{formatIdr(initialCapitalMenu1Idr)}</strong>.
+                      target racikan <strong className="ui-text-main">{activePortfolioName}</strong> dengan modal{' '}
+                      <strong className="ui-text-main">{formatIdr(initialCapitalMenu1Idr)}</strong>.
                     </p>
                   </div>
                 </div>
@@ -181,10 +181,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   {/* Step 1 */}
                   <div className="rounded-xl border ui-border ui-subtle p-4 space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
                         1
                       </span>
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Tentukan Bobot & Modal di Menu 1
                       </h5>
                     </div>
@@ -197,10 +197,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   {/* Step 2 */}
                   <div className="rounded-xl border ui-border ui-subtle p-4 space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
                         2
                       </span>
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Klik Tombol "Beli Perdana dari Rp 0"
                       </h5>
                     </div>
@@ -213,10 +213,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   {/* Step 3 */}
                   <div className="rounded-xl border ui-border ui-subtle p-4 space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
                         3
                       </span>
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Pembulatan Otomatis Lot Saham BEI
                       </h5>
                     </div>
@@ -229,10 +229,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   {/* Step 4 */}
                   <div className="rounded-xl border ui-border ui-subtle p-4 space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
                         4
                       </span>
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Buka Slip Order Broker & Belanja
                       </h5>
                     </div>
@@ -245,15 +245,15 @@ export const RebalanceExecutionGuideModal: React.FC<
 
                 {/* Pro Tip: Staged Buying & Auto-Subtract */}
                 <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 space-y-1.5 mt-3">
-                  <div className="flex items-center gap-2 text-sky-400 font-semibold text-xs">
+                  <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-semibold text-xs">
                     <Lock className="h-4 w-4 shrink-0" />
-                    <span>💡 Tips Beli Bertahap &amp; Auto-Subtract Sisa Kas:</span>
+                    <span>Tips Beli Bertahap &amp; Auto-Subtract Sisa Kas:</span>
                   </div>
                   <p className="text-xs ui-text-secondary leading-relaxed">
                     Jika Anda membeli aset secara bertahap (misal hari ini baru mengeksekusi{' '}
-                    <strong className="text-white">RDPT Rp 9 Juta</strong> dari total anggaran{' '}
-                    <strong className="text-white">Rp 25 Juta</strong>), sistem QuantPorto otomatis mengaktifkan fitur{' '}
-                    <strong className="text-emerald-400">🔒 Kunci Total Anggaran</strong>.
+                    <strong className="ui-text-main">RDPT Rp 9 Juta</strong> dari total anggaran{' '}
+                    <strong className="ui-text-main">Rp 25 Juta</strong>), sistem QuantPorto otomatis mengaktifkan fitur{' '}
+                    <strong className="text-emerald-600 dark:text-emerald-400">Kunci Total Anggaran</strong>.
                   </p>
                   <p className="text-xs ui-text-muted leading-relaxed">
                     Begitu saldo RDPT Anda isi, sisa Kas Baru akan <strong>otomatis terpotong menjadi Rp 16 Juta</strong>,
@@ -281,7 +281,7 @@ export const RebalanceExecutionGuideModal: React.FC<
                     onClick={handleActionOpenOrderSlip}
                     className="w-full sm:w-auto flex items-center justify-center gap-1.5 border ui-border ui-card hover:ui-subtle ui-text-main font-semibold text-xs py-2.5 px-4 rounded-xl transition"
                   >
-                    <Building2 className="h-4 w-4 text-sky-400" />
+                    <Building2 className="h-4 w-4 text-sky-500 dark:text-sky-400" />
                     <span>Buka Slip Order Broker</span>
                   </button>
                 )}
@@ -295,9 +295,9 @@ export const RebalanceExecutionGuideModal: React.FC<
               {/* Concept Banner */}
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                 <div className="flex items-start gap-3">
-                  <Scale className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <Scale className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-sm font-bold text-amber-300">
+                    <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300">
                       Prinsip Kuantitatif: Kapan Anda Harus Rebalance?
                     </h3>
                     <p className="text-xs ui-text-secondary mt-1">
@@ -327,11 +327,11 @@ export const RebalanceExecutionGuideModal: React.FC<
 
                 <div className="space-y-3">
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 flex items-start gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
                       1
                     </span>
                     <div className="space-y-1">
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Sinkronkan Harga Pasar Terkini
                       </h5>
                       <p className="text-xs ui-text-muted">
@@ -342,11 +342,11 @@ export const RebalanceExecutionGuideModal: React.FC<
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 flex items-start gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
                       2
                     </span>
                     <div className="space-y-1">
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Ketik Saldo Terkini atau Import dari Excel
                       </h5>
                       <p className="text-xs ui-text-muted">
@@ -357,36 +357,36 @@ export const RebalanceExecutionGuideModal: React.FC<
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 flex items-start gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
                       3
                     </span>
                     <div className="space-y-1">
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Pilih 1 dari 4 Strategi Rebalance
                       </h5>
                       <div className="grid sm:grid-cols-2 gap-2 pt-1 text-[11px]">
                         <div className="p-2 rounded ui-card border ui-border">
-                          <strong className="text-emerald-400">🎯 Jual Untung Saja:</strong> Hanya memangkas aset yang benar-benar untung/naik tinggi.
+                          <strong className="text-emerald-600 dark:text-emerald-400">Jual Untung Saja:</strong> Hanya memangkas aset yang benar-benar untung/naik tinggi.
                         </div>
                         <div className="p-2 rounded ui-card border ui-border">
-                          <strong className="text-sky-400">🛡️ Prioritas RDPT Dulu:</strong> Jual kas/obligasi dulu sebelum menyentuh aset volatil.
+                          <strong className="text-sky-600 dark:text-sky-400">Prioritas RDPT Dulu:</strong> Jual kas/obligasi dulu sebelum menyentuh aset volatil.
                         </div>
                         <div className="p-2 rounded ui-card border ui-border">
-                          <strong className="text-amber-400">⚖️ Jual Rata:</strong> Menjual proporsional semua aset yang kegemukan.
+                          <strong className="text-amber-600 dark:text-amber-400">Jual Rata:</strong> Menjual proporsional semua aset yang kegemukan.
                         </div>
                         <div className="p-2 rounded ui-card border ui-border">
-                          <strong className="text-emerald-600 dark:text-emerald-400">💰 DCA Beli Saja:</strong> Menyeimbangkan hanya dengan modal baru (tanpa jual & bebas pajak).
+                          <strong className="text-emerald-600 dark:text-emerald-400">DCA Beli Saja:</strong> Menyeimbangkan hanya dengan modal baru (tanpa jual & bebas pajak).
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 flex items-start gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full ui-card text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold shrink-0 mt-0.5">
                       4
                     </span>
                     <div className="space-y-1">
-                      <h5 className="font-semibold text-white text-xs">
+                      <h5 className="font-semibold ui-text-main text-xs">
                         Eksekusi Order & Catat ke Jurnal
                       </h5>
                       <p className="text-xs ui-text-muted">
@@ -404,7 +404,7 @@ export const RebalanceExecutionGuideModal: React.FC<
                   <button
                     type="button"
                     onClick={handleActionOpenTextImport}
-                    className="flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-semibold text-xs py-2 px-3.5 rounded-lg transition"
+                    className="flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-2 px-3.5 rounded-lg transition"
                   >
                     <FileSpreadsheet className="h-4 w-4" />
                     <span>Buka Import / Export Teks (Excel)</span>
@@ -419,9 +419,9 @@ export const RebalanceExecutionGuideModal: React.FC<
             <div className="space-y-5 animate-in fade-in duration-150">
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
                 <div className="flex items-start gap-3">
-                  <TrendingDown className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                  <TrendingDown className="h-5 w-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-sm font-bold text-rose-300">
+                    <h3 className="text-sm font-bold text-rose-700 dark:text-rose-300">
                       Disiplin Serok Krisis: Pasang Jaring Sebelum Kepanikan Datang
                     </h3>
                     <p className="text-xs ui-text-secondary mt-1">
@@ -439,10 +439,10 @@ export const RebalanceExecutionGuideModal: React.FC<
 
                 <div className="grid gap-2.5 sm:grid-cols-2">
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 space-y-1">
-                    <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
                       Level 1: Diskon -10%
                     </span>
-                    <h5 className="font-semibold text-white text-xs mt-1">
+                    <h5 className="font-semibold ui-text-main text-xs mt-1">
                       Koreksi Normal Pasar
                     </h5>
                     <p className="text-xs ui-text-muted">
@@ -451,10 +451,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 space-y-1">
-                    <span className="text-[11px] font-mono font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">
                       Level 2: Diskon -20%
                     </span>
-                    <h5 className="font-semibold text-white text-xs mt-1">
+                    <h5 className="font-semibold ui-text-main text-xs mt-1">
                       Batas Resmi Bear Market
                     </h5>
                     <p className="text-xs ui-text-muted">
@@ -463,10 +463,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 space-y-1">
-                    <span className="text-[11px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
                       Level 3: Diskon -35%
                     </span>
-                    <h5 className="font-semibold text-white text-xs mt-1">
+                    <h5 className="font-semibold ui-text-main text-xs mt-1">
                       Panic Selling / Geopolitik
                     </h5>
                     <p className="text-xs ui-text-muted">
@@ -475,10 +475,10 @@ export const RebalanceExecutionGuideModal: React.FC<
                   </div>
 
                   <div className="rounded-xl border ui-border ui-subtle p-3.5 space-y-1">
-                    <span className="text-[11px] font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">
                       Level 4: Diskon -50%
                     </span>
-                    <h5 className="font-semibold text-white text-xs mt-1">
+                    <h5 className="font-semibold ui-text-main text-xs mt-1">
                       Krisis Finansial Global
                     </h5>
                     <p className="text-xs ui-text-muted">
@@ -490,7 +490,7 @@ export const RebalanceExecutionGuideModal: React.FC<
 
               <div className="rounded-xl border ui-border ui-subtle p-4 text-xs ui-text-muted">
                 <p>
-                  👉 <strong>Cara Pakai di Menu Ini:</strong> Gulir ke bagian bawah tabel Rebalancer ke kartu{' '}
+                  <strong>Cara Pakai di Menu Ini:</strong> Gulir ke bagian bawah tabel Rebalancer ke kartu{' '}
                   <strong className="ui-text-main">Jaring Beli Bertahap (Crash Limit Order Ladder)</strong>.
                   Pilih aset yang ingin Anda pantau (misal BBCA, BTC, atau SPY) untuk melihat harga rupiah limit order
                   dan modal cadangan yang harus disiapkan.

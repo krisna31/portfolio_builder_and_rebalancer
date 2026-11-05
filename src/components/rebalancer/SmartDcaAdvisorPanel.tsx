@@ -404,6 +404,16 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
     return `${item.recommendedUnits} unit`;
   };
 
+  // Escape dismisses the "Mengapa?" dialog, matching native <dialog> keyboard behavior
+  useEffect(() => {
+    if (!selectedAssetForWhy) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedAssetForWhy(null);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedAssetForWhy]);
+
   return (
     <div className="space-y-6">
       {/* HERO BANNER & INTRO */}
@@ -433,7 +443,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800 ui-text-secondary text-xs px-3 py-2 transition shrink-0"
               title="Kembali ke Rebalancer Reguler"
             >
-              <Scale className="h-3.5 w-3.5 text-slate-400" />
+              <Scale className="h-3.5 w-3.5 ui-text-muted" />
               <span>Mode Rebalancer Reguler</span>
             </button>
           )}
@@ -460,7 +470,8 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           <button
             type="button"
             onClick={() => setRefreshToast(null)}
-            className={`p-0.5 ${
+            aria-label="Tutup notifikasi sinkronisasi"
+            className={`p-1.5 rounded ${
               refreshToast.isError
                 ? 'text-amber-600 hover:text-amber-800 dark:hover:text-amber-100'
                 : 'text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-100'
@@ -479,42 +490,42 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
-            <span className="text-slate-500 dark:text-slate-400">Kripto (Fear&amp;Greed):</span>
+            <span className="ui-text-secondary">Kripto (Fear&amp;Greed):</span>
             <span
               className={`font-mono font-bold ${
                 (tacticalConfig?.cryptoScore ?? 50) <= 44
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : (tacticalConfig?.cryptoScore ?? 50) >= 56
                     ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-700 dark:text-slate-200'
+                    : 'ui-text-main'
               }`}
             >
               {tacticalConfig?.cryptoScore ?? 50}/100
             </span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
-            <span className="text-slate-500 dark:text-slate-400">Saham AS (S&amp;P 500):</span>
+            <span className="ui-text-secondary">Saham AS (S&amp;P 500):</span>
             <span
               className={`font-mono font-bold ${
                 (tacticalConfig?.usEquityScore ?? 50) <= 44
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : (tacticalConfig?.usEquityScore ?? 50) >= 56
                     ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-700 dark:text-slate-200'
+                    : 'ui-text-main'
               }`}
             >
               {tacticalConfig?.usEquityScore ?? 50}/100
             </span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
-            <span className="text-slate-500 dark:text-slate-400">IHSG (Domestik):</span>
+            <span className="ui-text-secondary">IHSG (Domestik):</span>
             <span
               className={`font-mono font-bold ${
                 (tacticalConfig?.idxEquityScore ?? 50) <= 44
                   ? 'text-emerald-600 dark:text-emerald-400'
                   : (tacticalConfig?.idxEquityScore ?? 50) >= 56
                     ? 'text-rose-600 dark:text-rose-400'
-                    : 'text-slate-700 dark:text-slate-200'
+                    : 'ui-text-main'
               }`}
             >
               {tacticalConfig?.idxEquityScore ?? 50}/100
@@ -667,7 +678,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   <Scale className="h-3.5 w-3.5 text-emerald-500" />
                   <span>Mode Alokasi Budget DCA:</span>
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-slate-400">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-muted">
                   {allocationMode === 'pure-confluence-rank'
                     ? 'Murni Ranking Konfluensi'
                     : 'Target Weight × Multiplier'}
@@ -719,7 +730,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         <div className="ui-card rounded-xl p-4 border ui-border space-y-1">
           <div className="flex items-center justify-between text-xs ui-text-muted">
             <span>Total Budget DCA</span>
-            <Coins className="h-4 w-4 text-slate-400" />
+            <Coins className="h-4 w-4 ui-text-muted" />
           </div>
           <div className="text-lg font-bold font-mono ui-text-main">
             {formatIdr(monthlyBudgetIdr)}
@@ -832,7 +843,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                           ? 'bg-teal-500/20 text-teal-600 dark:text-teal-400'
                           : conf.confluencePercent < 20
                             ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-slate-400'
+                            : 'bg-zinc-200 dark:bg-zinc-800 ui-text-muted'
                     }`}
                   >
                     {conf.triggeredCount}/{conf.totalIndicators} ({conf.confluencePercent}%)
@@ -865,7 +876,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           <div>
             <h4 className="text-sm font-bold ui-text-main flex items-center gap-2">
               <span>Rekomendasi Alokasi Smart DCA</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-slate-700 dark:text-slate-300">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-secondary">
                 {smartDcaResult.items.length} Aset
               </span>
             </h4>
@@ -927,7 +938,8 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <button
               type="button"
               onClick={() => setCommitSuccessMessage(null)}
-              className="text-slate-400 hover:text-slate-200"
+              aria-label="Tutup pesan"
+              className="ui-text-muted hover:ui-text-main p-1.5 rounded"
             >
               ✕
             </button>
@@ -938,13 +950,13 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="border-b ui-border text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                <th className="py-2.5 px-3">Aset &amp; Bobot</th>
-                <th className="py-2.5 px-3">Rekomendasi Tindakan</th>
-                <th className="py-2.5 px-3 text-center">Konfluensi Indikator</th>
-                <th className="py-2.5 px-3 text-right">Rekomendasi Alokasi</th>
-                <th className="py-2.5 px-3 text-right">Estimasi Unit / Lot</th>
-                <th className="py-2.5 px-3 text-center">Transparansi</th>
+              <tr className="border-b ui-border text-[11px] font-bold ui-text-muted uppercase tracking-wider">
+                <th scope="col" className="py-2.5 px-3">Aset &amp; Bobot</th>
+                <th scope="col" className="py-2.5 px-3">Rekomendasi Tindakan</th>
+                <th scope="col" className="py-2.5 px-3 text-center">Konfluensi Indikator</th>
+                <th scope="col" className="py-2.5 px-3 text-right">Rekomendasi Alokasi</th>
+                <th scope="col" className="py-2.5 px-3 text-right">Estimasi Unit / Lot</th>
+                <th scope="col" className="py-2.5 px-3 text-center">Transparansi</th>
               </tr>
             </thead>
             <tbody className="divide-y ui-border">
@@ -968,18 +980,18 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                         <div>
                           <div className="font-bold ui-text-main flex items-center gap-1">
                             <span>{item.symbol}</span>
-                            <span className="text-[10px] font-normal text-slate-400 truncate max-w-[120px]">
+                            <span className="text-[10px] font-normal ui-text-muted truncate max-w-[120px]">
                               {item.name}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                          <div className="text-[10px] ui-text-muted tabular-nums flex items-center gap-1.5 mt-0.5">
                             <span>Target {item.targetWeightPercent.toFixed(1)}%</span>
                             <span>•</span>
                             <span
                               className={
                                 item.currentWeightPercent < item.targetWeightPercent
                                   ? 'text-amber-500'
-                                  : 'text-slate-400'
+                                  : 'ui-text-muted'
                               }
                             >
                               Saat ini {item.currentWeightPercent.toFixed(1)}%
@@ -1007,7 +1019,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                         >
                           {item.actionLabel}
                         </span>
-                        <span className="text-[10px] font-mono font-semibold text-slate-400">
+                        <span className="text-[10px] font-mono font-semibold ui-text-muted">
                           Multiplier: {item.multiplier}x
                         </span>
                       </div>
@@ -1057,7 +1069,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       <div className="font-mono font-bold text-xs ui-text-main">
                         {formatIdr(item.recommendedAmountIdr)}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
+                      <div className="text-[10px] ui-text-muted font-mono">
                         Base: {formatIdr(item.baseAllocationIdr, true)}
                       </div>
                     </td>
@@ -1108,18 +1120,18 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                     <div>
                       <div className="font-bold ui-text-main text-xs flex items-center gap-1.5">
                         <span>{item.symbol}</span>
-                        <span className="text-[10px] font-normal text-slate-400 truncate max-w-[120px]">
+                        <span className="text-[10px] font-normal ui-text-muted truncate max-w-[120px]">
                           {item.name}
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                      <div className="text-[10px] ui-text-muted tabular-nums flex items-center gap-1.5 mt-0.5">
                         <span>Target {item.targetWeightPercent.toFixed(1)}%</span>
                         <span>•</span>
                         <span
                           className={
                             item.currentWeightPercent < item.targetWeightPercent
                               ? 'text-amber-500 font-semibold'
-                              : 'text-slate-400'
+                              : 'ui-text-muted'
                           }
                         >
                           Saat ini {item.currentWeightPercent.toFixed(1)}%
@@ -1197,7 +1209,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                     </span>
                     <span
                       className={`text-[10px] font-semibold block ${
-                        deficitPct > 0 ? 'text-amber-500' : 'text-slate-400'
+                        deficitPct > 0 ? 'text-amber-500' : 'ui-text-muted'
                       }`}
                     >
                       {deficitPct > 0 ? `Defisit ${deficitPct}%` : 'Sesuai Target'}
@@ -1221,9 +1233,9 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
         {/* Remainder Cash Notice */}
         {smartDcaResult.unallocatedCashRemainderIdr > 0 && (
-          <div className="flex items-center justify-between text-xs p-3 rounded-lg bg-black/5 dark:bg-white/5 ui-border border text-slate-400">
+          <div className="flex items-center justify-between text-xs p-3 rounded-lg bg-black/5 dark:bg-white/5 ui-border border ui-text-muted">
             <span className="flex items-center gap-1.5">
-              <Info className="h-3.5 w-3.5 text-slate-400" />
+              <Info className="h-3.5 w-3.5 ui-text-muted" />
               <span>
                 Sisa Kas Pecahan Lot BEI:{' '}
                 <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
@@ -1239,6 +1251,9 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
       {/* INTERACTIVE "MENGAPA DIREKOMENDASIKAN?" MODAL / DRAWER */}
       {selectedAssetForWhy && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="smart-dca-why-modal-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
           onClick={() => setSelectedAssetForWhy(null)}
         >
@@ -1255,7 +1270,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold ui-text-main">
+                    <h3 id="smart-dca-why-modal-title" className="text-base font-bold ui-text-main">
                       {selectedAssetForWhy.symbol} — {selectedAssetForWhy.name}
                     </h3>
                     <span
@@ -1279,7 +1294,8 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedAssetForWhy(null)}
-                className="rounded-lg p-1.5 text-slate-400 hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 transition"
+                aria-label="Tutup penjelasan indikator"
+                className="rounded-lg p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 transition"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1332,11 +1348,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       <div key={idx} className="space-y-0.5">
                         <div className="flex items-center justify-between">
                           <span className="font-medium ui-text-main">{m.name}</span>
-                          <span className="font-mono font-bold text-slate-300">
+                          <span className="font-mono font-bold ui-text-secondary">
                             {m.value}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <div className="flex items-center justify-between text-[11px] ui-text-muted">
                           <span>Bobot: {m.weightPercent}%</span>
                           <span className="font-mono">Skor: {m.score}/100</span>
                         </div>
@@ -1361,19 +1377,19 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Target Alokasi:</span>
+                    <span className="ui-text-muted">Target Alokasi:</span>
                     <span className="font-mono font-bold ui-text-main">
                       {selectedAssetForWhy.targetWeightPercent.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Porsi Saat Ini:</span>
+                    <span className="ui-text-muted">Porsi Saat Ini:</span>
                     <span className="font-mono font-bold ui-text-main">
                       {selectedAssetForWhy.currentWeightPercent.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Selisih Defisit:</span>
+                    <span className="ui-text-muted">Selisih Defisit:</span>
                     <span
                       className={`font-mono font-bold ${
                         selectedAssetForWhy.explanation.driftBreakdown.relativeDeficitPercent > 0
@@ -1404,26 +1420,26 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
-                  <span className="text-[10px] text-slate-400 block">Base DCA</span>
+                  <span className="text-[10px] ui-text-muted block">Base DCA</span>
                   <span className="font-mono font-bold">
                     {formatIdr(selectedAssetForWhy.explanation.budgetMath.baseAllocationIdr, true)}
                   </span>
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
-                  <span className="text-[10px] text-slate-400 block">Multiplier</span>
+                  <span className="text-[10px] ui-text-muted block">Multiplier</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {selectedAssetForWhy.multiplier}x
                   </span>
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
-                  <span className="text-[10px] text-slate-400 block">Alokasi Final</span>
-                  <span className="font-mono font-bold text-emerald-400">
+                  <span className="text-[10px] ui-text-muted block">Alokasi Final</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {formatIdr(selectedAssetForWhy.recommendedAmountIdr, true)}
                   </span>
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
-                  <span className="text-[10px] text-slate-400 block">War Chest / Parkir</span>
-                  <span className="font-mono font-bold text-slate-300">
+                  <span className="text-[10px] ui-text-muted block">War Chest / Parkir</span>
+                  <span className="font-mono font-bold ui-text-secondary">
                     {formatIdr(selectedAssetForWhy.explanation.budgetMath.warChestShareIdr, true)}
                   </span>
                 </div>

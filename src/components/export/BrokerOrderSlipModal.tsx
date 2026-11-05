@@ -389,7 +389,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             >
               {copiedGroupId === 'all' ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300" />
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-300" />
                   <span>Semua Slip Disalin!</span>
                 </>
               ) : (
@@ -403,7 +403,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Tutup modal"
             >
               <X className="w-5 h-5" />
@@ -415,7 +415,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         <div className="px-6 py-3 border-b ui-border flex flex-wrap items-center justify-between gap-3 text-xs bg-black/5 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <span className="ui-text-muted">
-              Progres Eksekusi: <strong className="ui-text-main">{executedActionCount} / {totalActionCount}</strong> ({progressPercent}%)
+              Progres Eksekusi: <strong className="ui-text-main font-mono tabular-nums">{executedActionCount} / {totalActionCount}</strong> (<span className="font-mono tabular-nums">{progressPercent}%</span>)
             </span>
             <div className="w-32 h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
@@ -568,7 +568,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                             {isDone ? (
                               <CheckSquare className="w-5 h-5 text-emerald-500" />
                             ) : (
-                              <Square className="w-5 h-5 text-slate-400 dark:text-slate-600" />
+                              <Square className="w-5 h-5 ui-text-muted" />
                             )}
                           </button>
 
@@ -588,7 +588,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                       : isSell
                                       ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                                      : 'bg-zinc-200 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border ui-border'
+                                      : 'bg-zinc-200 dark:bg-zinc-800 ui-text-secondary border ui-border'
                                   }`}
                                 >
                                   {isBuy && <ArrowUpRight className="w-3 h-3" />}
@@ -605,7 +605,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                         </div>
 
                         {/* Right: Quantity / Lots / Nominal specifications */}
-                        <div className="text-left sm:text-right pl-8 sm:pl-0">
+                        <div className="text-left sm:text-right pl-8 sm:pl-0 font-mono tabular-nums">
                           {item.isNominalOnly || def?.isNominalOnly ? (
                             <div>
                               <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">

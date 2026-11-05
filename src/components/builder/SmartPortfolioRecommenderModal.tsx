@@ -93,7 +93,7 @@ export const SmartPortfolioRecommenderModal: React.FC<
     }
   }, [isOpen]);
 
-  // Fallback for browsers without declarative closedby="any"
+  // Fallback for browsers without declarative closedby="any" (Modern Web Guidance: dialog)
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -103,25 +103,37 @@ export const SmartPortfolioRecommenderModal: React.FC<
     };
     dialog.addEventListener('close', handleClose);
 
-    const handleBackdropClick = (event: MouseEvent) => {
-      if (!('closedBy' in HTMLDialogElement.prototype)) {
-        if (event.target !== dialog) return;
-        const rect = dialog.getBoundingClientRect();
-        const isDialogContent =
-          rect.top <= event.clientY &&
-          event.clientY <= rect.top + rect.height &&
-          rect.left <= event.clientX &&
-          event.clientX <= rect.left + rect.width;
-        if (!isDialogContent) {
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      const outside = (e: PointerEvent) => {
+        const r = dialog.getBoundingClientRect();
+        return (
+          e.clientX < r.left ||
+          e.clientX > r.right ||
+          e.clientY < r.top ||
+          e.clientY > r.bottom
+        );
+      };
+      let pressedOutside = false;
+      const handlePointerDown = (e: PointerEvent) => {
+        pressedOutside = outside(e);
+      };
+      const handlePointerUp = (e: PointerEvent) => {
+        if (pressedOutside && outside(e)) {
           dialog.close();
         }
-      }
-    };
-    dialog.addEventListener('click', handleBackdropClick);
+      };
+      dialog.addEventListener('pointerdown', handlePointerDown);
+      dialog.addEventListener('pointerup', handlePointerUp);
+
+      return () => {
+        dialog.removeEventListener('close', handleClose);
+        dialog.removeEventListener('pointerdown', handlePointerDown);
+        dialog.removeEventListener('pointerup', handlePointerUp);
+      };
+    }
 
     return () => {
       dialog.removeEventListener('close', handleClose);
-      dialog.removeEventListener('click', handleBackdropClick);
     };
   }, [onClose]);
 

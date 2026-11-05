@@ -495,6 +495,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 step={10_000_000}
                 value={initialCapitalIdr}
                 onChange={(e) => setInitialCapitalIdr(Number(e.target.value))}
+                aria-label="Modal awal (lump sum)"
                 className="mt-1.5 h-1.5 w-full cursor-pointer"
               />
               <div className="mt-1 flex gap-1.5 text-[11px]">
@@ -527,6 +528,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 step={500_000}
                 value={monthlySavingsIdr}
                 onChange={(e) => setMonthlySavingsIdr(Number(e.target.value))}
+                aria-label="Investasi rutin bulanan"
                 className="mt-1.5 h-1.5 w-full cursor-pointer"
               />
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
@@ -565,6 +567,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 step={1}
                 value={annualStepUpPct}
                 onChange={(e) => setAnnualStepUpPct(Number(e.target.value))}
+                aria-label="Kenaikan tabungan per tahun"
                 className="mt-1.5 h-1.5 w-full cursor-pointer"
               />
             </div>
@@ -834,8 +837,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         type="monotone"
                         dataKey="DayaBeliRiil"
                         name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
-                        stroke="#8b5cf6"
-                        fill="#8b5cf6"
+                        stroke="#06b6d4"
+                        fill="#06b6d4"
                         strokeDasharray="4 4"
                         fillOpacity={0.08}
                       />
@@ -945,10 +948,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   <div
                     className={`mt-0.5 text-base font-bold font-mono ${
                       monteCarloResult.successProbabilityPercent >= 75
-                        ? 'text-emerald-400'
+                        ? 'text-emerald-600 dark:text-emerald-400'
                         : monteCarloResult.successProbabilityPercent >= 50
-                        ? 'text-amber-400'
-                        : 'text-rose-400'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-rose-600 dark:text-rose-400'
                     }`}
                   >
                     {monteCarloResult.successProbabilityPercent}%
@@ -974,7 +977,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
 
                 <div className="p-3 rounded-lg ui-card border ui-border">
                   <div className="text-[11px] ui-text-muted">Hasil P10 (Ujian Bear)</div>
-                  <div className="mt-0.5 text-base font-bold font-mono text-rose-400">
+                  <div className="mt-0.5 text-base font-bold font-mono text-rose-600 dark:text-rose-400">
                     {formatIdr(monteCarloResult.bearFinalWealthIdr, true)}
                   </div>
                   <div className="text-[10px] ui-text-muted mt-0.5">
@@ -984,7 +987,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
 
                 <div className="p-3 rounded-lg ui-card border ui-border">
                   <div className="text-[11px] ui-text-muted">Hasil P90 (Kondisi Bull)</div>
-                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-400">
+                  <div className="mt-0.5 text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
                     {formatIdr(monteCarloResult.bullFinalWealthIdr, true)}
                   </div>
                   <div className="text-[10px] ui-text-muted mt-0.5">
@@ -1099,7 +1102,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               {formatIdr(monthlyLivingCostTargetIdr * 12 * 25, true)}
             </div>
             {annualInflationPercent > 0 && (
-              <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400 font-semibold">
+              <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                 Nominal Masa Depan:{' '}
                 {formatIdr(
                   sim.requiredNestEggSWRIdr ?? monthlyLivingCostTargetIdr * 12 * 25,
@@ -1116,7 +1119,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </div>
               <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-300">
                 {sim.monthsToFinancialFreedomSWR === 0
-                  ? 'Sudah Tercapai Sekarang! 🎉'
+                  ? 'Sudah Tercapai Sekarang'
                   : sim.monthsToFinancialFreedomSWR
                     ? `${Math.floor(sim.monthsToFinancialFreedomSWR / 12)} Tahun ${
                         sim.monthsToFinancialFreedomSWR % 12 > 0
@@ -1162,7 +1165,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       : 'N/A (Yield 0%)'}
                   </div>
                   {annualInflationPercent > 0 && divRealTarget > 0 && (
-                    <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       Nominal Masa Depan:{' '}
                       {formatIdr(divNominalTarget, true)}
                     </div>
@@ -1179,7 +1182,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </div>
               <div className="font-mono text-base font-bold text-emerald-700 dark:text-emerald-300">
                 {sim.monthsToFinancialFreedomDividends === 0
-                  ? 'Sudah Tercapai Sekarang! 🎉'
+                  ? 'Sudah Tercapai Sekarang'
                   : sim.monthsToFinancialFreedomDividends
                     ? `${Math.floor(sim.monthsToFinancialFreedomDividends / 12)} Tahun ${
                         sim.monthsToFinancialFreedomDividends % 12 > 0
@@ -1252,11 +1255,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       </section>
 
       {/* FEATURE 3: REVERSE DCA GOAL SOLVER */}
-      <section className="ui-card rounded-xl p-5 border border-zinc-500/20 ui-subtle">
+      <section className="ui-card rounded-xl p-5 border border-zinc-500/20">
         <div className="ui-border flex flex-col gap-3 border-b border-zinc-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400 dark:text-emerald-600 dark:text-emerald-400" />
+              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h3 className="ui-text-main text-sm font-bold">
                 Reverse DCA Goal Solver (Berapa Tabungan Bulanan yang Dibutuhkan?)
               </h3>
@@ -1491,23 +1494,23 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <thead className="ui-subtle text-[11px] font-semibold uppercase">
               <tr>
-                <th className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
+                <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
                   Instrumen
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Bobot Target
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Gross Dividend / Kupon (%)
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">Pajak</th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">Pajak</th>
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Net Yield (%)
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Dividen/Thn (@ {formatIdr(initialCapitalIdr, true)})
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Dividen/Thn (@ {formatIdr(targetGoalIdr, true)})
                 </th>
               </tr>

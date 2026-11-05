@@ -1437,7 +1437,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           key={a.id}
                           value={a.id}
                           disabled={isUsedInOtherSlot}
-                          className="bg-zinc-900 text-white"
                         >
                           {a.shortName}{isUsedInOtherSlot ? ' (Sudah Dipakai)' : ''}
                         </option>
@@ -1466,7 +1465,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <thead className="ui-card ui-border sticky top-0 z-20 text-[11px] font-semibold uppercase shadow-xs">
                 <tr>
                   <th
+                    scope="col"
                     rowSpan={2}
+                    aria-sort={tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                     onClick={() => handleToggleTableSort('rank')}
                     className="ui-card ui-border sticky left-0 z-30 min-w-[160px] max-w-[200px] cursor-pointer select-none border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] hover:text-emerald-600 sm:max-w-xs sm:px-3"
                     title="Klik untuk sortir berdasarkan Rank / Default"
@@ -1479,13 +1480,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </div>
                   </th>
                   <th
+                    scope="col"
                     rowSpan={2}
                     className="ui-border border-b border-r px-2.5 py-2 text-center"
                   >
                     Risk
                   </th>
                   <th
+                    scope="col"
                     rowSpan={2}
+                    aria-sort={tableSortKey === 'cagr' ? (tableSortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                     onClick={() => handleToggleTableSort('cagr')}
                     className="ui-border cursor-pointer select-none border-b border-r px-3 py-2 text-right hover:text-emerald-600"
                     title="Klik untuk sortir berdasarkan CAGR"
@@ -1498,7 +1502,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </div>
                   </th>
                   <th
+                    scope="col"
                     rowSpan={2}
+                    aria-sort={tableSortKey === 'maxDrawdown' ? (tableSortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                     onClick={() => handleToggleTableSort('maxDrawdown')}
                     className="ui-border cursor-pointer select-none border-b border-r px-3 py-2 text-right hover:text-emerald-600"
                     title="Klik untuk sortir berdasarkan Max Drawdown (Terendah / Paling Aman)"
@@ -1511,6 +1517,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </div>
                   </th>
                   <th
+                    scope="col"
                     colSpan={core8Slots.length + extraCustomAssetIds.length}
                     className="ui-border border-b px-3 py-1 text-center"
                   >
@@ -1532,6 +1539,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     return (
                       <th
                         key={slotId}
+                        scope="col"
                         className={`ui-border border-b border-r px-1.5 py-1 text-right font-mono text-[11px] ${
                           isSwapped ? 'bg-emerald-500/15' : 'ui-card'
                         }`}
@@ -1552,7 +1560,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 key={a.id}
                                 value={a.id}
                                 disabled={isUsedInOtherSlot}
-                                className="bg-zinc-900 text-white"
                               >
                                 {a.shortName} ({getEffectiveAssetCagr(a).toFixed(1)}%){isUsedInOtherSlot ? ' (Sudah Dipakai)' : ''}
                               </option>
@@ -1580,6 +1587,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     return (
                       <th
                         key={extraId}
+                        scope="col"
                         className="ui-card ui-border border-b border-r px-2.5 py-1 text-right font-mono text-[11px]"
                       >
                         <div>{extraId}</div>
@@ -1624,6 +1632,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               <button
                                 type="button"
                                 id={index === 0 ? 'tour-table-pin' : undefined}
+                                aria-pressed={isPinned}
+                                aria-label={isPinned ? `Lepas sematan ${preset.name}` : `Sematkan ${preset.name}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onTogglePinPreset(preset.id);
@@ -1689,6 +1699,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 onRemoveCustomTableRow(preset.id);
                               }}
                               title="Hapus baris custom ini dari tabel"
+                              aria-label={`Hapus baris custom ${preset.name}`}
                               className="ui-text-muted shrink-0 rounded p-1 hover:text-rose-500"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1788,6 +1799,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               onTogglePinPreset(preset.id);
                             }}
                             id={index === 0 ? 'tour-table-pin' : undefined}
+                                aria-pressed={isPinned}
+                                aria-label={isPinned ? `Lepas sematan ${preset.name}` : `Sematkan ${preset.name}`}
                             title={
                               isPinned
                                 ? 'Lepas sematan (unpin) kartu ini'
@@ -1822,7 +1835,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                         </h3>
                         {isPinned && (
                           <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.2 font-mono text-[9px] font-bold text-amber-700 dark:text-amber-300">
-                            📌 Pin
+                            PIN
                           </span>
                         )}
                       </div>
@@ -1889,7 +1902,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     )}
                     {preset.dominatedByReason && (
                       <p className="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
-                        ⚠️ {preset.dominatedByReason}
+                        {preset.dominatedByReason}
                       </p>
                     )}
                   </div>
@@ -1973,6 +1986,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <input
                 type="text"
                 placeholder="Nama baris (opsional)..."
+                aria-label="Nama baris custom (opsional)"
                 value={customRowName}
                 onChange={(e) => setCustomRowName(e.target.value)}
                 className="ui-card ui-text-main w-40 rounded px-2.5 py-1.5 text-xs focus:outline-none"
@@ -2170,7 +2184,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 {/* Warning if locked sum exceeds 100% */}
                 {isLockedSumOverLimit && (
                   <span className="rounded bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400">
-                    ⚠️ Total gembok ({lockedSum}%) &gt; 100%!
+                    Total gembok ({lockedSum}%) &gt; 100%!
                   </span>
                 )}
 
@@ -2230,7 +2244,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     <div key={asset.id} className="ui-subtle rounded-lg p-2.5">
                       {editingAssetId === asset.id ? (
                         /* Unlocked Edit State */
-                        <div className="space-y-2 rounded-md bg-zinc-900/60 p-2.5 border border-emerald-500/30 mb-2">
+                        <div className="space-y-2 rounded-md ui-card p-2.5 border border-emerald-500/30 mb-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
                               <span
@@ -2238,7 +2252,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 style={{ backgroundColor: asset.color }}
                               />
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] text-zinc-400">Kode:</span>
+                                <span className="text-[11px] ui-text-secondary">Kode:</span>
                                 <input
                                   type="text"
                                   value={draftShortName}
@@ -2250,7 +2264,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 />
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] text-zinc-400">Nama:</span>
+                                <span className="text-[11px] ui-text-secondary">Nama:</span>
                                 <input
                                   type="text"
                                   value={draftName}
@@ -2275,7 +2289,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               <button
                                 type="button"
                                 onClick={handleCancelEditAsset}
-                                className="flex items-center gap-1 rounded bg-zinc-700 px-2 py-0.5 text-xs font-medium text-zinc-200 hover:bg-zinc-600"
+                                className="flex items-center gap-1 rounded ui-subtle border ui-border px-2 py-0.5 text-xs font-medium ui-text-main hover:opacity-80"
                                 title="Batal Edit"
                               >
                                 <X className="h-3.5 w-3.5" />
@@ -2285,7 +2299,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleResetDefaultAsset(asset.id)}
-                                  className="flex items-center gap-1 rounded bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-400 hover:bg-rose-500/20 border border-rose-500/30"
+                                  className="flex items-center gap-1 rounded bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/30"
                                   title={`Kembalikan ke ${asset.originalShortName || asset.id} standar pabrikan`}
                                 >
                                   <RotateCcw className="h-3.5 w-3.5" />
@@ -2295,8 +2309,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 pt-1 border-t border-zinc-700/50">
-                            <label className="flex items-center gap-2 text-[11px] cursor-pointer text-zinc-300">
+                          <div className="flex items-center gap-2 pt-1 border-t ui-border">
+                            <label className="flex items-center gap-2 text-[11px] cursor-pointer ui-text-secondary">
                               <input
                                 type="checkbox"
                                 checked={draftIsNominal}
@@ -2308,7 +2322,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               </span>
                             </label>
                             {draftIsNominal && (
-                              <span className="text-[10px] text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-500/20">
+                              <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded border border-sky-500/20">
                                 Eksekusi nominal Rupiah bebas tanpa sisa odd-lot
                               </span>
                             )}
@@ -2351,6 +2365,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 onClick={() => handleStartEditAsset(asset)}
                                 className="ui-text-muted hover:ui-text-main hover:bg-zinc-500/10 rounded p-1 transition"
                                 title={`Ubah Kode Ticker (${asset.shortName}), Nama, atau Mode Reksa Dana`}
+                                aria-label={`Ubah instrumen ${asset.shortName}`}
                               >
                                 <Pencil className="h-3 w-3" />
                               </button>
@@ -2380,6 +2395,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onToggleLockAsset(asset.id)}
+                                aria-pressed={isLocked}
+                                aria-label={isLocked ? `Buka gembok bobot ${asset.shortName}` : `Gembok bobot ${asset.shortName}`}
                                 className={`rounded p-1 transition ${
                                   isLocked
                                     ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 shadow-xs'
@@ -2519,6 +2536,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   value={tickerInput}
                   onChange={(e) => setTickerInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleYahooLookup()}
+                  aria-label="Simbol ticker Yahoo Finance"
                   className="ui-input w-full rounded-lg pl-8 pr-3 py-1.5 text-xs"
                 />
               </div>
@@ -2606,41 +2624,45 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 className="ui-subtle mt-3 grid grid-cols-2 gap-2.5 rounded-lg p-3 sm:grid-cols-6"
               >
                 <div className="sm:col-span-1">
-                  <label className="ui-text-muted block text-[10px]">Simbol</label>
+                  <label htmlFor="synth-symbol" className="ui-text-muted block text-[10px]">Simbol</label>
                   <input
                     type="text"
                     required
                     placeholder="SBN"
+                    id="synth-symbol"
                     value={synthSymbol}
                     onChange={(e) => setSynthSymbol(e.target.value)}
                     className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="ui-text-muted block text-[10px]">Nama Aset</label>
+                  <label htmlFor="synth-name" className="ui-text-muted block text-[10px]">Nama Aset</label>
                   <input
                     type="text"
                     placeholder="Obligasi / Saham"
+                    id="synth-name"
                     value={synthName}
                     onChange={(e) => setSynthName(e.target.value)}
                     className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="ui-text-muted block text-[10px]">CAGR (%)</label>
+                  <label htmlFor="synth-cagr" className="ui-text-muted block text-[10px]">CAGR (%)</label>
                   <input
                     type="number"
                     step="0.5"
+                    id="synth-cagr"
                     value={synthCagr}
                     onChange={(e) => setSynthCagr(Number(e.target.value))}
                     className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="ui-text-muted block text-[10px]">Max DD (%)</label>
+                  <label htmlFor="synth-maxdd" className="ui-text-muted block text-[10px]">Max DD (%)</label>
                   <input
                     type="number"
                     step="0.5"
+                    id="synth-maxdd"
                     value={synthMaxDd}
                     onChange={(e) => setSynthMaxDd(Number(e.target.value))}
                     className="ui-card ui-text-main mt-1 w-full rounded px-2 py-1 text-xs"
@@ -3104,7 +3126,6 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     <option
                       key={p.id}
                       value={p.id}
-                      className="bg-zinc-900 text-white"
                     >
                       {p.rank ? `#${p.rank} ` : p.isCustomRow ? '[Custom] ' : ''}
                       {p.name} ({p.cagr}% / -{p.maxDrawdown}%)

@@ -228,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  // Close tools dropdown when clicking outside
+  // Close tools dropdown & mobile drawer on click outside or Escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -238,11 +238,21 @@ export const Header: React.FC<HeaderProps> = ({
         setIsToolsMenuOpen(false);
       }
     };
-    if (isToolsMenuOpen) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsToolsMenuOpen(false);
+        setIsMobileMenuOpen(false);
+      }
+    };
+    if (isToolsMenuOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleKeyDown);
+      };
     }
-  }, [isToolsMenuOpen]);
+  }, [isToolsMenuOpen, isMobileMenuOpen]);
 
   // Listen for programmatic toggle of tools menu (e.g. from interactive tour Step 19)
   useEffect(() => {
@@ -332,23 +342,32 @@ export const Header: React.FC<HeaderProps> = ({
   // Mandatory modern-web-guidance fallback for <dialog closedby="any"> light-dismiss
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
+    if (!dialog || 'closedBy' in HTMLDialogElement.prototype) return;
 
-    if (!('closedBy' in HTMLDialogElement.prototype)) {
-      const handleBackdropClick = (event: MouseEvent) => {
-        if (event.target !== dialog) return;
-        const rect = dialog.getBoundingClientRect();
-        const isDialogContent =
-          rect.top <= event.clientY &&
-          event.clientY <= rect.top + rect.height &&
-          rect.left <= event.clientX &&
-          event.clientX <= rect.left + rect.width;
-        if (isDialogContent) return;
-        dialog.close();
-      };
-      dialog.addEventListener('click', handleBackdropClick);
-      return () => dialog.removeEventListener('click', handleBackdropClick);
-    }
+    let pressedOutside = false;
+    const isOutside = (e: PointerEvent) => {
+      const r = dialog.getBoundingClientRect();
+      return (
+        e.clientX < r.left ||
+        e.clientX > r.right ||
+        e.clientY < r.top ||
+        e.clientY > r.bottom
+      );
+    };
+    const handlePointerDown = (e: PointerEvent) => {
+      pressedOutside = isOutside(e);
+    };
+    const handlePointerUp = (e: PointerEvent) => {
+      if (pressedOutside && isOutside(e)) dialog.close();
+      pressedOutside = false;
+    };
+
+    dialog.addEventListener('pointerdown', handlePointerDown);
+    dialog.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      dialog.removeEventListener('pointerdown', handlePointerDown);
+      dialog.removeEventListener('pointerup', handlePointerUp);
+    };
   }, []);
 
   const calmarRatio =
@@ -424,7 +443,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Desktop Primary Navigation Tabs (Hidden on mobile because mobile uses thumb-friendly Bottom Bar) */}
             <nav
               id="tour-nav-tabs"
-              aria-label="Navigasi Utama Desktop"
+              aria-label="Utama (Desktop)"
               className="ui-subtle hidden items-center gap-1 rounded-lg p-1 lg:flex"
             >
               <button
@@ -511,6 +530,8 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   id="tour-tools-menu"
                   type="button"
+                  aria-expanded={isToolsMenuOpen}
+                  aria-haspopup="menu"
                   onClick={() => setIsToolsMenuOpen((prev) => !prev)}
                   className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
@@ -619,7 +640,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="ui-border space-y-1.5 border-t pt-2">
                       {/* WebAuthn Biometric / Fingerprint Settings */}
                       {isBiometricSupported && (
-                        <div className="ui-subtle rounded-lg p-2 space-y-1.5 border border-slate-200 dark:border-slate-800">
+                        <div className="ui-subtle rounded-lg p-2 space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
                               <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
@@ -858,7 +879,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </>
                 ) : (
                   <>
-                    <Moon className="h-3.5 w-3.5 text-slate-700" />
+                    <Moon className="h-3.5 w-3.5 text-zinc-700" />
                     <span className="hidden xl:inline">Dark</span>
                   </>
                 )}
@@ -1044,7 +1065,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* WebAuthn Biometric Settings Mobile */}
                 {isBiometricSupported && (
-                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5 border border-slate-200 dark:border-slate-800">
+                  <div className="col-span-2 sm:col-span-3 ui-subtle rounded-lg p-2.5 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5">
                         <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
@@ -1193,7 +1214,8 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
-              className="ui-text-muted rounded p-1 hover:opacity-80"
+              aria-label="Tutup dialog"
+              className="ui-text-muted rounded p-1.5 hover:opacity-80"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1201,11 +1223,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="mt-4 space-y-4">
             <div className="ui-subtle rounded-lg p-3">
-              <label className="ui-text-secondary block text-xs font-medium">
+              <label htmlFor="save-portfolio-name-input" className="ui-text-secondary block text-xs font-medium">
                 Simpan Portfolio Saat Ini (LocalStorage)
               </label>
               <div className="mt-2 flex gap-2">
                 <input
+                  id="save-portfolio-name-input"
                   type="text"
                   placeholder="Nama Portfolio..."
                   value={newSaveName}
@@ -1347,7 +1370,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Thumb-Friendly Mobile Bottom Tab Navigation Bar (< lg) */}
       <nav
-        aria-label="Navigasi Utama Mobile"
+        aria-label="Utama (Mobile)"
         className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-lg lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-3 gap-1">

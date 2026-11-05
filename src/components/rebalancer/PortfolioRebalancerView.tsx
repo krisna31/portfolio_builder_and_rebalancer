@@ -812,6 +812,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       ? (pnlFromShockIdr / rebalanceResult.initialTotalIdr) * 100
       : 0;
 
+  // Escape closes the options popover and the deficit confirmation dialog (standard menu/dialog keyboard contract)
+  useEffect(() => {
+    if (!isOptionsMenuOpen && !showDeficitConfirmModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setIsOptionsMenuOpen(false);
+      setShowDeficitConfirmModal(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOptionsMenuOpen, showDeficitConfirmModal]);
+
   const historyChartData = [...rebalanceHistory]
     .reverse()
     .map((entry, idx) => ({
@@ -846,9 +858,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 : 'ui-text-secondary hover:ui-text-main'
             }`}
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-amber-300" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-amber-600 dark:text-amber-300" />
             <span>Smart DCA Advisor</span>
-            <span className="rounded bg-amber-400/20 text-amber-300 text-[10px] px-1.5 py-0.5 font-mono font-semibold">
+            <span className="rounded bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[10px] px-1.5 py-0.5 font-mono font-semibold">
               2-Pillar
             </span>
           </button>
@@ -959,7 +971,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${
                   isHoldingsSyncedWithMenu1
                     ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                    : 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300'
+                    : 'border-zinc-500/30 bg-zinc-500/10 ui-text-secondary'
                 }`}
               >
                 {isHoldingsSyncedWithMenu1
@@ -1025,6 +1037,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <button
                 id="tour-rebalance-options-btn"
                 type="button"
+                aria-expanded={isOptionsMenuOpen}
+                aria-haspopup="menu"
                 onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                   isOptionsMenuOpen || anyPriceModified || !enableIdxLotRounding || enableBrokerFees
@@ -1184,7 +1198,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
                     >
                       <div className="flex items-center gap-1.5">
-                        <Coins className="h-3.5 w-3.5 text-slate-400" />
+                        <Coins className="h-3.5 w-3.5 ui-text-muted" />
                         <span>Muat Contoh Video Rp 1 Miliar</span>
                       </div>
                       <span className="ui-text-muted font-mono text-[10px]">Demo</span>
@@ -1409,6 +1423,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   cryptoScore: parseInt(e.target.value, 10),
                                 })
                               }
+                              aria-label="Skor sentimen kripto"
                               className="w-full accent-emerald-500 h-1.5 cursor-pointer"
                             />
                             <div className="flex justify-between text-[9px] ui-text-muted">
@@ -1440,6 +1455,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   usEquityScore: parseInt(e.target.value, 10),
                                 })
                               }
+                              aria-label="Skor valuasi saham AS"
                               className="w-full accent-emerald-500 h-1.5 cursor-pointer"
                             />
                             <div className="flex justify-between text-[9px] ui-text-muted">
@@ -1466,6 +1482,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   idxEquityScore: parseInt(e.target.value, 10),
                                 })
                               }
+                              aria-label="Skor valuasi IHSG"
                               className="w-full accent-emerald-500 h-1.5 cursor-pointer"
                             />
                             <div className="flex justify-between text-[9px] ui-text-muted">
@@ -1499,7 +1516,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <button
                 type="button"
                 onClick={() => setShowShockSliders(false)}
-                className="text-[11px] text-slate-400 hover:text-slate-200"
+                className="text-[11px] ui-text-muted hover:ui-text-main rounded px-1.5 py-1"
               >
                 ✕ Tutup
               </button>
@@ -1636,11 +1653,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               <div className="rounded-lg bg-black/10 dark:bg-black/25 p-2 text-[11px] space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="ui-text-muted">Aset Terisi Saat Ini:</span>
-                  <span className="font-mono font-medium text-slate-300">
+                  <span className="font-mono font-medium ui-text-main">
                     {formatIdr(rebalanceResult.initialTotalIdr)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between border-t border-slate-700/40 pt-1">
+                <div className="flex items-center justify-between border-t ui-border pt-1">
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                     <span>Sisa Kas Belanja:</span>
                     <span className="text-[9px] px-1 rounded bg-emerald-500/20 font-mono font-bold">
@@ -2051,25 +2068,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </caption>
                 <thead className="ui-subtle text-[11px] font-semibold uppercase">
                   <tr>
-                    <th className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
+                    <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
                       Instrumen
                     </th>
-                    <th className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Harga Pasar
                     </th>
-                    <th className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Input Posisi Awal
                     </th>
-                    <th className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Nilai Saat Ini
                     </th>
-                    <th className="ui-border border-b px-2.5 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-2.5 py-2 text-right">
                       Now vs Target
                     </th>
-                    <th className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Target (Rp)
                     </th>
-                    <th className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Action (Jual / Beli)
                     </th>
                   </tr>
@@ -2214,7 +2231,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                             currentPrice: asset?.defaultPrice ?? 1,
                                           })
                                         }
-                                        className="ui-text-muted hover:text-emerald-500 p-0.5 rounded transition"
+                                        aria-label="Reset harga ke normal"
+                                      className="ui-text-muted hover:text-emerald-500 p-1.5 rounded transition"
                                         title={`Reset ke harga pasar normal (${formatPriceDisplay(asset?.defaultPrice ?? 1, asset?.currency)})`}
                                       >
                                         <RotateCcw className="h-2.5 w-2.5" />
@@ -2228,7 +2246,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                           currentPrice: 1,
                                         })
                                       }
-                                      className="ui-text-muted hover:text-sky-500 p-0.5 rounded transition"
+                                      aria-label="Jadikan aset nominal murni"
+                                      className="ui-text-muted hover:text-sky-500 p-1.5 rounded transition"
                                       title="Jadikan Aset Nominal Murni (Abaikan harga pasar unit)"
                                     >
                                       <Tag className="h-2.5 w-2.5" />
@@ -2293,7 +2312,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                             avgBuyPrice: undefined,
                                           })
                                         }
-                                        className="ui-text-muted hover:text-rose-500 p-0.5 rounded transition text-[9px]"
+                                        aria-label="Hapus modal beli"
+                                        className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
                                         title="Hapus modal beli"
                                       >
                                         ✕
@@ -2509,8 +2529,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, -1);
                                               }}
-                                              className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                               title="Kurangi 1 Lot"
+                                aria-label="Kurangi 1 Lot"
                                             >
                                               -
                                             </button>
@@ -2520,8 +2541,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, 1);
                                               }}
-                                              className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                               title="Tambah 1 Lot"
+                                aria-label="Tambah 1 Lot"
                                             >
                                               +
                                             </button>
@@ -2532,8 +2554,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                   e.stopPropagation();
                                                   handleResetLotOverride(item.assetId);
                                                 }}
-                                                className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                                className="min-w-6 min-h-6 text-[11px] text-amber-600 dark:text-amber-500 hover:underline ml-0.5"
                                                 title="Reset ke hitungan lot awal"
+                                aria-label="Reset ke hitungan lot awal"
                                               >
                                                 ↺
                                               </button>
@@ -2583,8 +2606,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, -1);
                                               }}
-                                              className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                               title="Kurangi 1 Lot"
+                                aria-label="Kurangi 1 Lot"
                                             >
                                               -
                                             </button>
@@ -2594,8 +2618,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, 1);
                                               }}
-                                              className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                               title="Tambah 1 Lot"
+                                aria-label="Tambah 1 Lot"
                                             >
                                               +
                                             </button>
@@ -2606,8 +2631,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                   e.stopPropagation();
                                                   handleResetLotOverride(item.assetId);
                                                 }}
-                                                className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                                className="min-w-6 min-h-6 text-[11px] text-amber-600 dark:text-amber-500 hover:underline ml-0.5"
                                                 title="Reset ke hitungan lot awal"
+                                aria-label="Reset ke hitungan lot awal"
                                               >
                                                 ↺
                                               </button>
@@ -2747,6 +2773,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                         currentPrice: Math.max(0.000001, Number(e.target.value)),
                                       })
                                     }
+                                    aria-label={`Harga pasar ${item.symbol}`}
                                     className={`ui-input w-24 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold text-right ${
                                       isPriceCustom ? 'border-amber-500 text-amber-600 dark:text-amber-400' : ''
                                     }`}
@@ -2770,7 +2797,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                           currentPrice: asset?.defaultPrice ?? 1,
                                         })
                                       }
-                                      className="ui-text-muted hover:text-emerald-500 p-0.5 rounded transition"
+                                      aria-label="Reset harga ke normal"
+                                      className="ui-text-muted hover:text-emerald-500 p-1.5 rounded transition"
                                       title="Reset ke harga pasar normal"
                                     >
                                       <RotateCcw className="h-2.5 w-2.5" />
@@ -2784,7 +2812,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                         currentPrice: 1,
                                       })
                                     }
-                                    className="ui-text-muted hover:text-sky-500 p-0.5 rounded transition"
+                                    aria-label="Jadikan aset nominal murni"
+                                      className="ui-text-muted hover:text-sky-500 p-1.5 rounded transition"
                                     title="Jadikan Aset Nominal Murni (Abaikan harga pasar unit)"
                                   >
                                     <Tag className="h-2.5 w-2.5" />
@@ -2821,7 +2850,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                           avgBuyPrice: undefined,
                                         })
                                       }
-                                      className="ui-text-muted hover:text-rose-500 p-0.5 rounded transition text-[9px]"
+                                      aria-label="Hapus modal beli"
+                                        className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
                                       title="Hapus modal beli"
                                     >
                                       ✕
@@ -2886,8 +2916,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, -1);
                                   }}
-                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                   title="Kurangi 1 Lot Jual"
+                                aria-label="Kurangi 1 Lot Jual"
                                 >
                                   -
                                 </button>
@@ -2897,8 +2928,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, 1);
                                   }}
-                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                   title="Tambah 1 Lot Beli"
+                                aria-label="Tambah 1 Lot Beli"
                                 >
                                   +
                                 </button>
@@ -2909,8 +2941,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                       e.stopPropagation();
                                       handleResetLotOverride(item.assetId);
                                     }}
-                                    className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                    className="min-w-6 min-h-6 text-[11px] text-amber-600 dark:text-amber-500 hover:underline ml-0.5"
                                     title="Reset ke hitungan lot awal"
+                                aria-label="Reset ke hitungan lot awal"
                                   >
                                     ↺
                                   </button>
@@ -3132,8 +3165,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, -1);
                                   }}
-                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                   title="Kurangi 1 Lot"
+                                aria-label="Kurangi 1 Lot"
                                 >
                                   -
                                 </button>
@@ -3143,8 +3177,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, 1);
                                   }}
-                                  className="h-4 w-4 rounded bg-slate-800 hover:bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center leading-none border border-slate-700"
+                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
                                   title="Tambah 1 Lot"
+                                aria-label="Tambah 1 Lot"
                                 >
                                   +
                                 </button>
@@ -3155,8 +3190,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                       e.stopPropagation();
                                       handleResetLotOverride(item.assetId);
                                     }}
-                                    className="text-[9px] text-amber-500 hover:underline ml-0.5"
+                                    className="min-w-6 min-h-6 text-[11px] text-amber-600 dark:text-amber-500 hover:underline ml-0.5"
                                     title="Reset ke hitungan lot awal"
+                                aria-label="Reset ke hitungan lot awal"
                                   >
                                     ↺
                                   </button>
@@ -3402,25 +3438,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <thead className="ui-subtle text-[11px] font-semibold uppercase">
               <tr>
-                <th className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
+                <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
                   Tier Koreksi
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Harga Limit Order ({selectedLadderAsset?.currency ?? 'IDR'})
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Harga Limit (Rp)
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Total Porto Saat Crash
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Nominal BUY Rebalance
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Jumlah Unit / Lot IDX
                 </th>
-                <th className="ui-border border-b px-3 py-2 text-right">
+                <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                   Sumber Dana (Jual RDPT / GLD)
                 </th>
               </tr>
@@ -3565,15 +3601,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <table className="w-full border-separate border-spacing-0 text-left text-xs">
                   <thead className="ui-subtle text-[11px] font-semibold uppercase">
                     <tr>
-                      <th className="ui-border border-b px-3 py-2">Tanggal</th>
-                      <th className="ui-border border-b px-3 py-2">Catatan</th>
-                      <th className="ui-border border-b px-3 py-2 text-right">
+                      <th scope="col" className="ui-border border-b px-3 py-2">Tanggal</th>
+                      <th scope="col" className="ui-border border-b px-3 py-2">Catatan</th>
+                      <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                         Total Portfolio
                       </th>
-                      <th className="ui-border border-b px-3 py-2">
+                      <th scope="col" className="ui-border border-b px-3 py-2">
                         Ringkasan Eksekusi
                       </th>
-                      <th className="ui-border border-b px-2 py-2 text-center">
+                      <th scope="col" className="ui-border border-b px-2 py-2 text-center">
                         Hapus
                       </th>
                     </tr>
@@ -3619,8 +3655,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           <button
                             type="button"
                             onClick={() => onDeleteRebalanceHistoryEntry(h.id)}
-                            className="ui-text-muted hover:text-rose-600"
+                            className="ui-text-muted hover:text-rose-600 p-1.5 rounded"
                             title="Hapus log ini"
+                            aria-label={`Hapus log rebalance ${h.timestamp}`}
                           >
                             <Trash2 className="mx-auto h-3.5 w-3.5" />
                           </button>
@@ -3671,9 +3708,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           role="dialog"
           aria-modal="true"
           aria-labelledby="deficit-modal-title"
+          onClick={() => setShowDeficitConfirmModal(false)}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
         >
-          <div className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-lg p-6 space-y-4">
+          <div
+            className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-lg p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
                 <AlertTriangle className="h-4 w-4" />

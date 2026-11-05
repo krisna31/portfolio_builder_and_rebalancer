@@ -165,6 +165,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="ui-subtle ui-text-muted hover:ui-text-main rounded-lg p-1.5 transition"
             aria-label="Tutup"
@@ -208,7 +209,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
             /* IMPORT TAB */
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="ui-text-main text-xs font-semibold">
+                <label htmlFor="holdings-import-textarea" className="ui-text-main text-xs font-semibold">
                   Tempelkan Baris Aset (Excel / CSV / Teks Bebas):
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -245,8 +246,9 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                     <button
                       type="button"
                       onClick={() => setInputText('')}
-                      className="ui-subtle ui-text-muted hover:text-rose-500 rounded p-1 text-xs"
+                      className="ui-subtle ui-text-muted hover:text-rose-500 rounded p-1.5 text-xs"
                       title="Bersihkan teks"
+                      aria-label="Bersihkan teks"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>
@@ -257,6 +259,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
               {/* Textarea */}
               <div className="relative">
                 <textarea
+                  id="holdings-import-textarea"
                   value={inputText}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -358,11 +361,11 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                       <table className="w-full border-separate border-spacing-0 text-left text-xs">
                         <thead className="ui-subtle text-[11px] font-semibold sticky top-0 z-10">
                           <tr>
-                            <th className="ui-border border-b px-3 py-2">Symbol</th>
-                            <th className="ui-border border-b px-3 py-2">Nama Aset</th>
-                            <th className="ui-border border-b px-3 py-2 text-right">Nilai IDR</th>
-                            <th className="ui-border border-b px-3 py-2 text-right">Unit / Lot</th>
-                            <th className="ui-border border-b px-3 py-2 text-center">Status</th>
+                            <th scope="col" className="ui-border border-b px-3 py-2">Symbol</th>
+                            <th scope="col" className="ui-border border-b px-3 py-2">Nama Aset</th>
+                            <th scope="col" className="ui-border border-b px-3 py-2 text-right">Nilai IDR</th>
+                            <th scope="col" className="ui-border border-b px-3 py-2 text-right">Unit / Lot</th>
+                            <th scope="col" className="ui-border border-b px-3 py-2 text-center">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 font-mono text-[11px]">
@@ -412,7 +415,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
 
                   {parseResult.invalidLines.length > 0 && (
                     <div className="text-[11px] text-amber-600 dark:text-amber-400">
-                      ⚠️ {parseResult.invalidLines.length} baris dilewati karena tidak memiliki nilai numerik yang valid.
+                      {parseResult.invalidLines.length} baris dilewati karena tidak memiliki nilai numerik yang valid.
                     </div>
                   )}
                 </div>
@@ -485,6 +488,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                   readOnly
                   value={exportText}
                   rows={10}
+                  aria-label="Teks ekspor saldo holding"
                   className="ui-subtle ui-border ui-text-main w-full rounded-xl border p-3 font-mono text-[11px] leading-relaxed focus:outline-none"
                   spellCheck={false}
                 />
