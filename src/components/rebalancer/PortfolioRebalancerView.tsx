@@ -2095,10 +2095,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <thead className="ui-subtle text-[11px] font-semibold uppercase">
                   <tr>
                     <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
-                      Instrumen
-                    </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
-                      Harga Pasar
+                      Instrumen &amp; Harga Spot
                     </th>
                     <th scope="col" className="ui-border border-b px-3 py-2 text-right">
                       Input Posisi Awal
