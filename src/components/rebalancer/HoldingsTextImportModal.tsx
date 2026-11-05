@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   X,
   Copy,
@@ -68,17 +69,13 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
     }
   }, [isOpen]);
 
-  // Accessibility: Close modal on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   if (!isOpen) return null;
 
@@ -147,9 +144,9 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 animate-in fade-in duration-200"
     >
-      <div className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-xl border shadow-lg overflow-hidden">
+      <div ref={containerRef} tabIndex={-1} className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-xl border shadow-md overflow-hidden outline-none">
         {/* Header */}
         <div className="ui-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -359,6 +356,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                   {parseResult.items.length > 0 ? (
                     <div className="ui-border max-h-56 overflow-y-auto rounded-xl border">
                       <table className="w-full border-separate border-spacing-0 text-left text-xs">
+                        <caption className="sr-only">Pratinjau Hasil Pembacaan Teks Portofolio</caption>
                         <thead className="ui-subtle text-[11px] font-semibold sticky top-0 z-10">
                           <tr>
                             <th scope="col" className="ui-border border-b px-3 py-2">Symbol</th>

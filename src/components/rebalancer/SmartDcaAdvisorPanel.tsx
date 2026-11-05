@@ -386,7 +386,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
       `Smart DCA Execution: ${formatIdr(monthlyBudgetIdr)}`,
       smartDcaResult.asRebalanceSummary
     );
-    setCommitSuccessMessage('✅ Alokasi Smart DCA berhasil dicatat ke saldo portofolio!');
+    setCommitSuccessMessage('Alokasi Smart DCA berhasil dicatat ke saldo portofolio.');
     setTimeout(() => setCommitSuccessMessage(null), 3500);
   };
 
@@ -949,6 +949,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         {/* Table View (Desktop & Tablet) */}
         <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left text-xs">
+            <caption className="sr-only">Tabel Rekomendasi Alokasi DCA Bertahap Berdasarkan Indikator Pasar</caption>
             <thead>
               <tr className="border-b ui-border text-[11px] font-bold ui-text-muted uppercase tracking-wider">
                 <th scope="col" className="py-2.5 px-3">Aset &amp; Bobot</th>
@@ -1254,11 +1255,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="smart-dca-why-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in"
           onClick={() => setSelectedAssetForWhy(null)}
         >
           <div
-            className="ui-card w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border ui-border shadow-2xl p-5 sm:p-6 space-y-5"
+            className="ui-card w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border ui-border shadow-md p-5 sm:p-6 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

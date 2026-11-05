@@ -38,7 +38,6 @@ import {
   Scale,
   ShieldCheck,
   Award,
-  Zap,
   CheckCircle2,
   AlertTriangle,
   Plus,
@@ -890,7 +889,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             onClick={() => onSelectPreset(targetPreset)}
                             className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 font-mono text-[11px] font-semibold text-amber-950 transition hover:bg-amber-500 hover:text-white dark:text-amber-100 dark:hover:bg-amber-500 dark:hover:text-zinc-950"
                           >
-                            <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>{dom.name}</span></span>
+                            <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-amber-500" /><span>{dom.name}</span></span>
                             <span className="rounded bg-emerald-500/20 px-1 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                               CAGR {dom.cagr.toFixed(2)}% (+{dom.cagrDiff.toFixed(2)}%)
                             </span>
@@ -1016,7 +1015,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             <div className="mt-2.5 grid grid-cols-2 gap-2">
               <div className="ui-subtle rounded-lg p-2">
                 <div className="flex items-center justify-between">
-                  <label className="ui-text-muted block text-[10px] font-medium">
+                  <label htmlFor="builder-initial-capital" className="ui-text-muted block text-[10px] font-medium">
                     Modal Awal (Rp)
                   </label>
                   <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1025,12 +1024,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </div>
                 <div className="mt-0.5 flex items-center justify-between gap-1">
                   <FormattedNumberInput
+                    id="builder-initial-capital"
                     step={10_000_000}
                     min={0}
                     value={initialCapitalIdr}
                     onChange={(val) => setInitialCapitalIdr(val)}
                     className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
-                    ariaLabel="Initial Capital in IDR"
+                    ariaLabel="Modal Awal dalam Rupiah"
                   />
                 </div>
                 <div className="mt-1 flex gap-1 text-[10px]">
@@ -1053,7 +1053,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
 
               <div className="ui-subtle rounded-lg p-2">
                 <div className="flex items-center justify-between">
-                  <label className="ui-text-muted block text-[10px] font-medium">
+                  <label htmlFor="builder-target-goal" className="ui-text-muted block text-[10px] font-medium">
                     Target Kekayaan (Rp)
                   </label>
                   <span className="font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -1183,7 +1183,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         </div>
       </section>
 
-      {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA -> PTBA & PINNED CUSTOM ROWS) */}
+      {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA &rarr; PTBA & PINNED CUSTOM ROWS) */}
       <section id="tour-table-section" className="ui-card rounded-xl p-5">
         <div className="ui-border flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -1199,13 +1199,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
             <p className="ui-text-muted mt-0.5 text-xs">
               Anda bisa mengganti instrumen di header kolom tabel (contoh: ubah{' '}
-              <strong>BBCA ➔ PTBA</strong>) untuk melihat bagaimana bobot ke-15
+              <strong>BBCA &rarr; PTBA</strong>) untuk melihat bagaimana bobot ke-15
               strategi berubah secara otomatis, atau pin racikan custom Anda ke tabel.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            {/* Quick Example Button: Ubah BBCA -> PTBA */}
+            {/* Quick Example Button: Ubah BBCA &rarr; PTBA */}
             <button
               type="button"
               onClick={onQuickSwapBbcaToPtba}
@@ -1216,7 +1216,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               }`}
             >
               <Repeat className="h-3 w-3" />
-              <span>Contoh Custom: Ubah BBCA ➔ PTBA</span>
+              <span>Contoh Custom: Ubah BBCA &rarr; PTBA</span>
             </button>
 
             {isSlotMapCustomized && (
@@ -1525,7 +1525,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       {formatIdr(initialCapitalIdr, true)}
                     </span>{' '}
-                    — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA ➔ PTBA)
+                    — Klik Dropdown Kolom untuk Ganti Instrumen (Misal BBCA &rarr; PTBA)
                   </th>
                 </tr>
                 <tr>
@@ -2723,7 +2723,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       const d = payload[0]?.payload;
                       if (!d) return null;
                       return (
-                        <div className="ui-card ui-border rounded-lg border p-3 text-xs shadow-xl">
+                        <div className="ui-card ui-border rounded-lg border p-3 text-xs shadow-md">
                           <div className="ui-text-main font-bold">
                             {d.symbol} — {d.name}
                           </div>
@@ -2853,7 +2853,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       const pt = payload[0]?.payload;
                       if (!pt) return null;
                       return (
-                        <div className="ui-card ui-border max-w-xs rounded-lg border p-3 text-xs shadow-xl">
+                        <div className="ui-card ui-border max-w-xs rounded-lg border p-3 text-xs shadow-md">
                           <div className="flex items-center justify-between gap-2">
                             <span
                               className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${

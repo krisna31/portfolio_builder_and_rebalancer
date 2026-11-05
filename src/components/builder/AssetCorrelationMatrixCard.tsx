@@ -10,7 +10,7 @@ import {
   ArrowRight,
   ChevronDown,
   ArrowLeftRight,
-  Zap,
+  GitCompare,
 } from 'lucide-react';
 
 export interface AssetCorrelationMatrixCardProps {
@@ -275,6 +275,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
               <div className="ui-subtle rounded-xl border ui-border p-3 sm:p-4 overflow-hidden">
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="w-full text-center border-collapse text-xs">
+                    <caption className="sr-only">Matriks Korelasi Spearman Antar-Aset Portofolio</caption>
                     <thead>
                       <tr>
                         <th scope="col" className="p-2.5 text-left font-semibold ui-text-muted text-[11px] uppercase tracking-wider w-24">
@@ -513,7 +514,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
               {/* Quick Pair Explorations */}
               <div className="space-y-2 pt-1 border-t ui-border">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold ui-text-muted">
-                  <Zap className="w-3 h-3 text-amber-500" />
+                  <GitCompare className="w-3 h-3 text-amber-500" />
                   <span>Eksplorasi Pasangan Kunci:</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">

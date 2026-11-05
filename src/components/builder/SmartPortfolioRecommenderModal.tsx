@@ -183,7 +183,7 @@ export const SmartPortfolioRecommenderModal: React.FC<
       ref={dialogRef}
       {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
       aria-labelledby={titleId}
-      className="ui-card ui-text-main m-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-xl p-0 shadow-lg backdrop:bg-black/60 backdrop:backdrop-blur-[2px]"
+      className="ui-card ui-text-main m-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-xl p-0 shadow-md backdrop:bg-black/60"
     >
       <div className="p-5 sm:p-6">
         {/* Header */}

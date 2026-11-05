@@ -382,12 +382,12 @@ export const Header: React.FC<HeaderProps> = ({
         <aside
           role="status"
           aria-live="polite"
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-md text-xs font-semibold transition max-w-sm ${
+          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-md text-xs font-semibold transition max-w-sm ${
             biometricToast.type === 'success'
-              ? 'border-emerald-500/40 bg-emerald-950/95 text-emerald-200'
+              ? 'border-emerald-500/40 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-200'
               : biometricToast.type === 'error'
-              ? 'border-rose-500/40 bg-rose-950/95 text-rose-200'
-              : 'border-zinc-500/40 bg-zinc-900/95 text-zinc-200'
+              ? 'border-rose-500/40 bg-rose-50 text-rose-900 dark:bg-rose-950/95 dark:text-rose-200'
+              : 'border-ui-border ui-card ui-text-main'
           }`}
         >
           <Fingerprint
@@ -553,7 +553,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isToolsMenuOpen && (
-                  <div className="ui-card absolute right-0 z-50 mt-1.5 w-72 space-y-2.5 rounded-xl p-3 text-xs shadow-xl">
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2.5 rounded-xl p-3 text-xs shadow-md">
                     <div className="ui-border flex items-center justify-between border-b pb-2">
                       <span className="ui-text-main font-bold">
                         Alat &amp; Pengaturan
@@ -1134,7 +1134,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
-        <div className="ui-card border-t ui-border backdrop-blur-md px-3 py-1 sm:px-6 bg-white/95 dark:bg-zinc-950/90">
+        <div className="ui-card border-t ui-border px-3 py-1 sm:px-6">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
@@ -1371,7 +1371,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Thumb-Friendly Mobile Bottom Tab Navigation Bar (< lg) */}
       <nav
         aria-label="Utama (Mobile)"
-        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-lg lg:hidden"
+        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-xs lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
           <button

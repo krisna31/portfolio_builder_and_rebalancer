@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   X,
   HelpCircle,
@@ -44,17 +45,13 @@ export const RebalanceExecutionGuideModal: React.FC<
 }) => {
   const [activeTab, setActiveTab] = useState<GuideTab>('initial-buy');
 
-  // Accessibility: Close modal on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   if (!isOpen) return null;
 
@@ -78,12 +75,12 @@ export const RebalanceExecutionGuideModal: React.FC<
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="guide-modal-title"
     >
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-xl border ui-border ui-card ui-text-main shadow-lg overflow-hidden">
+      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-xl border ui-border ui-card ui-text-main shadow-md overflow-hidden outline-none">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b ui-border px-5 py-3.5 ui-subtle shrink-0">
           <div className="flex items-center gap-2.5">
@@ -267,7 +264,7 @@ export const RebalanceExecutionGuideModal: React.FC<
                 <button
                   type="button"
                   onClick={handleActionSetupInitialBuy}
-                  className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-lg transition"
+                  className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-sm transition"
                 >
                   <ArrowUpRight className="h-4 w-4" />
                   <span>

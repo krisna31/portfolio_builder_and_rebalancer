@@ -135,7 +135,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
           </div>
           <p className="text-[11px] ui-text-muted">
             Keputusan aksi Smart DCA ditentukan 100% dari jumlah aturan
-            indikator yang berstatus <strong>Triggered (✅)</strong>.
+            indikator yang berstatus <strong>Triggered (Aktif)</strong>.
           </p>
 
           {/* Live Sync Status & Refresh Indicator */}
@@ -213,6 +213,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
       <div className="rounded-xl border ui-border overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
+            <caption className="sr-only">Daftar Indikator Siklus dan Valuasi Pasar Multi-Faktor</caption>
             <thead>
               <tr className="border-b ui-border bg-black/5 dark:bg-white/[0.03] text-[11px] font-semibold ui-text-muted uppercase tracking-wider">
                 <th scope="col" className="py-3 px-3.5 w-10 text-center">#</th>
@@ -269,7 +270,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                                   tooltipIndicatorId === ind.id ? null : ind.id
                                 )
                               }
-                              className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition p-0.5"
+                              className="ui-text-muted hover:ui-text-main transition p-0.5"
                               aria-label={`Info ${ind.name}`}
                             >
                               <Info className="w-3.5 h-3.5" />
@@ -279,17 +280,17 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             {tooltipIndicatorId === ind.id && (
                               <div
                                 data-cmc-popover="true"
-                                className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border bg-zinc-900 text-zinc-100 text-[11px] leading-relaxed shadow-2xl backdrop-blur-md"
+                                className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border ui-card ui-text-main text-[11px] leading-relaxed shadow-md"
                               >
                                 <p className="font-semibold text-emerald-400 mb-1">
                                   {ind.name}
                                 </p>
                                 <p>{ind.description}</p>
 
-                                <div className="mt-2.5 pt-2 border-t border-zinc-800 space-y-1 text-[10px]">
-                                  <div className="flex items-center justify-between text-zinc-400">
+                                <div className="mt-2.5 pt-2 border-t ui-border space-y-1 text-[10px]">
+                                  <div className="flex items-center justify-between ui-text-secondary">
                                     <span>Acuan Beli:</span>
-                                    <span className="font-mono text-zinc-200 font-semibold">
+                                    <span className="font-mono ui-text-main font-semibold">
                                       {ind.formattedReference}
                                     </span>
                                   </div>

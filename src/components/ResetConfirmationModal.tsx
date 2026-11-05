@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useRef } from 'react';
+import { useModalAccessibility } from '../hooks/useModalAccessibility';
 import { AlertTriangle, RotateCcw, X, ShieldAlert } from 'lucide-react';
 
 export interface ResetConfirmationModalProps {
@@ -12,16 +13,13 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
   onClose,
   onConfirmReset,
 }) => {
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   if (!isOpen) return null;
 
@@ -33,9 +31,13 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="reset-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-md ui-card border ui-border rounded-xl shadow-lg overflow-hidden ui-text-main">
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        className="relative w-full max-w-md ui-card border ui-border rounded-xl shadow-md overflow-hidden ui-text-main outline-none"
+      >
         {/* Header with warning accent */}
         <div className="flex items-center justify-between p-4 border-b ui-border bg-rose-500/10">
           <div className="flex items-center gap-2.5">

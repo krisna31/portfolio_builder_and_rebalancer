@@ -44,7 +44,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Download,
-  Zap,
+  Activity,
   History,
   Check,
   Trash2,
@@ -1057,7 +1057,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </button>
 
               {isOptionsMenuOpen && (
-                <div className="ui-card absolute right-0 z-50 mt-1.5 w-80 max-w-[90vw] space-y-3 rounded-xl p-3.5 text-xs shadow-2xl border">
+                <div className="ui-card absolute right-0 z-50 mt-1.5 w-80 max-w-[90vw] space-y-3 rounded-xl p-3.5 text-xs shadow-md border ui-border">
                   <div className="ui-border flex items-center justify-between border-b pb-2">
                     <span className="ui-text-main font-bold">
                       Opsi &amp; Simulasi Lanjutan
@@ -1071,7 +1071,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <div id="tour-stress-scenarios" className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 text-[11px] font-semibold ui-text-main">
-                        <Zap className="h-3 w-3 text-amber-500" />
+                        <Activity className="h-3 w-3 text-amber-500" />
                         <span>Simulasi Krisis &amp; Crash Pasar:</span>
                       </div>
                       <button
@@ -1510,7 +1510,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           <div className="ui-subtle mt-3 rounded-lg p-3 border">
             <div className="flex items-center justify-between mb-2 text-xs">
               <span className="ui-text-main font-semibold flex items-center gap-1">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                <SlidersHorizontal className="h-3.5 w-3.5 text-amber-500" />
                 <span>Slider Shock Harga Per Aset:</span>
               </span>
               <button
@@ -3709,10 +3709,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           aria-modal="true"
           aria-labelledby="deficit-modal-title"
           onClick={() => setShowDeficitConfirmModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200"
         >
           <div
-            className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-lg p-6 space-y-4"
+            tabIndex={-1}
+            className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-md p-6 space-y-4 outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3">

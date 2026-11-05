@@ -2783,6 +2783,16 @@ export function App() {
     }
   };
 
+  // SPA Title synchronization (Modern Web Guidance: accessibility & page titles)
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      builder: 'QuantPorto — Portfolio Builder & Risk Parity',
+      rebalancer: 'QuantPorto — Portfolio Rebalancer & Smart DCA',
+      roadmap: 'QuantPorto — Wealth Roadmap & Monte Carlo',
+    };
+    document.title = titles[activeTab] || 'QuantPorto — Portfolio Builder & Rebalancer';
+  }, [activeTab]);
+
   // 1. Strict Security Policy: If VITE_APP_PASSWORD_HASH is missing from .env, block app completely
   if (!CONFIGURED_PASSWORD_HASH) {
     return <MissingEnvScreen />;
@@ -2801,6 +2811,14 @@ export function App() {
 
   return (
     <div className="ui-page min-h-screen">
+      {/* Keyboard Accessibility Skip Link (WCAG 2.4.1 Bypass Blocks) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-lg focus:shadow-md focus:outline-none focus:text-xs focus:font-semibold"
+      >
+        Lewati ke konten utama
+      </a>
+
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -2845,7 +2863,7 @@ export function App() {
         rebalanceMaxDriftPercent={rebalanceResult.maxAbsoluteDrift}
       />
 
-      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 outline-none">
         {activeTab === 'builder' && (
           <PortfolioBuilderView
             allAssets={allAssets}

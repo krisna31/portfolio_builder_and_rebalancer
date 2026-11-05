@@ -1,4 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import html2canvas from 'html2canvas-pro';
 import {
   AssetDefinition,
@@ -62,17 +63,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [sheetTheme, setSheetTheme] = useState<'light' | 'dark'>('light');
 
-  // Accessibility: Close modal on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   if (!isOpen) return null;
 
@@ -285,9 +282,9 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-xs overflow-y-auto"
+      className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 overflow-y-auto"
     >
-      <div className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-card ui-border rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[95vh]">
+      <div ref={containerRef} tabIndex={-1} className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-card ui-border rounded-xl shadow-md overflow-hidden flex flex-col max-h-[95vh] outline-none">
         {/* Top Control Bar (Hidden on print) */}
         <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2">
@@ -565,6 +562,8 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <div>
               <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <table className="w-full text-left text-[11px] border-collapse">
+                <caption className="sr-only">Simulasi Proyeksi Portofolio Menuju Target Finansial</caption>
+                <caption className="sr-only">Rincian Alokasi Aset dan Bobot Risiko Portofolio Factsheet</caption>
                   <thead>
                     <tr
                       className={`border-b ${

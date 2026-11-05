@@ -837,8 +837,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         type="monotone"
                         dataKey="DayaBeliRiil"
                         name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
-                        stroke="#06b6d4"
-                        fill="#06b6d4"
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
                         strokeDasharray="4 4"
                         fillOpacity={0.08}
                       />
@@ -1492,6 +1492,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
           className="ui-border mt-4 overflow-x-auto rounded-lg border"
         >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
+            <caption className="sr-only">Tabel Rincian Dividen dan Passive Income Per-Instrumen Portofolio</caption>
             <thead className="ui-subtle text-[11px] font-semibold uppercase">
               <tr>
                 <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">

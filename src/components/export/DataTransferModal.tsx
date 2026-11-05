@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   X,
   Copy,
@@ -73,17 +74,13 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
     }
   }, [isOpen]);
 
-  // Accessibility: Close modal on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   if (!isOpen) return null;
 
@@ -150,9 +147,9 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 animate-in fade-in duration-200"
     >
-      <div className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl border shadow-lg overflow-hidden">
+      <div ref={containerRef} tabIndex={-1} className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-xl border shadow-md overflow-hidden outline-none">
         {/* Header */}
         <div className="ui-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -281,7 +278,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
                   className="ui-subtle ui-border ui-text-main w-full rounded-xl border p-3 font-mono text-[11px] leading-relaxed focus:outline-none"
                   spellCheck={false}
                 />
-                <div className="absolute bottom-3 right-3 rounded bg-black/60 px-2 py-0.5 text-[10px] font-mono text-zinc-300 backdrop-blur-xs">
+                <div className="absolute bottom-3 right-3 rounded bg-black/60 px-2 py-0.5 text-[10px] font-mono text-zinc-300">
                   {exportText.length.toLocaleString('id-ID')} karakter
                 </div>
               </div>
@@ -505,7 +502,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
               className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold transition shadow-sm ${
                 parseResult?.success
                   ? confirmOverwritePrompt
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : 'bg-zinc-400/30 text-zinc-400 cursor-not-allowed'
               }`}

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   AssetDefinition,
   HoldingEntry,
@@ -62,17 +63,13 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
   // Bug 15 fix: Track which specific platform slip (or 'all') was copied
   const [copiedGroupId, setCopiedGroupId] = useState<string | 'all' | null>(null);
 
-  // Accessibility: Close modal on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen,
+    onClose,
+    containerRef,
+  });
 
   const assetDefMap = useMemo(() => {
     const map = new Map<string, AssetDefinition>();
@@ -350,9 +347,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-xs overflow-y-auto animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 overflow-y-auto animate-in fade-in"
     >
-      <div className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-xl shadow-lg overflow-hidden flex flex-col max-h-[92vh]">
+      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-xl shadow-md overflow-hidden flex flex-col max-h-[92vh] outline-none">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2.5">
