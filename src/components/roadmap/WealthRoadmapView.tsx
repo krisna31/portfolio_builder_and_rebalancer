@@ -34,6 +34,7 @@ import {
   Check,
   RotateCcw,
   Banknote,
+  ChevronDown,
 } from 'lucide-react';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 
@@ -103,6 +104,67 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   const [reverseDcaTargetYears, setReverseDcaTargetYears] = useState<number>(
     () => initialRoadmapSettings?.reverseDcaTargetYears ?? 10
   );
+
+  // Collapsible cards state
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('quantporto_roadmap_collapsed_v1');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSectionCollapse = (key: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('quantporto_roadmap_collapsed_v1', JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  const areAllSectionsCollapsed = useMemo(() => {
+    return !!(
+      collapsedSections.calc &&
+      collapsedSections.curve &&
+      collapsedSections.swr &&
+      collapsedSections.reverseDca &&
+      collapsedSections.dividends &&
+      collapsedSections.backtest
+    );
+  }, [collapsedSections]);
+
+  const toggleAllSections = () => {
+    setCollapsedSections((prev) => {
+      const allCollapsed = !!(
+        prev.calc &&
+        prev.curve &&
+        prev.swr &&
+        prev.reverseDca &&
+        prev.dividends &&
+        prev.backtest
+      );
+      const next = {
+        ...prev,
+        calc: !allCollapsed,
+        curve: !allCollapsed,
+        swr: !allCollapsed,
+        reverseDca: !allCollapsed,
+        dividends: !allCollapsed,
+        backtest: !allCollapsed,
+      };
+      try {
+        localStorage.setItem('quantporto_roadmap_collapsed_v1', JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
 
   // Bug 18: Save settings whenever changed
   useEffect(() => {
@@ -557,17 +619,44 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       <section id="tour-roadmap-calculator" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 5 Cols: Wealth Simulator Parameters */}
         <div className="ui-card space-y-4 rounded-xl p-5 lg:col-span-5">
-          <div className="ui-border flex items-center gap-2 border-b pb-3">
-            <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="ui-text-main text-sm font-bold">
-              Kalkulator Compounding Kekayaan (Rp 1M – Rp 10M)
-            </h2>
+          <div className="ui-border flex items-center justify-between border-b pb-2.5">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="ui-text-main text-sm font-bold">
+                Kalkulator Compounding
+              </h2>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                {formatIdr(targetGoalIdr, true)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('calc')}
+              className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition"
+              title={collapsedSections.calc ? 'Buka form kalkulator' : 'Ciutkan kalkulator'}
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.calc ? '-rotate-90' : ''}`} />
+              <span>{collapsedSections.calc ? 'Buka' : 'Ciutkan'}</span>
+            </button>
           </div>
 
-          <p className="ui-text-muted text-xs">
-            Ilustrasi menit 02:48: Dengan active income yang sama, kenaikan CAGR dari
-            10% ke 15%+ membuat hasil akhir melompat berkali-kali lipat.
-          </p>
+          {collapsedSections.calc ? (
+            <div className="py-1 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="ui-text-muted">
+                  Modal: <strong className="ui-text-main">{formatIdr(initialCapitalIdr, true)}</strong> • DCA: <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(monthlySavingsIdr, true)}/bln</strong>
+                </span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {sim.reachedGoal ? `${sim.yearsToGoal} Thn` : '> 30 Thn'}
+                </span>
+              </div>
+              <div className="text-[11px] ui-text-secondary flex justify-between">
+                <span>Target: {formatIdr(targetGoalIdr, true)}</span>
+                <span className="ui-text-muted">Compounding: +{formatIdr(sim.totalGainAtGoalIdr, true)}</span>
+              </div>
+            </div>
+          ) : (
+          <>
 
           <div className="space-y-3.5">
             <div>
@@ -802,50 +891,48 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* Right 7 Cols: Compounding Curve */}
         <div className="space-y-5 lg:col-span-7">
-          <div className="ui-card rounded-xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="ui-text-main text-sm font-bold flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <span>
-                    {simulationViewMode === 'deterministic'
-                      ? 'Kurva Pertumbuhan Kekayaan vs Modal Pokok & Risiko Crash'
-                      : 'Simulasi Stokastik Monte Carlo (500 Skenario Siklus Pasar)'}
-                  </span>
-                </h3>
-                <p className="ui-text-muted text-xs mt-0.5">
+          <div className="ui-card rounded-xl p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-2.5">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <h3 className="ui-text-main text-sm font-bold">
                   {simulationViewMode === 'deterministic'
-                    ? `Proyeksi pada CAGR efektif ${effectiveCompoundingCagr.toFixed(2)}% beserta batas bawah Maximum Drawdown (-${solvedMetrics.maxDrawdown}%):`
-                    : `Simulasi 500 lintasan acak (volatilitas \u03c3 = ${(solvedMetrics.volatility || 18).toFixed(1)}%) memetakan rentang hasil terburuk (P10) hingga terbaik (P90)${
-                        isRealMonteCarlo ? ` dalam daya beli riil (inflasi ${annualInflationPercent}%)` : ''
-                      }:`}
-                </p>
+                    ? 'Kurva Compounding'
+                    : 'Simulasi Monte Carlo (500x)'}
+                </h3>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {simulationViewMode === 'deterministic'
+                    ? `CAGR ${effectiveCompoundingCagr.toFixed(1)}%`
+                    : `\u03c3 ${(solvedMetrics.volatility || 18).toFixed(1)}%`}
+                </span>
               </div>
 
-              {/* Mode Toggle: Deterministik vs Monte Carlo & Real vs Nominal */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Controls: Mode toggles + Collapse Button */}
+              <div className="flex items-center gap-1.5">
                 {simulationViewMode === 'monte-carlo' && annualInflationPercent > 0 && (
                   <div className="ui-subtle flex rounded-lg p-0.5 text-xs">
                     <button
                       type="button"
                       onClick={() => setMonteCarloDisplayMode('real')}
-                      className={`px-2 py-1 rounded font-medium transition ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
                         monteCarloDisplayMode === 'real'
                           ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                           : 'ui-text-muted hover:opacity-80'
                       }`}
                       title="Tampilkan proyeksi dalam daya beli riil yang didiskonto inflasi"
                     >
-                      Daya Beli Riil
+                      Riil
                     </button>
                     <button
                       type="button"
                       onClick={() => setMonteCarloDisplayMode('nominal')}
-                      className={`px-2 py-1 rounded font-medium transition ${
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
                         monteCarloDisplayMode === 'nominal'
                           ? 'ui-card ui-text-main font-semibold shadow-2xs'
                           : 'ui-text-muted hover:opacity-80'
@@ -857,11 +944,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   </div>
                 )}
 
-                <div className="ui-subtle flex rounded-lg p-0.5 text-xs shrink-0 self-start sm:self-auto">
+                <div className="ui-subtle flex rounded-lg p-0.5 text-xs shrink-0">
                   <button
                     type="button"
                     onClick={() => setSimulationViewMode('deterministic')}
-                    className={`px-2.5 py-1 rounded font-medium transition ${
+                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
                       simulationViewMode === 'deterministic'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:opacity-80'
@@ -872,19 +959,53 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setSimulationViewMode('monte-carlo')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded font-medium transition ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition ${
                       simulationViewMode === 'monte-carlo'
                         ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                         : 'ui-text-muted hover:opacity-80'
                     }`}
                   >
                     <Activity className="h-3 w-3" />
-                    <span>Monte Carlo (500x)</span>
+                    <span>Monte Carlo</span>
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSectionCollapse('curve')}
+                  className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition"
+                  title={collapsedSections.curve ? 'Buka grafik kurva' : 'Ciutkan grafik kurva'}
+                >
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.curve ? '-rotate-90' : ''}`} />
+                  <span>{collapsedSections.curve ? 'Buka' : 'Ciutkan'}</span>
+                </button>
               </div>
             </div>
 
+            {collapsedSections.curve ? (
+              <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                {simulationViewMode === 'monte-carlo' ? (
+                  <>
+                    <span className="ui-text-muted">
+                      Peluang: <strong className="text-emerald-600 dark:text-emerald-400">{monteCarloResult.successProbabilityPercent}%</strong> • Median: <strong className="ui-text-main">{monteCarloResult.medianYearsToGoal !== null ? `${monteCarloResult.medianYearsToGoal} Thn` : '> 30 Thn'}</strong>
+                    </span>
+                    <span className="ui-text-secondary">
+                      Bear P10: <strong className="text-rose-500">{formatIdr(monteCarloResult.bearFinalWealthIdr, true)}</strong> | Bull P90: <strong className="text-emerald-500">{formatIdr(monteCarloResult.bullFinalWealthIdr, true)}</strong>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="ui-text-muted">
+                      CAGR: <strong className="text-emerald-600 dark:text-emerald-400">{effectiveCompoundingCagr.toFixed(1)}%</strong> • Max DD: <strong className="text-rose-500">-{solvedMetrics.maxDrawdown}%</strong>
+                    </span>
+                    <span className="ui-text-secondary">
+                      Target {formatIdr(targetGoalIdr, true)}: <strong className="ui-text-main">{sim.reachedGoal ? `${sim.yearsToGoal} Thn` : '> 30 Thn'}</strong>
+                    </span>
+                  </>
+                )}
+              </div>
+            ) : (
+            <>
             <div className="mt-4 h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 {simulationViewMode === 'deterministic' ? (
@@ -1096,78 +1217,77 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 </div>
               </div>
             )}
+            </>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="ui-card rounded-xl p-4">
-              <div className="ui-text-muted text-xs">25 Tahun @ 10% / thn</div>
-              <div className="ui-text-main mt-1 font-mono text-lg font-bold">
-                {formatIdr(sim10Pct25Y.finalValueAfter25YIdr, true)}
+          {!collapsedSections.curve && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="ui-card rounded-xl p-4">
+                <div className="ui-text-muted text-xs">25 Tahun @ 10% / thn</div>
+                <div className="ui-text-main mt-1 font-mono text-lg font-bold">
+                  {formatIdr(sim10Pct25Y.finalValueAfter25YIdr, true)}
+                </div>
+                <div className="ui-text-muted mt-0.5 text-[11px]">
+                  Benchmark Konservatif (02:55)
+                </div>
               </div>
-              <div className="ui-text-muted mt-0.5 text-[11px]">
-                Benchmark Konservatif (02:55)
-              </div>
-            </div>
 
-            <div className="ui-card rounded-xl p-4">
-              <div className="ui-text-muted text-xs">25 Tahun @ 15% / thn</div>
-              <div className="ui-text-main mt-1 font-mono text-lg font-bold">
-                {formatIdr(sim15Pct25Y.finalValueAfter25YIdr, true)}
+              <div className="ui-card rounded-xl p-4">
+                <div className="ui-text-muted text-xs">25 Tahun @ 15% / thn</div>
+                <div className="ui-text-main mt-1 font-mono text-lg font-bold">
+                  {formatIdr(sim15Pct25Y.finalValueAfter25YIdr, true)}
+                </div>
+                <div className="ui-text-muted mt-0.5 text-[11px]">
+                  Benchmark Medium Risk (03:10)
+                </div>
               </div>
-              <div className="ui-text-muted mt-0.5 text-[11px]">
-                Benchmark Medium Risk (03:10)
-              </div>
-            </div>
 
-            <div className="ui-card rounded-xl p-4">
-              <div className="ui-text-muted flex items-center justify-between text-xs">
-                <span>
-                  25 Tahun @ Porto Aktif ({effectiveCompoundingCagr.toFixed(1)}%)
-                </span>
-                <ShieldAlert className="h-3.5 w-3.5" />
-              </div>
-              <div className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                {formatIdr(sim.finalValueAfter25YIdr, true)}
-              </div>
-              <div className="ui-text-muted mt-0.5 text-[11px]">
-                Max Drawdown -{solvedMetrics.maxDrawdown}%
+              <div className="ui-card rounded-xl p-4">
+                <div className="ui-text-muted flex items-center justify-between text-xs">
+                  <span>
+                    25 Tahun @ Porto Aktif ({effectiveCompoundingCagr.toFixed(1)}%)
+                  </span>
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                </div>
+                <div className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatIdr(sim.finalValueAfter25YIdr, true)}
+                </div>
+                <div className="ui-text-muted mt-0.5 text-[11px]">
+                  Max Drawdown -{solvedMetrics.maxDrawdown}%
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
       {/* KALKULATOR TARGET KEBEBASAN FINANSIAL & BIAYA HIDUP PENSIUN (4% SWR VS DIVIDEN MURNI) */}
-      <section id="tour-dividend-retirement" className="ui-card rounded-xl p-5">
-        <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="ui-text-main text-sm font-bold">
-                Kalkulator Kebebasan Finansial (Financial Freedom &amp; Biaya Hidup Pensiun)
-              </h3>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Hitung kapan portofolio Anda mampu menutup seluruh biaya hidup tanpa harus bekerja aktif, baik lewat <strong>4% Safe Withdrawal Rate</strong> (Trinity Study) maupun <strong>100% Dividen Murni</strong>:
-            </p>
+      <section id="tour-dividend-retirement" className="ui-card rounded-xl p-4 sm:p-5">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-2.5 border-b pb-2.5">
+          <div className="flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="ui-text-main text-sm font-bold">
+              Kebebasan Finansial &amp; Pensiun (4% SWR &amp; Dividen)
+            </h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="ui-text-secondary font-medium">Target Biaya Hidup:</span>
-            <div className="ui-card flex items-center gap-1 rounded-md border px-2 py-1">
+            <span className="ui-text-secondary font-medium hidden sm:inline">Biaya Hidup:</span>
+            <div className="ui-card flex items-center gap-1 rounded-md border ui-border px-2 py-0.5">
               <span className="ui-text-muted font-mono text-[11px]">Rp</span>
               <FormattedNumberInput
                 step={1_000_000}
                 min={1_000_000}
                 value={monthlyLivingCostTargetIdr}
                 onChange={(val) => setMonthlyLivingCostTargetIdr(val)}
-                className="ui-text-main w-24 bg-transparent font-mono text-xs font-bold focus:outline-none"
+                className="ui-text-main w-20 bg-transparent font-mono text-xs font-bold focus:outline-none"
                 ariaLabel="Monthly Living Cost Target in IDR"
               />
               <span className="ui-text-muted text-[10px]">/bln</span>
             </div>
             <div className="flex flex-wrap gap-1 text-[10px]">
-              {[5_000_000, 10_000_000, 15_000_000, 25_000_000, 50_000_000].map(
+              {[5_000_000, 10_000_000, 15_000_000, 25_000_000].map(
                 (costPreset) => (
                   <button
                     key={costPreset}
@@ -1184,9 +1304,30 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 )
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('swr')}
+              className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition ml-1"
+              title={collapsedSections.swr ? 'Buka simulasi pensiun' : 'Ciutkan simulasi pensiun'}
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.swr ? '-rotate-90' : ''}`} />
+              <span>{collapsedSections.swr ? 'Buka' : 'Ciutkan'}</span>
+            </button>
           </div>
         </div>
 
+        {collapsedSections.swr ? (
+          <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <span className="ui-text-muted">
+              Biaya Hidup: <strong className="ui-text-main">{formatIdr(monthlyLivingCostTargetIdr, true)}/bln</strong> • Target Nest Egg 4%: <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(monthlyLivingCostTargetIdr * 12 * 25, true)}</strong>
+            </span>
+            <span className="ui-text-secondary">
+              Estimasi 4% SWR: <strong className="ui-text-main">{sim.monthsToFinancialFreedomSWR === 0 ? 'Tercapai' : sim.monthsToFinancialFreedomSWR ? `${Math.floor(sim.monthsToFinancialFreedomSWR / 12)} Thn` : '> 30 Thn'}</strong>
+            </span>
+          </div>
+        ) : (
+        <>
         {/* Financial Freedom KPI Cards */}
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* SWR 4% Card */}
@@ -1352,44 +1493,65 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </div>
           </div>
         </div>
+        </>
+        )}
       </section>
 
       {/* FEATURE 3: REVERSE DCA GOAL SOLVER */}
-      <section id="roadmap-reverse-dca" className="ui-card rounded-xl p-5 border border-zinc-500/20">
-        <div className="ui-border flex flex-col gap-3 border-b border-zinc-500/20 pb-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="ui-text-main text-sm font-bold">
-                Reverse DCA Goal Solver (Berapa Tabungan Bulanan yang Dibutuhkan?)
-              </h3>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Hitung mundur berapa DCA bulanan yang harus Anda sisihkan agar modal awal {formatIdr(initialCapitalIdr, true)} bertumbuh menjadi target {formatIdr(targetGoalIdr, true)} dalam rentang waktu yang Anda pilih:
-            </p>
+      <section id="roadmap-reverse-dca" className="ui-card rounded-xl p-4 sm:p-5 border border-zinc-500/20">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-2.5 border-b border-zinc-500/20 pb-2.5">
+          <div className="flex items-center gap-2">
+            <Calculator className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="ui-text-main text-sm font-bold">
+              Reverse DCA Goal Solver
+            </h3>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+              {reverseDcaTargetYears} Tahun
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="ui-text-secondary font-medium">Target Waktu:</span>
+            <span className="ui-text-secondary font-medium hidden sm:inline">Target:</span>
             <div className="flex gap-1">
               {[3, 5, 10, 15, 20, 25].map((yr) => (
                 <button
                   key={yr}
                   type="button"
                   onClick={() => setReverseDcaTargetYears(yr)}
-                  className={`rounded px-2 py-1 font-mono text-xs font-semibold transition ${
+                  className={`rounded px-2 py-0.5 font-mono text-xs font-semibold transition ${
                     reverseDcaTargetYears === yr
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
                 >
-                  {yr} Thn
+                  {yr}T
                 </button>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('reverseDca')}
+              className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition ml-1"
+              title={collapsedSections.reverseDca ? 'Buka Reverse DCA' : 'Ciutkan Reverse DCA'}
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.reverseDca ? '-rotate-90' : ''}`} />
+              <span>{collapsedSections.reverseDca ? 'Buka' : 'Ciutkan'}</span>
+            </button>
           </div>
         </div>
 
+        {collapsedSections.reverseDca ? (
+          <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <span className="ui-text-muted">
+              Target: <strong className="ui-text-main">{formatIdr(targetGoalIdr, true)}</strong> dalam <strong className="ui-text-main">{reverseDcaTargetYears} Thn</strong>
+            </span>
+            <span className="ui-text-secondary">
+              DCA Bulanan: <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(reverseDcaSolution.deterministicMonthlyDcaIdr, true)}</strong> (CAGR {effectiveCompoundingCagr.toFixed(1)}%) | Konservatif 75%: <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(reverseDcaSolution.monteCarlo75MonthlyDcaIdr, true)}</strong>
+            </span>
+          </div>
+        ) : (
+        <>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Deterministic compounding solution */}
           <div className="ui-subtle rounded-xl p-4 flex flex-col justify-between">
@@ -1447,22 +1609,21 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </div>
           </div>
         </div>
+        </>
+        )}
       </section>
 
       {/* DIVIDEND YIELD & PASSIVE CASHFLOW ESTIMATOR */}
-      <section id="roadmap-dividends" className="ui-card rounded-xl p-5">
-        <div className="ui-border flex flex-col gap-3 border-b pb-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="ui-text-main text-sm font-bold">
-                Kalkulator Dividen &amp; Arus Kas Pasif (Passive Income Estimator)
-              </h3>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Hitung arus kas pasif dari kupon RDPT, dividen saham IDX (mis. PTBA,
-              BBCA, BBRI, AADI), dan ETF US beserta simulasi pajak bersih &amp; DRIP:
-            </p>
+      <section id="roadmap-dividends" className="ui-card rounded-xl p-4 sm:p-5">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-2.5 border-b pb-2.5">
+          <div className="flex items-center gap-2">
+            <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="ui-text-main text-sm font-bold">
+              Dividen &amp; Arus Kas Pasif
+            </h3>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+              Net {dividendBreakdown.weightedNetYieldPct.toFixed(2)}%/thn
+            </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1471,7 +1632,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setTaxMode('standard-net')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition ${
                   taxMode === 'standard-net'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
@@ -1482,24 +1643,24 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setTaxMode('idx-tax-exempt-reinvest')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition ${
                   taxMode === 'idx-tax-exempt-reinvest'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Bebas Pajak (PMK)
+                Bebas Pajak
               </button>
               <button
                 type="button"
                 onClick={() => setTaxMode('gross')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition ${
                   taxMode === 'gross'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Gross (0%)
+                Gross
               </button>
             </div>
 
@@ -1508,18 +1669,18 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setDividendUsageMode('reinvest-drip')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition ${
                   dividendUsageMode === 'reinvest-drip'
                     ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Reinvest (DRIP)
+                DRIP
               </button>
               <button
                 type="button"
                 onClick={() => setDividendUsageMode('cashout-passive')}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition ${
                   dividendUsageMode === 'cashout-passive'
                     ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
                     : 'ui-text-muted hover:ui-text-main'
@@ -1528,9 +1689,30 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 Tarik Tunai
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('dividends')}
+              className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition ml-1"
+              title={collapsedSections.dividends ? 'Buka rincian dividen' : 'Ciutkan rincian dividen'}
+            >
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.dividends ? '-rotate-90' : ''}`} />
+              <span>{collapsedSections.dividends ? 'Buka' : 'Ciutkan'}</span>
+            </button>
           </div>
         </div>
 
+        {collapsedSections.dividends ? (
+          <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <span className="ui-text-muted">
+              Net Yield: <strong className="text-emerald-600 dark:text-emerald-400">{dividendBreakdown.weightedNetYieldPct.toFixed(2)}%</strong> • Gross: <strong className="ui-text-main">{dividendBreakdown.weightedGrossYieldPct.toFixed(2)}%</strong>
+            </span>
+            <span className="ui-text-secondary">
+              Pasif Awal: <strong className="ui-text-main">{formatIdr(dividendBreakdown.monthlyPassiveAtInitialIdr)}/bln</strong> → Target: <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(dividendBreakdown.monthlyPassiveAtGoalIdr)}/bln</strong>
+            </span>
+          </div>
+        ) : (
+        <>
         {/* Summary KPI Cards for Passive Income */}
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="ui-subtle rounded-lg p-3.5">
@@ -1757,27 +1939,45 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </tbody>
           </table>
         </div>
+        </>
+        )}
       </section>
 
       {/* 5-YEAR HISTORICAL BACKTEST: REBALANCING FREQUENCY SIMULATOR (16:08) */}
-      <section id="tour-backtest-frequency" className="ui-card rounded-xl p-5">
-        <div className="ui-border flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="ui-text-main text-sm font-bold">
-                Backtest 5 Tahun: Rebalance Bulanan vs Kuartalan (3 Bulan) vs Tahunan
-                vs Buy &amp; Hold
-              </h3>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Pembuktian klaim menit 16:08 (Sander &amp; Leon): Rebalancing rutin tiap
-              kuartal/bulan memanen volatilitas saat Bull Run (2020–2021), melindungi
-              modal saat Crash (2022), dan mempercepat recovery (2023–2024):
-            </p>
+      <section id="tour-backtest-frequency" className="ui-card rounded-xl p-4 sm:p-5">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-2.5 border-b pb-2.5">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="ui-text-main text-sm font-bold">
+              Backtest 5 Tahun: Frekuensi Rebalancing
+            </h3>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+              Kuartalan: {formatIdr(freqBacktest.finalQuarterlyIdr)}
+            </span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => toggleSectionCollapse('backtest')}
+            className="flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-0.5 rounded-lg ui-text-secondary hover:ui-text-main transition"
+            title={collapsedSections.backtest ? 'Buka backtest' : 'Ciutkan backtest'}
+          >
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${collapsedSections.backtest ? '-rotate-90' : ''}`} />
+            <span>{collapsedSections.backtest ? 'Buka' : 'Ciutkan'}</span>
+          </button>
         </div>
 
+        {collapsedSections.backtest ? (
+          <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            <span className="ui-text-muted">
+              Kuartalan (3M): <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(freqBacktest.finalQuarterlyIdr)}</strong> (DD -{solvedMetrics.maxDrawdown}%)
+            </span>
+            <span className="ui-text-secondary">
+              Bulanan: <strong className="ui-text-main">{formatIdr(freqBacktest.finalMonthlyIdr)}</strong> | Tahunan: <strong className="ui-text-main">{formatIdr(freqBacktest.finalAnnualIdr)}</strong> | Buy&amp;Hold: <strong className="text-rose-500">{formatIdr(freqBacktest.finalBuyHoldIdr)}</strong>
+            </span>
+          </div>
+        ) : (
+        <>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="ui-subtle rounded-lg p-3.5">
             <div className="ui-text-muted text-xs">
@@ -1888,6 +2088,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </LineChart>
           </ResponsiveContainer>
         </div>
+        </>
+        )}
       </section>
     </div>
   );

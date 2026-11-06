@@ -1015,46 +1015,54 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       )}
 
       {/* TOP CONTROL BAR: HERO ACTIONS & TECHNICAL SETTINGS HUB */}
-      <section className="ui-card rounded-xl p-4 sm:p-5">
-        <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h2 className="ui-text-main text-sm font-bold sm:text-base">
-                Portfolio Rebalancer &amp; Simulator
-              </h2>
-              <span
-                className={`rounded border px-2 py-0.5 text-[10px] font-semibold ${
-                  isHoldingsSyncedWithMenu1
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                    : 'border-zinc-500/30 bg-zinc-500/10 ui-text-secondary'
-                }`}
-              >
-                {isHoldingsSyncedWithMenu1
-                  ? `[SYNC M1] (${formatIdr(initialCapitalMenu1Idr, true)})`
-                  : 'Mode Posisi Manual'}
-              </span>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Target: <strong className="ui-text-main">{activePortfolioName}</strong>{' '}
-              — Hitung order jual &amp; beli seimbang atau rencanakan belanja perdana bertahap.
-            </p>
-          </div>
+      <section className="ui-card rounded-xl p-3 sm:p-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: Collapsible Header & Target Badge */}
+          <button
+            type="button"
+            onClick={() => toggleSectionCollapse('rebalanceHero')}
+            className="flex items-center gap-2 text-left group focus:outline-none"
+            aria-expanded={!collapsedSections['rebalanceHero']}
+            aria-label={collapsedSections['rebalanceHero'] ? 'Buka Setelan Rebalancer' : 'Ciutkan Setelan Rebalancer'}
+          >
+            <ChevronDown
+              className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                collapsedSections['rebalanceHero'] ? '-rotate-90' : ''
+              }`}
+            />
+            <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h2 className="ui-text-main text-xs sm:text-sm font-bold tracking-tight">
+              Portfolio Rebalancer
+            </h2>
+            <span
+              className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold font-mono ${
+                isHoldingsSyncedWithMenu1
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'border-zinc-500/30 bg-zinc-500/10 ui-text-secondary'
+              }`}
+            >
+              {isHoldingsSyncedWithMenu1 ? `SYNC M1 (${formatIdr(initialCapitalMenu1Idr, true)})` : 'Manual'}
+            </span>
+            <span className="hidden md:inline-flex items-center gap-1 text-[11px] ui-text-muted">
+              • Target: <strong className="ui-text-main font-semibold truncate max-w-[200px]">{activePortfolioName}</strong>
+            </span>
+          </button>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Guide SOP Modal Trigger */}
+          {/* Right: Quick Action Controls */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Guide SOP */}
             <button
               type="button"
               onClick={() => setIsGuideModalOpen(true)}
-              className="ui-subtle ui-text-secondary flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium hover:ui-text-main hover:border-emerald-500/40 transition"
-              title="Buka panduan eksekusi rebalancing vs belanja perdana"
+              className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:ui-text-main transition"
+              title="Panduan SOP eksekusi rebalancing vs belanja perdana"
             >
               <Lightbulb className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden sm:inline">Panduan SOP</span>
+              <span className="hidden sm:inline">SOP</span>
             </button>
 
-            {/* Core Action Cluster: Ambil Default M1 vs Beli Perdana */}
-            <div className="ui-subtle inline-flex rounded-lg p-0.5 border">
+            {/* Segmented Quick Actions: Ambil M1 / Beli Perdana / Kosongkan */}
+            <div className="ui-subtle inline-flex rounded-md p-0.5 border text-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -1062,43 +1070,43 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   setPercentReferenceTotalIdr(initialCapitalMenu1Idr);
                   onPopulateCapital(initialCapitalMenu1Idr);
                 }}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                   isHoldingsSyncedWithMenu1
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'ui-text-secondary hover:ui-text-main'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
-                title="Isi saldo aset sesuai proporsi Modal Awal Menu 1"
+                title={`Isi saldo aset sesuai proporsi Modal Awal Menu 1 (${formatIdr(initialCapitalMenu1Idr, true)})`}
               >
-                <Coins className="h-3.5 w-3.5" />
-                <span>Ambil Default M1 ({formatIdr(initialCapitalMenu1Idr, true)})</span>
+                <Coins className="h-3 w-3" />
+                <span>Ambil M1</span>
               </button>
 
               <button
                 type="button"
                 onClick={onSetupInitialBuyFromMenu1}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                   cashInjectionIdr > 0 && rebalanceResult.initialTotalIdr === 0
-                    ? 'bg-emerald-600 text-white shadow-2xs'
-                    : 'ui-text-secondary hover:ui-text-main'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
                 title="Kosongkan aset ke Rp 0 dan jadikan modal M1 sebagai Kas Baru untuk belanja perdana"
               >
-                <ArrowUpRight className="h-3.5 w-3.5" />
-                <span>Beli Perdana (Rp 0)</span>
+                <ArrowUpRight className="h-3 w-3" />
+                <span>Beli Perdana</span>
               </button>
 
               <button
                 type="button"
                 onClick={onClearHoldingsForManualInput}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                   rebalanceResult.initialTotalIdr === 0 && cashInjectionIdr === 0
-                    ? 'bg-zinc-600 text-white shadow-2xs'
-                    : 'ui-text-secondary hover:ui-text-main'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
-                title="Reset semua saldo aset menjadi Rp 0 untuk mulai mengetik portofolio baru dari awal"
+                title="Reset semua saldo aset menjadi Rp 0"
               >
-                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-                <span>Kosongkan (Rp 0)</span>
+                <Trash2 className="h-3 w-3 text-rose-500" />
+                <span>Kosongkan</span>
               </button>
             </div>
 
@@ -1110,20 +1118,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 aria-expanded={isOptionsMenuOpen}
                 aria-haspopup="menu"
                 onClick={() => setIsOptionsMenuOpen((prev) => !prev)}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition ${
                   isOptionsMenuOpen || anyPriceModified || !enableIdxLotRounding || enableBrokerFees
-                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
                     : 'ui-subtle ui-text-secondary hover:ui-text-main'
                 }`}
                 title="Pengaturan Lanjutan: Skenario Krisis, Split Bank, Filter Receh, Fee Broker, Import Teks"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <SlidersHorizontal className="h-3 w-3" />
                 <span>Opsi &amp; Simulasi</span>
-                <ChevronDown
-                  className={`h-3 w-3 transition-transform ${
-                    isOptionsMenuOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <ChevronDown className={`h-3 w-3 transition-transform ${isOptionsMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isOptionsMenuOpen && (
@@ -1611,11 +1615,35 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </div>
               )}
             </div>
+
+            {/* Collapse toggle button */}
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('rebalanceHero')}
+              className="ui-subtle ui-border rounded-md border px-2 py-1 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+              title={collapsedSections['rebalanceHero'] ? 'Buka Setelan Rebalancer' : 'Ciutkan Setelan Rebalancer'}
+            >
+              {collapsedSections['rebalanceHero'] ? 'Buka' : 'Ciutkan'}
+            </button>
           </div>
         </div>
 
+        {/* When Collapsed: A slim reminder line */}
+        {collapsedSections['rebalanceHero'] && (
+          <div className="mt-2 pt-2 border-t ui-border flex items-center justify-between text-xs ui-text-muted">
+            <span className="text-[11px]">Setelan kontrol rebalancer disembunyikan. Posisi portfolio aktif tetap berlaku.</span>
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('rebalanceHero')}
+              className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+            >
+              Buka Setelan &rarr;
+            </button>
+          </div>
+        )}
+
         {/* Custom Shock Sliders (Collapsible when opened from Opsi & Simulasi) */}
-        {showShockSliders && (
+        {showShockSliders && !collapsedSections['rebalanceHero'] && (
           <div className="ui-subtle mt-3 rounded-lg p-3 border">
             <div className="flex items-center justify-between mb-2 text-xs">
               <span className="ui-text-main font-semibold flex items-center gap-1">
@@ -2026,116 +2054,40 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </div>
             </div>
 
-            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-2">
+            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-1.5">
               {/* Primary Emerald Broker Slip Button Group */}
               {onOpenOrderSlip ? (
                 <div className="inline-flex rounded-lg shadow-2xs">
                   <button
                     type="button"
                     onClick={() => onOpenOrderSlip(rebalanceResult)}
-                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-semibold transition shadow-xs"
+                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-xs font-semibold transition shadow-xs"
                     title="Buka Slip Order Broker Interaktif (Stockbit / Pluang / Reku / Makmur)"
                   >
                     <Building2 className="h-3.5 w-3.5" />
-                    <span>Slip Order Broker</span>
+                    <span>Slip Broker</span>
                   </button>
                   <button
                     type="button"
                     onClick={copyWhatsAppOrderSlip}
                     title="Salin Cepat Format Catatan ke Clipboard"
-                    className="inline-flex items-center gap-1 rounded-r-lg bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-1.5 text-xs border-l border-emerald-500/40 transition"
+                    className="inline-flex items-center gap-1 rounded-r-lg bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-1 text-xs border-l border-emerald-500/40 transition"
                   >
                     {slipCopied ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-white" />
-                        <span className="hidden sm:inline">Tersalin</span>
-                      </>
+                      <Check className="h-3.5 w-3.5 text-white" />
                     ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Salin</span>
-                      </>
+                      <Copy className="h-3.5 w-3.5" />
                     )}
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={copyWhatsAppOrderSlip}
-                  title="Salin daftar order Jual/Beli untuk ditempel ke aplikasi Catatan"
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
-                >
-                  {slipCopied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5" />
-                      <span>Slip Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>Salin Slip Order</span>
-                    </>
-                  )}
-                </button>
-              )}
-
-              {/* Segmented Control: Nominal vs % vs Unit */}
-              <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHoldingEntryMode('nominal');
-                    setInputMode('nominal');
-                  }}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
-                    holdingEntryMode === 'nominal'
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:ui-text-main'
-                  }`}
-                >
-                  Nominal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHoldingEntryMode('percent');
-                    setInputMode('nominal');
-                    setPercentReferenceTotalIdr(
-                      rebalanceResult.initialTotalIdr > 0
-                        ? rebalanceResult.initialTotalIdr
-                        : initialCapitalMenu1Idr
-                    );
-                  }}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
-                    holdingEntryMode === 'percent'
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:ui-text-main'
-                  }`}
-                >
-                  % Saat Ini
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHoldingEntryMode('units');
-                    setInputMode('units');
-                  }}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
-                    holdingEntryMode === 'units'
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:ui-text-main'
-                  }`}
-                >
-                  Unit
-                </button>
-              </div>
+              ) : null}
 
               {/* Segmented Control: Table vs Mobile Card View */}
-              <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
+              <div className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs">
                 <button
                   type="button"
                   onClick={() => setRebalanceViewMode('table')}
-                  className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                  className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                     rebalanceViewMode === 'table'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
@@ -2143,12 +2095,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   title="Tampilan Tabel Lengkap"
                 >
                   <Table2 className="h-3 w-3" />
-                  <span>Tabel</span>
+                  <span className="hidden sm:inline">Tabel</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setRebalanceViewMode('cards')}
-                  className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                  className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                     rebalanceViewMode === 'cards'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
@@ -2156,42 +2108,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   title="Tampilan Kartu Kompak"
                 >
                   <LayoutGrid className="h-3 w-3" />
-                  <span>Kartu</span>
+                  <span className="hidden sm:inline">Kartu</span>
                 </button>
               </div>
-
-              {/* Toggle Uji Drop Harga & Modal Beli */}
-              <button
-                type="button"
-                onClick={() => setShowPriceSimControls((prev) => !prev)}
-                className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
-                  showPriceSimControls
-                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
-                    : 'ui-subtle ui-text-secondary hover:ui-text-main'
-                }`}
-                title="Tampilkan / sembunyikan tombol cepat simulasi drop harga (-10% s.d. -50%) dan input modal beli rata-rata"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">
-                  {showPriceSimControls ? 'Tutup Uji Drop' : 'Uji Drop & Modal'}
-                </span>
-              </button>
-
-              {/* Clean Minimal CSV Export Button */}
-              <button
-                type="button"
-                onClick={exportCsvTrades}
-                className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium hover:ui-text-main transition"
-                title="Unduh Instruksi Order sebagai file CSV"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">CSV</span>
-              </button>
 
               <button
                 type="button"
                 onClick={() => toggleSectionCollapse('rebalanceTable')}
-                className="ui-subtle ui-border rounded-lg border px-2 py-1.5 text-xs font-medium ui-text-secondary hover:ui-text-main transition"
+                className="ui-subtle ui-border rounded-md border px-2 py-1 text-xs font-medium ui-text-secondary hover:ui-text-main transition"
               >
                 {collapsedSections['rebalanceTable'] ? 'Buka' : 'Ciutkan'}
               </button>
@@ -2200,13 +2124,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
           {!collapsedSections['rebalanceTable'] ? (
             <>
-              {/* Action Filter Bar */}
-              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-3 text-xs">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-1">
-                Filter Tindakan:
-              </span>
-              <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+              {/* Row 2: Action Filter & Entry Mode Strip */}
+              <div className="mt-2.5 pt-2 flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-2.5 text-xs">
+                {/* Left: Filter Tindakan Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-0.5 hidden sm:inline">
+                    Filter:
+                  </span>
+                  <div className="ui-subtle inline-flex rounded-md p-0.5 border text-xs">
                 <button
                   type="button"
                   onClick={() => setTableActionFilter('all')}
@@ -2256,7 +2181,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <button
                   type="button"
                   onClick={() => setTableActionFilter('hold')}
-                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                  className={`rounded px-2 py-0.5 font-medium transition ${
                     tableActionFilter === 'hold'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
@@ -2265,6 +2190,85 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   Hold ({actionCounts.hold})
                 </button>
               </div>
+            </div>
+
+            {/* Right: Holding Entry Mode & Tools */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="ui-subtle inline-flex rounded-md p-0.5 border text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoldingEntryMode('nominal');
+                    setInputMode('nominal');
+                  }}
+                  className={`rounded px-2 py-0.5 font-medium transition ${
+                    holdingEntryMode === 'nominal'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  Nominal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoldingEntryMode('percent');
+                    setInputMode('nominal');
+                    setPercentReferenceTotalIdr(
+                      rebalanceResult.initialTotalIdr > 0
+                        ? rebalanceResult.initialTotalIdr
+                        : initialCapitalMenu1Idr
+                    );
+                  }}
+                  className={`rounded px-2 py-0.5 font-medium transition ${
+                    holdingEntryMode === 'percent'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  % Saat Ini
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoldingEntryMode('units');
+                    setInputMode('units');
+                  }}
+                  className={`rounded px-2 py-0.5 font-medium transition ${
+                    holdingEntryMode === 'units'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  Unit
+                </button>
+              </div>
+
+              {/* Toggle Uji Drop Harga & Modal Beli */}
+              <button
+                type="button"
+                onClick={() => setShowPriceSimControls((prev) => !prev)}
+                className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                  showPriceSimControls
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                    : 'ui-subtle ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Tampilkan / sembunyikan tombol simulasi drop harga"
+              >
+                <SlidersHorizontal className="h-3 w-3" />
+                <span>{showPriceSimControls ? 'Tutup Uji' : 'Uji Drop'}</span>
+              </button>
+
+              {/* CSV Export */}
+              <button
+                type="button"
+                onClick={exportCsvTrades}
+                className="ui-subtle ui-text-secondary flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium hover:ui-text-main transition"
+                title="Unduh Instruksi Order sebagai file CSV"
+              >
+                <Download className="h-3 w-3" />
+                <span>CSV</span>
+              </button>
             </div>
 
             {tableActionFilter !== 'all' && (
