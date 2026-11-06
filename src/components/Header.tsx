@@ -25,6 +25,9 @@ import {
   ClipboardPaste,
   Lock,
   Fingerprint,
+  ExternalLink,
+  Video,
+  Keyboard,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { FormattedNumberInput } from './FormattedNumberInput';
@@ -119,10 +122,12 @@ export const Header: React.FC<HeaderProps> = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const helpMenuRef = useRef<HTMLDivElement>(null);
   const [newSaveName, setNewSaveName] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
 
   // Biometric / WebAuthn settings state
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
@@ -245,15 +250,22 @@ export const Header: React.FC<HeaderProps> = ({
       ) {
         setIsExportMenuOpen(false);
       }
+      if (
+        helpMenuRef.current &&
+        !helpMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsHelpMenuOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsToolsMenuOpen(false);
         setIsExportMenuOpen(false);
+        setIsHelpMenuOpen(false);
         setIsMobileMenuOpen(false);
       }
     };
-    if (isToolsMenuOpen || isExportMenuOpen || isMobileMenuOpen) {
+    if (isToolsMenuOpen || isExportMenuOpen || isHelpMenuOpen || isMobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
       return () => {
@@ -261,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
         document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isToolsMenuOpen, isExportMenuOpen, isMobileMenuOpen]);
+  }, [isToolsMenuOpen, isExportMenuOpen, isHelpMenuOpen, isMobileMenuOpen]);
 
   // Listen for programmatic toggle of tools menu & export menu (from interactive tour)
   useEffect(() => {
@@ -435,29 +447,16 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-2 sm:gap-2.5">
               <BrandLogo className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
               <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="ui-text-main text-sm font-bold tracking-tight sm:text-base">
-                    QuantPorto
-                  </h1>
-                  <span className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono text-[10px] font-medium">
-                    Rp10M
-                  </span>
-                </div>
-                <p className="ui-text-muted hidden text-[11px] sm:block">
-                  Risk Parity &amp; Rebalancer •{' '}
-                  <a
-                    href="https://www.youtube.com/watch?v=O8PShy9d484"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-emerald-600"
-                  >
-                    Ref Video
-                  </a>
+                <h1 className="ui-text-main text-sm font-bold tracking-tight sm:text-base leading-none">
+                  QuantPorto
+                </h1>
+                <p className="ui-text-muted hidden text-[11px] sm:block mt-0.5 font-medium">
+                  Risk Parity &amp; Rebalancing Engine
                 </p>
               </div>
             </div>
 
-            {/* Desktop Primary Navigation Tabs (Hidden on mobile because mobile uses thumb-friendly Bottom Bar) */}
+            {/* Desktop Primary Navigation Tabs */}
             <nav
               id="tour-nav-tabs"
               aria-label="Utama (Desktop)"
@@ -474,10 +473,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <BarChart3 className="h-3.5 w-3.5" />
-                <span>1. Builder</span>
-                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
-                  Alt+1
-                </kbd>
+                <span>Builder</span>
               </button>
               <button
                 type="button"
@@ -490,15 +486,12 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Scale className="h-3.5 w-3.5" />
-                <span>2. Rebalancer</span>
-                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
-                  Alt+2
-                </kbd>
+                <span>Rebalancer</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('roadmap')}
-                title="Rp10M Wealth Simulator (Shortcut: Alt+3)"
+                title="Wealth Simulator (Shortcut: Alt+3)"
                 className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                   activeTab === 'roadmap'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -506,41 +499,120 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>3. Rp10M Simulator</span>
-                <kbd className="hidden xl:inline-block rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 font-mono text-[9px] opacity-60">
-                  Alt+3
-                </kbd>
+                <span>Simulator</span>
               </button>
             </nav>
 
             {/* Right Action Bar: Clean Partitioned Hierarchy */}
             <div className="flex items-center gap-1.5">
-              {/* Primary CTA: Tanya Quant */}
+              {/* Primary Advisory Action: Tanya Quant (Refined Emerald Accent) */}
               <button
                 id="tour-tanya-quant"
                 type="button"
                 onClick={onOpenRecommender}
-                title="Jawab 4 pertanyaan singkat untuk mengestimasi pilihan portfolio terbaik Anda"
-                className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
+                title="Kuis Rekomendasi Portofolio: Jawab 4 pertanyaan profil risiko"
+                className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-500/20"
               >
-                <Compass className="h-3.5 w-3.5 shrink-0" />
+                <Compass className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Tanya Quant</span>
               </button>
 
-              {/* Interactive Spotlight Tour Trigger */}
-              <button
-                id="tour-guide-btn"
-                type="button"
-                onClick={onStartInteractiveTour}
-                title="Mulai tur panduan interaktif QuantPorto (Shortcut: tekan '?' di keyboard)"
-                className="ui-subtle ui-text-main hidden items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition hover:border-emerald-500/50 sm:flex"
-              >
-                <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Panduan</span>
-                <kbd className="hidden md:inline-block rounded bg-black/10 dark:bg-white/10 px-1 py-0.2 text-[9px] font-mono opacity-70">
-                  ?
-                </kbd>
-              </button>
+              {/* Interactive Help & Reference Popover Hub */}
+              <div ref={helpMenuRef} className="relative hidden sm:block">
+                <button
+                  id="tour-guide-btn"
+                  type="button"
+                  aria-expanded={isHelpMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setIsHelpMenuOpen((prev) => !prev);
+                    setIsExportMenuOpen(false);
+                    setIsToolsMenuOpen(false);
+                  }}
+                  title="Panduan Interaktif, Video Referensi YouTube & Pintasan Keyboard (Shortcut: '?')"
+                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                    isHelpMenuOpen
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'ui-subtle ui-text-main hover:opacity-80'
+                  }`}
+                >
+                  <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Panduan</span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform ${
+                      isHelpMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {isHelpMenuOpen && (
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2 rounded-xl p-3 text-xs shadow-md">
+                    <div className="ui-border flex items-center justify-between border-b pb-2">
+                      <span className="ui-text-main font-bold">Bantuan &amp; Panduan</span>
+                      <span className="ui-text-muted font-mono text-[10px]">QuantPorto</span>
+                    </div>
+
+                    {/* Option 1: Mulai Tur Interaktif */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsHelpMenuOpen(false);
+                        onStartInteractiveTour();
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>Mulai Tur Interaktif</span>
+                      </div>
+                      <kbd className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 text-[10px] font-mono opacity-80">
+                        ?
+                      </kbd>
+                    </button>
+
+                    {/* Option 2: Video Referensi YouTube */}
+                    <a
+                      href="https://www.youtube.com/watch?v=O8PShy9d484"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsHelpMenuOpen(false)}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Video className="h-3.5 w-3.5 text-rose-500" />
+                        <span>Video Edukasi (Leon &amp; Sander)</span>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-zinc-400" />
+                    </a>
+
+                    {/* Keyboard Shortcuts Cheat Sheet */}
+                    <div className="ui-subtle rounded-lg p-2 space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
+                        <Keyboard className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>Pintasan Keyboard</span>
+                      </div>
+                      <div className="space-y-1 text-[11px] pt-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="ui-text-muted">Portfolio Builder</span>
+                          <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+1</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="ui-text-muted">Portfolio Rebalancer</span>
+                          <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+2</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="ui-text-muted">Wealth Simulator</span>
+                          <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+3</kbd>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="ui-text-muted">Mulai Tur Bantuan</span>
+                          <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">?</kbd>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Desktop Menu 1: Ekspor & Dokumen */}
               <div ref={exportMenuRef} className="relative hidden lg:block">
@@ -552,6 +624,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => {
                     setIsExportMenuOpen((prev) => !prev);
                     setIsToolsMenuOpen(false);
+                    setIsHelpMenuOpen(false);
                   }}
                   className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                     isExportMenuOpen
@@ -718,6 +791,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => {
                     setIsToolsMenuOpen((prev) => !prev);
                     setIsExportMenuOpen(false);
+                    setIsHelpMenuOpen(false);
                   }}
                   className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
@@ -728,9 +802,6 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>Pengaturan</span>
-                  <span className="font-mono text-[10px] ui-text-muted">
-                    (${Math.round(usdIdrRate / 1000)}k)
-                  </span>
                   <ChevronDown
                     className={`h-3 w-3 transition-transform ${
                       isToolsMenuOpen ? 'rotate-180' : ''
@@ -920,48 +991,42 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* Light / Dark Theme Toggle (Always accessible) */}
-              <button
-                type="button"
-                onClick={handleToggleColorScheme}
-                title={
-                  renderedScheme === 'dark'
-                    ? 'Switch to Light Mode'
-                    : 'Switch to Dark Mode'
-                }
-                aria-label={
-                  renderedScheme === 'dark'
-                    ? 'Switch to light theme'
-                    : 'Switch to dark theme'
-                }
-                className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition hover:opacity-80"
-              >
-                {renderedScheme === 'dark' ? (
-                  <>
-                    <Sun className="h-3.5 w-3.5 text-amber-400" />
-                    <span className="hidden xl:inline">Light</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-3.5 w-3.5 text-zinc-700" />
-                    <span className="hidden xl:inline">Dark</span>
-                  </>
-                )}
-              </button>
-
-              {/* Lock Session Button */}
-              {onLockApp && (
+              {/* Unified Utility Button Group: Theme Toggle & Session Lock */}
+              <div className="ui-subtle flex items-center rounded-md border ui-border p-0.5">
                 <button
                   type="button"
-                  onClick={onLockApp}
-                  title="Kunci Layar (Keluar dari Sesi)"
-                  aria-label="Kunci Layar"
-                  className="ui-subtle ui-text-main flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition hover:text-amber-500 hover:border-amber-500/30"
+                  onClick={handleToggleColorScheme}
+                  title={
+                    renderedScheme === 'dark'
+                      ? 'Beralih ke Tema Terang (Light Mode)'
+                      : 'Beralih ke Tema Gelap (Dark Mode)'
+                  }
+                  aria-label={
+                    renderedScheme === 'dark'
+                      ? 'Beralih ke tema terang'
+                      : 'Beralih ke tema gelap'
+                  }
+                  className="flex h-7 w-7 items-center justify-center rounded transition hover:bg-black/5 dark:hover:bg-white/10"
                 >
-                  <Lock className="h-3.5 w-3.5 text-amber-500/80" />
-                  <span className="hidden xl:inline">Kunci</span>
+                  {renderedScheme === 'dark' ? (
+                    <Sun className="h-3.5 w-3.5 text-amber-400" />
+                  ) : (
+                    <Moon className="h-3.5 w-3.5 text-zinc-700" />
+                  )}
                 </button>
-              )}
+
+                {onLockApp && (
+                  <button
+                    type="button"
+                    onClick={onLockApp}
+                    title="Kunci Layar (Keluar dari Sesi)"
+                    aria-label="Kunci Layar"
+                    className="flex h-7 w-7 items-center justify-center rounded transition hover:bg-amber-500/15 text-amber-500/80 hover:text-amber-500"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
 
               {/* Mobile Tools Drawer Trigger (< lg) */}
               <button
@@ -1032,6 +1097,19 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Kunci Sesi</span>
                     </button>
                   )}
+                  <a
+                    href="https://www.youtube.com/watch?v=O8PShy9d484"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="ui-subtle ui-text-main col-span-3 flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Video className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                      <span>Video Edukasi (Leon &amp; Sander)</span>
+                    </div>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </a>
                 </div>
               </div>
 
@@ -1257,7 +1335,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
-        <div className="ui-card border-t ui-border px-3 py-1 sm:px-6">
+        <div className="ui-card border-t ui-border px-3 py-0.5 sm:px-6 sm:py-1">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
