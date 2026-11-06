@@ -1294,7 +1294,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     }`}
                   >
                     <Briefcase className="h-3 w-3" />
-                    <span>&lt;10% DD</span>
+                    <span>Preservasi</span>
                   </button>
                   <button
                     type="button"
@@ -1306,7 +1306,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     }`}
                   >
                     <Scale className="h-3 w-3" />
-                    <span>Risk Budgeting</span>
+                    <span>Seimbang</span>
                   </button>
                   <button
                     type="button"
@@ -1318,7 +1318,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     }`}
                   >
                     <Flame className="h-3 w-3" />
-                    <span>&gt;18% CAGR</span>
+                    <span>Agresif</span>
                   </button>
                 </div>
 
@@ -1332,7 +1332,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   ) : (
                     <Eye className="h-3 w-3" />
                   )}
-                  <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
+                  <span>{showDominated25 ? 'Sembunyikan' : '+10 Sub-optimal'}</span>
                 </button>
 
                 {/* Instant Search Bar */}

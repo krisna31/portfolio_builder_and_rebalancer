@@ -505,12 +505,12 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Right Action Bar: Clean Partitioned Hierarchy */}
             <div className="flex items-center gap-1.5">
-              {/* Primary Advisory Action: Tanya Quant (Refined Emerald Accent) */}
+              {/* Primary Advisory Action: Tanya Quant */}
               <button
                 id="tour-tanya-quant"
                 type="button"
                 onClick={onOpenRecommender}
-                title="Kuis Rekomendasi Portofolio: Jawab 4 pertanyaan profil risiko"
+                title="Tanya Quant: Kuis profil risiko"
                 className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-500/20"
               >
                 <Compass className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -529,7 +529,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsExportMenuOpen(false);
                     setIsToolsMenuOpen(false);
                   }}
-                  title="Panduan Interaktif, Video Referensi YouTube & Pintasan Keyboard (Shortcut: '?')"
+                  title="Panduan & Pintasan (?)"
                   className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
                     isHelpMenuOpen
                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
@@ -546,66 +546,57 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isHelpMenuOpen && (
-                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2 rounded-xl p-3 text-xs shadow-md">
-                    <div className="ui-border flex items-center justify-between border-b pb-2">
-                      <span className="ui-text-main font-bold">Bantuan &amp; Panduan</span>
-                      <span className="ui-text-muted font-mono text-[10px]">QuantPorto</span>
-                    </div>
-
-                    {/* Option 1: Mulai Tur Interaktif */}
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-60 rounded-xl p-1.5 text-xs shadow-lg space-y-1">
                     <button
                       type="button"
                       onClick={() => {
                         setIsHelpMenuOpen(false);
                         onStartInteractiveTour();
                       }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Mulai Tur Interaktif</span>
+                        <span>Tur Panduan</span>
                       </div>
-                      <kbd className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 text-[10px] font-mono opacity-80">
+                      <kbd className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-mono opacity-70">
                         ?
                       </kbd>
                     </button>
 
-                    {/* Option 2: Video Referensi YouTube */}
                     <a
                       href="https://www.youtube.com/watch?v=O8PShy9d484"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsHelpMenuOpen(false)}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <Video className="h-3.5 w-3.5 text-rose-500" />
-                        <span>Video Edukasi (Leon &amp; Sander)</span>
+                        <span>Video Referensi</span>
                       </div>
                       <ExternalLink className="h-3 w-3 text-zinc-400" />
                     </a>
 
-                    {/* Keyboard Shortcuts Cheat Sheet */}
-                    <div className="ui-subtle rounded-lg p-2 space-y-1.5">
-                      <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
-                        <Keyboard className="h-3.5 w-3.5 text-zinc-400" />
-                        <span>Pintasan Keyboard</span>
+                    <div className="border-t ui-border pt-1.5 px-2 pb-0.5 space-y-1">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider ui-text-muted">
+                        Pintasan
                       </div>
-                      <div className="space-y-1 text-[11px] pt-0.5">
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
                         <div className="flex items-center justify-between">
-                          <span className="ui-text-muted">Portfolio Builder</span>
+                          <span className="ui-text-muted">Builder</span>
                           <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+1</kbd>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="ui-text-muted">Portfolio Rebalancer</span>
+                          <span className="ui-text-muted">Rebalance</span>
                           <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+2</kbd>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="ui-text-muted">Wealth Simulator</span>
+                          <span className="ui-text-muted">Simulator</span>
                           <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">Alt+3</kbd>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="ui-text-muted">Mulai Tur Bantuan</span>
+                          <span className="ui-text-muted">Bantuan</span>
                           <kbd className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[9px]">?</kbd>
                         </div>
                       </div>
@@ -631,7 +622,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
-                  title="Ekspor Factsheet A4, Slip Order Broker, dan Cadangan Data"
+                  title="Ekspor & Dokumen"
                 >
                   <Download className="h-3.5 w-3.5" />
                   <span>Ekspor</span>
@@ -643,17 +634,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isExportMenuOpen && (
-                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2 rounded-xl p-3 text-xs shadow-md">
-                    <div className="ui-border flex items-center justify-between border-b pb-2">
-                      <span className="ui-text-main font-bold">
-                        Dokumen &amp; Ekspor
-                      </span>
-                      <span className="ui-text-muted font-mono text-[10px]">
-                        Laporan
-                      </span>
-                    </div>
-
-                    {/* Factsheet Report */}
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-60 rounded-xl p-1.5 text-xs shadow-lg space-y-0.5">
                     {onOpenFactsheet && (
                       <button
                         type="button"
@@ -661,19 +642,16 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenFactsheet();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Factsheet Portofolio</span>
+                          <span>Factsheet</span>
                         </div>
-                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                          A4 / PNG
-                        </span>
+                        <span className="font-mono text-[10px] ui-text-muted">A4</span>
                       </button>
                     )}
 
-                    {/* Broker Order Slips */}
                     {onOpenOrderSlip && (
                       <button
                         type="button"
@@ -681,45 +659,35 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenOrderSlip();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <Building2 className="h-3.5 w-3.5 text-sky-500" />
-                          <span>Slip Order Broker</span>
+                          <span>Slip Broker</span>
                         </div>
-                        <span className="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-sky-500 dark:text-sky-400">
-                          Multi-App
-                        </span>
+                        <span className="font-mono text-[10px] ui-text-muted">App</span>
                       </button>
                     )}
 
-                    {/* Share Link */}
                     <button
                       type="button"
                       onClick={() => {
                         onCopyShareUrl();
                         setTimeout(() => setIsExportMenuOpen(false), 800);
                       }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         {shareCopied ? (
                           <Check className="h-3.5 w-3.5 text-emerald-600" />
                         ) : (
                           <Share2 className="h-3.5 w-3.5 text-emerald-600" />
                         )}
-                        <span>
-                          {shareCopied
-                            ? 'Tautan Tersalin ke Clipboard!'
-                            : 'Bagikan Link Portofolio'}
-                        </span>
+                        <span>{shareCopied ? 'Tersalin' : 'Bagikan Link'}</span>
                       </div>
-                      <span className="ui-text-muted font-mono text-[10px]">
-                        #porto
-                      </span>
+                      <span className="font-mono text-[10px] ui-text-muted">URL</span>
                     </button>
 
-                    {/* Transfer Data & Backup */}
                     {onOpenDataTransfer && (
                       <button
                         type="button"
@@ -727,54 +695,51 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenDataTransfer();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 border border-emerald-500/30 bg-emerald-500/5 mt-1"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <Database className="h-3.5 w-3.5 text-emerald-500" />
-                          <span className="font-semibold">Transfer &amp; Backup Data</span>
-                        </div>
-                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                          Teks / JSON
-                        </span>
-                      </button>
-                    )}
-
-                    {/* Quick Copy Config & File Backup */}
-                    {onQuickCopyConfig && (
-                      <button
-                        type="button"
-                        onClick={onQuickCopyConfig}
-                        className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-md p-1.5 text-[11px] hover:opacity-80 mt-1"
-                        title="Salin seluruh konfigurasi aplikasi sebagai teks JSON ke clipboard"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          {quickCopyFeedback ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                          <span>{quickCopyFeedback ? 'Config Tersalin!' : 'Salin Config Teks'}</span>
+                          <span>Transfer Data</span>
                         </div>
                         <span className="font-mono text-[10px] ui-text-muted">JSON</span>
                       </button>
                     )}
 
-                    <div className="grid grid-cols-2 gap-1.5 pt-1 border-t ui-border">
+                    {onQuickCopyConfig && (
+                      <button
+                        type="button"
+                        onClick={onQuickCopyConfig}
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        title="Salin konfigurasi sebagai teks JSON"
+                      >
+                        <div className="flex items-center gap-2">
+                          {quickCopyFeedback ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                          <span>{quickCopyFeedback ? 'Tersalin' : 'Salin Config'}</span>
+                        </div>
+                        <span className="font-mono text-[10px] ui-text-muted">Teks</span>
+                      </button>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-1 pt-1 border-t ui-border">
                       <button
                         type="button"
                         onClick={onExportJson}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs hover:ui-text-main transition"
                       >
                         <Download className="h-3 w-3" />
-                        <span>Export File</span>
+                        <span>Export</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1 rounded-md py-1.5 text-[11px] hover:opacity-80"
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs hover:ui-text-main transition"
                       >
                         <Upload className="h-3 w-3" />
-                        <span>Import File</span>
+                        <span>Import</span>
                       </button>
                     </div>
                   </div>
@@ -798,7 +763,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
-                  title="Menu Kurs USD, Promo RDPT, Sinkronisasi Harga Live, Sidik Jari, dan Reset"
+                  title="Pengaturan & Pasar"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   <span>Pengaturan</span>
@@ -810,183 +775,132 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isToolsMenuOpen && (
-                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-72 space-y-2.5 rounded-xl p-3 text-xs shadow-md">
-                    <div className="ui-border flex items-center justify-between border-b pb-2">
-                      <span className="ui-text-main font-bold">
-                        Pengaturan &amp; Pasar
-                      </span>
-                      <span className="ui-text-muted font-mono text-[10px]">
-                        QuantPorto
-                      </span>
-                    </div>
-
-                    {/* Kurs USD Inline */}
-                    <div className="ui-subtle flex items-center justify-between rounded-lg p-2">
-                      <span className="ui-text-secondary font-medium">
-                        Asumsi Kurs USD:
-                      </span>
+                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-64 rounded-xl p-2 text-xs shadow-lg space-y-2">
+                    {/* Kurs USD */}
+                    <div className="ui-subtle flex items-center justify-between rounded-lg px-2.5 py-1.5">
+                      <span className="ui-text-secondary text-xs">Kurs USD:</span>
                       <div className="flex items-center gap-1">
-                        <span className="ui-text-muted font-mono text-[11px]">
-                          Rp
-                        </span>
+                        <span className="ui-text-muted font-mono text-[11px]">Rp</span>
                         <FormattedNumberInput
                           step={100}
                           min={1000}
                           value={usdIdrRate}
                           onChange={(val) => setUsdIdrRate(val)}
-                          className="ui-text-main w-20 bg-transparent text-right font-mono font-bold focus:outline-none"
+                          className="ui-text-main w-20 bg-transparent text-right font-mono font-bold focus:outline-none text-xs"
                           ariaLabel="USD to IDR Exchange Rate"
                         />
                       </div>
                     </div>
 
-                    {/* Promo RDPT +3% */}
+                    {/* Promo RDPT */}
                     <button
                       type="button"
                       onClick={() => setRdptPromoActive(!rdptPromoActive)}
-                      className={`flex w-full items-center justify-between rounded-lg p-2 text-xs transition ${
+                      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition ${
                         rdptPromoActive
                           ? 'border border-emerald-500/40 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300'
-                          : 'ui-subtle ui-text-secondary hover:opacity-80'
+                          : 'ui-subtle ui-text-secondary hover:ui-text-main'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Promo RDPT (+3% Alpha)</span>
+                        <span>Promo RDPT (+3%)</span>
                       </div>
-                      <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
+                      <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10">
                         {rdptPromoActive ? 'ON' : 'OFF'}
                       </span>
                     </button>
 
-                    {/* Live Market Price Sync */}
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={onRefreshLivePrices}
-                        disabled={isFetchingPrices}
-                        className="ui-subtle ui-text-secondary flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80 disabled:opacity-50"
-                        title={priceSourceText ? `Sumber data: ${priceSourceText}` : 'Ambil harga live saham, ETF & crypto'}
-                      >
+                    {/* Sync Harga Live */}
+                    <button
+                      type="button"
+                      onClick={onRefreshLivePrices}
+                      disabled={isFetchingPrices}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80 disabled:opacity-50"
+                      title={priceSourceText ? `Sumber: ${priceSourceText}` : 'Perbarui harga pasar live'}
+                    >
+                      <div className="flex items-center gap-2">
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-emerald-600' : ''}`}
+                        />
+                        <span>Sync Harga</span>
+                      </div>
+                      <span className="font-mono text-[10px] ui-text-muted truncate max-w-[80px]">
+                        {isFetchingPrices ? 'Sync...' : lastUpdatedText || '5Y'}
+                      </span>
+                    </button>
+
+                    {/* Biometrik / Sidik Jari */}
+                    {isBiometricSupported && (
+                      <div className="ui-subtle rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="ui-text-main">Biometrik</span>
+                        </div>
                         <div className="flex items-center gap-1.5">
-                          <RefreshCw
-                            className={`h-3.5 w-3.5 ${
-                              isFetchingPrices
-                                ? 'animate-spin text-emerald-600'
-                                : ''
-                            }`}
-                          />
-                          <span>Sync Harga Pasar Live</span>
-                        </div>
-                        <span className="ui-text-muted text-[10px]">
-                          {isFetchingPrices
-                            ? 'Fetching...'
-                            : lastUpdatedText || '5Y Baseline'}
-                        </span>
-                      </button>
-                      {priceSourceText && (
-                        <div
-                          className="px-2 text-[10px] ui-text-muted truncate"
-                          title={priceSourceText}
-                        >
-                          Sumber: {priceSourceText}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="ui-border space-y-1.5 border-t pt-2">
-                      {/* WebAuthn Biometric / Fingerprint Settings */}
-                      {isBiometricSupported && (
-                        <div className="ui-subtle rounded-lg p-2 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 font-medium ui-text-secondary">
-                              <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
-                              <span>Login Sidik Jari</span>
-                            </div>
-                            <span
-                              className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                                hasBiometric
-                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                  : 'bg-zinc-500/15 text-zinc-500'
-                              }`}
+                          <span className={`text-[10px] font-mono ${hasBiometric ? 'text-emerald-600 dark:text-emerald-400' : 'ui-text-muted'}`}>
+                            {hasBiometric ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                          {hasBiometric ? (
+                            <button
+                              type="button"
+                              onClick={handleRevokeBiometric}
+                              className="text-[10px] text-rose-500 hover:underline ml-1"
                             >
-                              {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-1 text-[11px] pt-0.5">
-                            <span className="ui-text-muted text-[10px] truncate max-w-[150px]">
-                              {hasBiometric ? 'Terdaftar di perangkat' : 'Belum didaftarkan'}
-                            </span>
-                            {hasBiometric ? (
-                              <button
-                                type="button"
-                                onClick={handleRevokeBiometric}
-                                className="text-rose-500 hover:text-rose-400 underline font-medium text-[11px]"
-                              >
-                                Hapus
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={handleRegisterBiometric}
-                                disabled={isRegisteringBiometric}
-                                className="text-emerald-600 dark:text-emerald-400 hover:underline font-semibold text-[11px] disabled:opacity-50"
-                              >
-                                {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
-                              </button>
-                            )}
-                          </div>
-
-                          {biometricFeedback && (
-                            <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
-                              {biometricFeedback}
-                            </p>
+                              Hapus
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleRegisterBiometric}
+                              disabled={isRegisteringBiometric}
+                              className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold ml-1 disabled:opacity-50"
+                            >
+                              {isRegisteringBiometric ? '...' : 'Daftar'}
+                            </button>
                           )}
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {/* Saved Portfolios */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsToolsMenuOpen(false);
-                          dialogRef.current?.showModal();
-                        }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs transition hover:opacity-80"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>Portofolio Tersimpan</span>
-                        </div>
-                        <span className="rounded bg-zinc-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold">
-                          {savedPortfolios.length}
-                        </span>
-                      </button>
+                    {/* Saved Portfolios */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        dialogRef.current?.showModal();
+                      }}
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                    >
+                      <div className="flex items-center gap-2">
+                        <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>Portofolio Tersimpan</span>
+                      </div>
+                      <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                        {savedPortfolios.length}
+                      </span>
+                    </button>
 
-                      {/* Reset All to Initial Settings */}
-                      {onOpenResetConfirm && (
-                        <div className="ui-border border-t pt-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsToolsMenuOpen(false);
-                              onOpenResetConfirm();
-                            }}
-                            className="flex w-full items-center justify-between rounded-lg p-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
-                            title="Reset seluruh portofolio, simpanan, dan pengaturan ke setelan awal"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              <span>Reset ke Setelan Awal</span>
-                            </div>
-                            <span className="rounded border border-rose-500/30 bg-rose-500/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase text-rose-500 dark:text-rose-400">
-                              Reset
-                            </span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Reset All to Initial Settings */}
+                    {onOpenResetConfirm && (
+                      <div className="border-t ui-border pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsToolsMenuOpen(false);
+                            onOpenResetConfirm();
+                          }}
+                          className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
+                          title="Reset konfigurasi ke setelan awal"
+                        >
+                          <div className="flex items-center gap-2">
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            <span>Reset Setelan</span>
+                          </div>
+                          <span className="font-mono text-[9px] uppercase tracking-wider">Awal</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1052,312 +966,257 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Categorized Mobile Tools & Navigation Drawer (< lg) */}
+          {/* Minimalist Mobile Menu Drawer (< lg) */}
           {isMobileMenuOpen && (
-            <div className="ui-border mt-2.5 space-y-3.5 border-t pt-3 lg:hidden max-h-[75vh] overflow-y-auto">
-              {/* Category 1: Aksi Cepat & Navigasi */}
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
-                  Aksi Cepat
-                </span>
-                <div className="grid grid-cols-3 gap-1.5">
+            <div className="ui-border mt-2 space-y-2 border-t pt-2 lg:hidden max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenRecommender();
+                  }}
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white shadow-2xs"
+                >
+                  <Compass className="h-3.5 w-3.5 shrink-0" />
+                  <span>Tanya Quant</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onStartInteractiveTour();
+                  }}
+                  className="ui-subtle ui-text-main flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium"
+                >
+                  <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Panduan</span>
+                </button>
+
+                {onOpenFactsheet && (
                   <button
                     type="button"
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      onOpenRecommender();
-                    }}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white shadow-2xs"
-                  >
-                    <Compass className="h-3.5 w-3.5 shrink-0" />
-                    <span>Tanya Quant</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onStartInteractiveTour();
-                    }}
-                    className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium"
-                  >
-                    <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>Panduan</span>
-                  </button>
-
-                  {onLockApp && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onLockApp();
-                      }}
-                      className="ui-subtle ui-text-main flex items-center justify-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium text-amber-600 dark:text-amber-400"
-                    >
-                      <Lock className="h-3.5 w-3.5 shrink-0" />
-                      <span>Kunci Sesi</span>
-                    </button>
-                  )}
-                  <a
-                    href="https://www.youtube.com/watch?v=O8PShy9d484"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="ui-subtle ui-text-main col-span-3 flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Video className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                      <span>Video Edukasi (Leon &amp; Sander)</span>
-                    </div>
-                    <ExternalLink className="h-3 w-3 text-zinc-400" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Category 2: Dokumen & Ekspor */}
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
-                  Dokumen &amp; Ekspor
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {onOpenFactsheet && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onOpenFactsheet();
-                      }}
-                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>Factsheet A4</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">PNG</span>
-                    </button>
-                  )}
-
-                  {onOpenOrderSlip && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onOpenOrderSlip();
-                      }}
-                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-sky-500" />
-                        <span>Slip Broker</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-sky-500 font-bold">App</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={onCopyShareUrl}
-                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      {shareCopied ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      ) : (
-                        <Share2 className="h-3.5 w-3.5 text-emerald-600" />
-                      )}
-                      <span>{shareCopied ? 'Link Tersalin!' : 'Bagikan Link'}</span>
-                    </div>
-                    <span className="text-[10px] font-mono ui-text-muted">#porto</span>
-                  </button>
-
-                  {onOpenDataTransfer && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onOpenDataTransfer();
-                      }}
-                      className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border border-emerald-500/30 px-2.5 py-2 text-xs font-semibold"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Database className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>Transfer Data</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">JSON</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Category 3: Pasar & Pengaturan */}
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider ui-text-muted px-1 block mb-1.5">
-                  Pasar &amp; Pengaturan
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* USD/IDR Input */}
-                  <div className="ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
-                    <span className="ui-text-muted font-medium">Kurs USD:</span>
-                    <FormattedNumberInput
-                      step={100}
-                      min={1000}
-                      value={usdIdrRate}
-                      onChange={(val) => setUsdIdrRate(val)}
-                      className="ui-text-main w-16 bg-transparent text-right font-mono font-bold focus:outline-none"
-                      ariaLabel="USD to IDR Exchange Rate Mobile"
-                    />
-                  </div>
-
-                  {/* RDPT Promo Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setRdptPromoActive(!rdptPromoActive)}
-                    className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
-                      rdptPromoActive
-                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                        : 'ui-subtle ui-text-secondary'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>Promo RDPT</span>
-                    </div>
-                    <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
-                      {rdptPromoActive ? '+3%' : 'OFF'}
-                    </span>
-                  </button>
-
-                  {/* Sync Live Prices */}
-                  <button
-                    type="button"
-                    onClick={onRefreshLivePrices}
-                    disabled={isFetchingPrices}
-                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
-                    title={priceSourceText || undefined}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <RefreshCw
-                        className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-emerald-600' : ''}`}
-                      />
-                      <span>Sync Harga</span>
-                    </div>
-                    <span className="text-[10px] font-mono ui-text-muted truncate max-w-[70px]">
-                      {isFetchingPrices ? 'Syncing...' : lastUpdatedText || '5Y'}
-                    </span>
-                  </button>
-
-                  {/* Saved Portfolios */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      dialogRef.current?.showModal();
+                      onOpenFactsheet();
                     }}
                     className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
                   >
                     <div className="flex items-center gap-1.5">
-                      <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>Saved</span>
+                      <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Factsheet</span>
                     </div>
-                    <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
-                      {savedPortfolios.length}
-                    </span>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">A4</span>
                   </button>
+                )}
 
-                  {/* WebAuthn Biometric Settings Mobile */}
-                  {isBiometricSupported && (
-                    <div className="col-span-2 ui-subtle rounded-lg border p-2.5 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
-                          <span className="ui-text-main font-semibold">Login Sidik Jari:</span>
-                        </div>
-                        <span
-                          className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                            hasBiometric
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-zinc-500/15 text-zinc-500'
-                          }`}
-                        >
-                          {hasBiometric ? 'AKTIF' : 'NONAKTIF'}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs pt-0.5">
-                        <span className="ui-text-muted text-[11px]">
-                          {hasBiometric ? 'Terdaftar di perangkat' : 'Belum didaftarkan'}
-                        </span>
-                        {hasBiometric ? (
-                          <button
-                            type="button"
-                            onClick={handleRevokeBiometric}
-                            className="text-rose-500 hover:text-rose-400 font-semibold underline text-xs"
-                          >
-                            Hapus Sidik Jari
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleRegisterBiometric}
-                            disabled={isRegisteringBiometric}
-                            className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline text-xs disabled:opacity-50"
-                          >
-                            {isRegisteringBiometric ? 'Memindai...' : 'Daftarkan'}
-                          </button>
-                        )}
-                      </div>
-
-                      {biometricFeedback && (
-                        <p className="text-[10px] text-amber-500 dark:text-amber-400 pt-0.5 leading-tight">
-                          {biometricFeedback}
-                        </p>
-                      )}
+                {onOpenOrderSlip && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenOrderSlip();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                      <span>Slip Broker</span>
                     </div>
-                  )}
+                    <span className="text-[10px] font-mono text-sky-500 font-bold">App</span>
+                  </button>
+                )}
 
-                  {/* Reset All to Initial Settings Mobile */}
-                  {onOpenResetConfirm && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onOpenResetConfirm();
-                      }}
-                      className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition mt-0.5"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      <span>Reset Seluruh Aplikasi ke Kondisi Awal</span>
-                    </button>
-                  )}
+                <button
+                  type="button"
+                  onClick={onCopyShareUrl}
+                  className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {shareCopied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                    )}
+                    <span>{shareCopied ? 'Tersalin' : 'Bagikan Link'}</span>
+                  </div>
+                  <span className="text-[10px] font-mono ui-text-muted">URL</span>
+                </button>
+
+                {onOpenDataTransfer && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenDataTransfer();
+                    }}
+                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Database className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Transfer Data</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">JSON</span>
+                  </button>
+                )}
+
+                {/* Kurs USD Mobile */}
+                <div className="ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs">
+                  <span className="ui-text-muted">Kurs:</span>
+                  <FormattedNumberInput
+                    step={100}
+                    min={1000}
+                    value={usdIdrRate}
+                    onChange={(val) => setUsdIdrRate(val)}
+                    className="ui-text-main w-16 bg-transparent text-right font-mono font-bold focus:outline-none"
+                    ariaLabel="USD to IDR Exchange Rate Mobile"
+                  />
                 </div>
+
+                {/* RDPT Promo Mobile */}
+                <button
+                  type="button"
+                  onClick={() => setRdptPromoActive(!rdptPromoActive)}
+                  className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+                    rdptPromoActive
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : 'ui-subtle ui-text-secondary'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Promo RDPT</span>
+                  </div>
+                  <span className="rounded bg-black/10 dark:bg-white/10 px-1 text-[10px]">
+                    {rdptPromoActive ? '+3%' : 'OFF'}
+                  </span>
+                </button>
+
+                {/* Sync Harga Mobile */}
+                <button
+                  type="button"
+                  onClick={onRefreshLivePrices}
+                  disabled={isFetchingPrices}
+                  className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-50"
+                  title={priceSourceText || undefined}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RefreshCw className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-emerald-600' : ''}`} />
+                    <span>Sync Harga</span>
+                  </div>
+                  <span className="text-[10px] font-mono ui-text-muted truncate max-w-[60px]">
+                    {isFetchingPrices ? '...' : lastUpdatedText || '5Y'}
+                  </span>
+                </button>
+
+                {/* Saved Portfolios Mobile */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    dialogRef.current?.showModal();
+                  }}
+                  className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Saved</span>
+                  </div>
+                  <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                    {savedPortfolios.length}
+                  </span>
+                </button>
+
+                {/* Biometrik Mobile */}
+                {isBiometricSupported && (
+                  <div className="col-span-2 ui-subtle rounded-lg border px-2.5 py-1.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Biometrik:</span>
+                      <span className={`font-mono text-[10px] font-bold ${hasBiometric ? 'text-emerald-600 dark:text-emerald-400' : 'ui-text-muted'}`}>
+                        {hasBiometric ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </div>
+                    {hasBiometric ? (
+                      <button
+                        type="button"
+                        onClick={handleRevokeBiometric}
+                        className="text-rose-500 hover:underline font-medium text-[11px]"
+                      >
+                        Hapus
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRegisterBiometric}
+                        disabled={isRegisteringBiometric}
+                        className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline text-[11px] disabled:opacity-50"
+                      >
+                        {isRegisteringBiometric ? '...' : 'Daftar'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Video Edukasi Mobile */}
+                <a
+                  href="https://www.youtube.com/watch?v=O8PShy9d484"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="ui-subtle ui-text-main col-span-2 flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Video className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                    <span>Video Referensi</span>
+                  </div>
+                  <ExternalLink className="h-3 w-3 text-zinc-400" />
+                </a>
+
+                {/* Reset Mobile */}
+                {onOpenResetConfirm && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenResetConfirm();
+                    }}
+                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Reset ke Setelan Awal</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
 
         {/* Mini Active Portfolio Status Bar (Persistent when scrolling) */}
-        <div className="ui-card border-t ui-border px-3 py-0.5 sm:px-6 sm:py-1">
+        <div className="ui-card border-t ui-border px-3 py-1 sm:px-6">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
-            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-              <span className="ui-text-main truncate max-w-[85px] sm:max-w-none font-semibold">
+              <span className="ui-text-main truncate max-w-[90px] sm:max-w-none font-semibold">
                 {activePortfolioName}
               </span>
               <span className="ui-text-muted hidden sm:inline">•</span>
               <span className="shrink-0 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                CAGR +{activeCagr.toFixed(2)}%
+                +{activeCagr.toFixed(1)}%
               </span>
               <span className="shrink-0 font-mono font-semibold text-rose-600 dark:text-rose-400">
-                DD -{activeMaxDrawdown.toFixed(1)}%
+                -{activeMaxDrawdown.toFixed(1)}%
               </span>
               <span className="ui-text-muted hidden shrink-0 font-mono md:inline">
                 Calmar {calmarRatio}x
               </span>
 
-              {/* Feature 1: Live Drift Status Badge */}
+              {/* Drift Status Pill */}
               <button
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
-                className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
+                className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full px-2 py-0.2 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
                   (rebalanceBreachedCount ?? 0) > 0
                     ? 'border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
                     : 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -1367,20 +1226,12 @@ export const Header: React.FC<HeaderProps> = ({
                 {(rebalanceBreachedCount ?? 0) > 0 ? (
                   <>
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                    <span className="sm:hidden">
-                      {rebalanceBreachedCount} DRIFT
-                    </span>
-                    <span className="hidden sm:inline">
-                      {rebalanceBreachedCount} ASET DRIFT
-                      {rebalanceMaxDriftPercent !== undefined &&
-                        ` (MAX: ±${rebalanceMaxDriftPercent.toFixed(1)}%)`}
-                    </span>
+                    <span>{rebalanceBreachedCount} Drift</span>
                   </>
                 ) : (
                   <>
-                    <Check className="h-3 w-3 text-emerald-500 shrink-0" />
-                    <span className="sm:hidden">SEIMBANG</span>
-                    <span className="hidden sm:inline">PORTOFOLIO SEIMBANG</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span>Seimbang</span>
                   </>
                 )}
               </button>
@@ -1391,10 +1242,10 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() =>
                 setActiveTab(activeTab === 'builder' ? 'rebalancer' : 'builder')
               }
-              className="flex shrink-0 items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
+              className="flex shrink-0 items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300 text-xs"
             >
               <span>
-                {activeTab === 'builder' ? 'Eksekusi Order' : 'Ubah Bobot'}
+                {activeTab === 'builder' ? 'Eksekusi' : 'Ubah Bobot'}
               </span>
               <ArrowRight className="h-3 w-3" />
             </button>
@@ -1406,32 +1257,32 @@ export const Header: React.FC<HeaderProps> = ({
           ref={dialogRef}
           {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
           aria-labelledby="saved-modal-title"
-          className="ui-card m-auto w-full max-w-lg rounded-xl p-5 shadow-xl backdrop:bg-black/50"
+          className="ui-card m-auto w-full max-w-md rounded-xl p-4 shadow-xl backdrop:bg-black/50"
         >
-          <div className="ui-border flex items-center justify-between border-b pb-3">
-            <h2 id="saved-modal-title" className="ui-text-main text-sm font-bold">
-              Saved Portfolios &amp; JSON Backup
+          <div className="ui-border flex items-center justify-between border-b pb-2.5">
+            <h2 id="saved-modal-title" className="ui-text-main text-xs font-bold uppercase tracking-wider">
+              Portofolio Tersimpan
             </h2>
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
               aria-label="Tutup dialog"
-              className="ui-text-muted rounded p-1.5 hover:opacity-80"
+              className="ui-text-muted rounded p-1 hover:opacity-80"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="mt-4 space-y-4">
-            <div className="ui-subtle rounded-lg p-3">
+          <div className="mt-3 space-y-3">
+            <div className="ui-subtle rounded-lg p-2.5">
               <label htmlFor="save-portfolio-name-input" className="ui-text-secondary block text-xs font-medium">
-                Simpan Portfolio Saat Ini (LocalStorage)
+                Simpan Portofolio Saat Ini
               </label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-1.5 flex gap-1.5">
                 <input
                   id="save-portfolio-name-input"
                   type="text"
-                  placeholder="Nama Portfolio..."
+                  placeholder="Nama racikan..."
                   value={newSaveName}
                   onChange={(e) => setNewSaveName(e.target.value)}
                   className="ui-card ui-text-main flex-1 rounded-md px-2.5 py-1.5 text-xs focus:outline-none"
@@ -1441,11 +1292,11 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => {
                     const name =
                       newSaveName.trim() ||
-                      `Custom Porto #${savedPortfolios.length + 1}`;
+                      `Porto #${savedPortfolios.length + 1}`;
                     onSaveCurrentPortfolio(name);
                     setNewSaveName('');
                   }}
-                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition"
                 >
                   Simpan
                 </button>
@@ -1513,7 +1364,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {onOpenDataTransfer && (
-              <div className="ui-border border-t pt-3">
+              <div className="ui-border border-t pt-2.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -1521,27 +1372,27 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenDataTransfer();
                   }}
-                  className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2.5 text-xs font-semibold"
+                  className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg p-2 text-xs font-medium"
                 >
                   <div className="flex items-center gap-2">
-                    <Database className="h-4 w-4 text-emerald-500" />
-                    <span>Transfer & Backup Data (Teks / File)</span>
+                    <Database className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Transfer &amp; Backup Data</span>
                   </div>
-                  <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-mono text-[10px] ui-text-muted">
                     Buka
                   </span>
                 </button>
               </div>
             )}
 
-            <div className="ui-border flex items-center justify-between border-t pt-3">
+            <div className="ui-border flex items-center justify-between border-t pt-2.5">
               <button
                 type="button"
                 onClick={onExportJson}
-                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
+                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span>Export (.json)</span>
+                <span>Export JSON</span>
               </button>
               <input
                 ref={fileInputRef}
@@ -1559,10 +1410,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium"
+                className="ui-subtle ui-text-main flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium"
               >
                 <Upload className="h-3.5 w-3.5" />
-                <span>Import (.json)</span>
+                <span>Import JSON</span>
               </button>
             </div>
           </div>

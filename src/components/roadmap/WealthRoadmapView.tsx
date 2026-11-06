@@ -1471,32 +1471,32 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setTaxMode('standard-net')}
-                className={`rounded-md px-2.5 py-1 font-medium ${
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
                   taxMode === 'standard-net'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Net Pajak (IDX 10% / US 15%)
+                Net Pajak
               </button>
               <button
                 type="button"
                 onClick={() => setTaxMode('idx-tax-exempt-reinvest')}
-                className={`rounded-md px-2.5 py-1 font-medium ${
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
                   taxMode === 'idx-tax-exempt-reinvest'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Bebas Pajak IDX (Reinvest)
+                Bebas Pajak (PMK)
               </button>
               <button
                 type="button"
                 onClick={() => setTaxMode('gross')}
-                className={`rounded-md px-2.5 py-1 font-medium ${
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
                   taxMode === 'gross'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                    : 'ui-text-muted'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
                 Gross (0%)
@@ -1508,24 +1508,24 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setDividendUsageMode('reinvest-drip')}
-                className={`rounded-md px-2.5 py-1 font-medium ${
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
                   dividendUsageMode === 'reinvest-drip'
-                    ? 'bg-emerald-600 font-semibold text-white'
-                    : 'ui-text-muted'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Reinvest ke Compounding
+                Reinvest (DRIP)
               </button>
               <button
                 type="button"
                 onClick={() => setDividendUsageMode('cashout-passive')}
-                className={`rounded-md px-2.5 py-1 font-medium ${
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
                   dividendUsageMode === 'cashout-passive'
-                    ? 'bg-emerald-600 font-semibold text-white'
-                    : 'ui-text-muted'
+                    ? 'bg-emerald-600 font-semibold text-white shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
-                Tarik Tunai (Living Cost)
+                Tarik Tunai
               </button>
             </div>
           </div>

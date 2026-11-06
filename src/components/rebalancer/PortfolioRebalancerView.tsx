@@ -729,12 +729,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       }`,
       `⚙️ Mode: ${
         rebalanceMode === 'sell-and-buy'
-          ? 'Full Sell + Buy (Jual Rata)'
+          ? 'Jual Rata (Proporsional)'
           : rebalanceMode === 'selective-profit-trim'
-            ? 'Jual Untung Saja (Selective Trim 🎯)'
+            ? 'Jual Untung Saja'
             : rebalanceMode === 'trim-defensive-first'
-              ? 'Prioritas RDPT Dulu 🛡️'
-              : 'Buy-Only DCA 💰'
+              ? 'Prioritas Kas/RDPT'
+              : 'Beli Saja (DCA)'
       }`,
       enableIdxLotRounding ? `📦 Pembulatan: Lot Bulat BEI (1 Lot = 100 lbr)` : '',
       rebalanceResult.tacticalBandActive
@@ -1809,10 +1809,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           )}
         </div>
 
-        <div className="ui-card rounded-xl p-4">
+        <div className="ui-card rounded-xl p-3.5">
           <div className="flex items-center justify-between">
             <span className="ui-text-muted text-xs font-medium">
-              Mode Eksekusi Rebalancing
+              Mode Rebalancing
             </span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-zinc-500/10 text-emerald-600 dark:text-emerald-400">
               {rebalanceMode === 'selective-profit-trim'
@@ -1820,7 +1820,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 : rebalanceMode === 'trim-defensive-first'
                   ? 'Defensive First'
                   : rebalanceMode === 'buy-only-dca'
-                    ? 'Buy-Only DCA'
+                    ? 'Buy DCA'
                     : 'Full Rebalance'}
             </span>
           </div>
@@ -1834,9 +1834,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold ring-1 ring-emerald-500/30 shadow-2xs'
                   : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
-              title="Hanya jual aset yang surplus/kelebihan bobot signifikan. Aset dengan drift kecil di-HOLD tanpa penjualan receh."
+              title="Hanya jual aset yang surplus signifikan"
             >
-              <span>Jual Untung Saja</span>
+              <span>Jual Untung</span>
               {rebalanceMode === 'selective-profit-trim' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               )}
@@ -1850,9 +1850,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold ring-1 ring-blue-500/30 shadow-2xs'
                   : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
-              title="Cairkan dana dari aset defensif (RDPT/RDPU/Kas) untuk membeli aset diskon, tanpa menjual saham/kripto."
+              title="Cairkan kas/RDPT untuk beli aset diskon"
             >
-              <span>Prioritas Kas/RDPT</span>
+              <span>Kas/RDPT Dulu</span>
               {rebalanceMode === 'trim-defensive-first' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               )}
@@ -1866,9 +1866,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ? 'bg-zinc-500/15 ui-text-main font-bold ring-1 ring-emerald-500/30 shadow-2xs'
                   : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
-              title="Jual rata seluruh aset yang kelebihan bobot secara proporsional (rumus modern portfolio theory standar)."
+              title="Jual rata aset surplus secara proporsional"
             >
-              <span>Jual Proporsional</span>
+              <span>Jual Rata</span>
               {rebalanceMode === 'sell-and-buy' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               )}
@@ -1882,36 +1882,34 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold ring-1 ring-amber-500/30 shadow-2xs'
                   : 'ui-subtle ui-text-secondary hover:ui-text-main'
               }`}
-              title="Tanpa jual aset ($0 jual). Alokasikan suntikan kas baru ke aset yang paling underweight."
+              title="Alokasikan suntikan kas baru ke aset diskon tanpa jual"
             >
               <span>Beli Saja (DCA)</span>
               {rebalanceMode === 'buy-only-dca' && (
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               )}
             </button>
-
-
           </div>
 
           <div className="ui-text-muted mt-2 text-[11px] leading-snug">
             {rebalanceMode === 'selective-profit-trim' && (
               <span className="text-emerald-600 dark:text-emerald-400">
-                Pangkas hanya pemenang terbesar (overweight) untuk mendanai aset diskon. Aset netral tetap <strong>HOLD</strong>.
+                Pangkas aset surplus untuk beli aset diskon. Aset netral tetap HOLD.
               </span>
             )}
             {rebalanceMode === 'trim-defensive-first' && (
               <span className="text-blue-600 dark:text-blue-400">
-                Cairkan buffer kas / RDPT untuk beli aset diskon. Aset pertumbuhan (SPY, QQQ, BTC) aman dari aksi jual.
+                Cairkan buffer kas/RDPT untuk beli aset diskon tanpa jual saham/kripto.
               </span>
             )}
             {rebalanceMode === 'sell-and-buy' && (
               <span>
-                Jual seluruh aset overweight dan beli underweight secara proporsional (standar textbook).
+                Jual aset overweight dan beli underweight secara proporsional.
               </span>
             )}
             {rebalanceMode === 'buy-only-dca' && (
               <span className="text-amber-600 dark:text-amber-400">
-                Tanpa jual aset sama sekali. Alokasikan kas baru untuk mengakumulasi aset diskon.
+                Tanpa jual aset. Alokasikan kas baru untuk mengakumulasi aset diskon.
               </span>
             )}
           </div>
@@ -2047,7 +2045,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </button>
               )}
 
-              {/* Segmented Control: Nominal vs % vs Unit/Lot */}
+              {/* Segmented Control: Nominal vs % vs Unit */}
               <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
                 <button
                   type="button"
@@ -2055,13 +2053,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     setHoldingEntryMode('nominal');
                     setInputMode('nominal');
                   }}
-                  className={`rounded-md px-2 py-1 font-medium transition ${
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
                     holdingEntryMode === 'nominal'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
-                  Nominal (Rp)
+                  Nominal
                 </button>
                 <button
                   type="button"
@@ -2074,7 +2072,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         : initialCapitalMenu1Idr
                     );
                   }}
-                  className={`rounded-md px-2 py-1 font-medium transition ${
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
                     holdingEntryMode === 'percent'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
@@ -2088,13 +2086,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     setHoldingEntryMode('units');
                     setInputMode('units');
                   }}
-                  className={`rounded-md px-2 py-1 font-medium transition ${
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
                     holdingEntryMode === 'units'
                       ? 'ui-card ui-text-main font-semibold shadow-2xs'
                       : 'ui-text-muted hover:ui-text-main'
                   }`}
                 >
-                  Unit / Lot
+                  Unit
                 </button>
               </div>
 
