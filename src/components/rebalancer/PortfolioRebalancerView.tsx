@@ -208,6 +208,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 }) => {
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
+  const [showPriceSimControls, setShowPriceSimControls] = useState(false);
   const [isHoldingsTextModalOpen, setIsHoldingsTextModalOpen] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
@@ -1918,15 +1919,30 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 {rebalanceResult.unallocatedCashRemainderIdr &&
                 Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
                   <span
-                    className={`font-mono text-[11px] font-semibold ${
+                    className={`font-mono text-[11px] font-semibold inline-flex items-center gap-1.5 ${
                       rebalanceResult.unallocatedCashRemainderIdr < 0
                         ? 'text-rose-500 font-bold'
                         : 'text-emerald-600 dark:text-emerald-400'
                     }`}
                   >
-                    • {rebalanceResult.unallocatedCashRemainderIdr < 0 ? 'Defisit Kas: ' : 'Sisa Kas Belum Terpakai: '}
-                    {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}
-                    {rebalanceResult.unallocatedCashRemainderIdr < 0 ? ' (Perlu Top-Up)' : ''}
+                    <span>
+                      • {rebalanceResult.unallocatedCashRemainderIdr < 0 ? 'Defisit Kas: ' : 'Sisa Kas Belum Terpakai: '}
+                      {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}
+                      {rebalanceResult.unallocatedCashRemainderIdr < 0 ? ' (Perlu Top-Up)' : ''}
+                    </span>
+                    {rebalanceResult.unallocatedCashRemainderIdr < 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const deficit = Math.abs(rebalanceResult.unallocatedCashRemainderIdr!);
+                          setCashInjectionIdr(cashInjectionIdr + Math.ceil(deficit));
+                        }}
+                        className="rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-1.5 py-0.2 font-sans text-[10px] font-semibold transition"
+                        title="Otomatis tambahkan nominal defisit ini ke Top-Up Kas"
+                      >
+                        + Tutup Defisit
+                      </button>
+                    )}
                   </span>
                 ) : null}
               </div>
@@ -2065,6 +2081,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <span>Kartu</span>
                 </button>
               </div>
+
+              {/* Toggle Uji Drop Harga & Modal Beli */}
+              <button
+                type="button"
+                onClick={() => setShowPriceSimControls((prev) => !prev)}
+                className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
+                  showPriceSimControls
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                    : 'ui-subtle ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Tampilkan / sembunyikan tombol cepat simulasi drop harga (-10% s.d. -50%) dan input modal beli rata-rata"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {showPriceSimControls ? 'Tutup Uji Drop' : 'Uji Drop & Modal'}
+                </span>
+              </button>
 
               {/* Clean Minimal CSV Export Button */}
               <button
@@ -2277,72 +2310,79 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     </button>
                                   </div>
 
-                                  {/* Quick Drop Chips: [-10%] [-20%] [-35%] [-50%] */}
-                                  <div className="flex items-center gap-1 pt-0.5">
-                                    <span className="ui-text-muted text-[9px] select-none">Drop:</span>
-                                    {[10, 20, 35, 50].map((dropPct) => {
-                                      const defaultP = asset?.defaultPrice ?? 1;
-                                      const discountedPrice = Number(
-                                        (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
-                                      );
-                                      const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
-                                      return (
+                                  {/* Quick Drop Chips & Modal Beli (Collapsible via showPriceSimControls, or keep visible if actively modified) */}
+                                   {(showPriceSimControls ||
+                                     h.avgBuyPrice !== undefined ||
+                                     Math.abs(h.currentPrice - (asset?.defaultPrice ?? 1)) > 0.01) && (
+                                     <div className="pt-1 mt-1 border-t border-black/5 dark:border-white/5 space-y-1">
+                                       {/* Quick Drop Chips: [-10%] [-20%] [-35%] [-50%] */}
+                                    <div className="flex items-center gap-1 pt-0.5">
+                                      <span className="ui-text-muted text-[9px] select-none">Drop:</span>
+                                      {[10, 20, 35, 50].map((dropPct) => {
+                                        const defaultP = asset?.defaultPrice ?? 1;
+                                        const discountedPrice = Number(
+                                          (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
+                                        );
+                                        const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
+                                        return (
+                                          <button
+                                            key={dropPct}
+                                            type="button"
+                                            onClick={() =>
+                                              onUpdateHolding(item.assetId, {
+                                                currentPrice: discountedPrice,
+                                              })
+                                            }
+                                            className={`rounded px-1 py-0.2 font-mono text-[9px] transition ${
+                                              isActive
+                                                ? 'bg-rose-500 text-white font-bold'
+                                                : 'ui-subtle ui-text-muted hover:text-rose-500'
+                                            }`}
+                                            title={`Simulasi harga anjlok -${dropPct}% menjadi ${formatPriceDisplay(discountedPrice, asset?.currency)}`}
+                                          >
+                                            -{dropPct}%
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+  
+                                    {/* Feature 5: Optional Avg Buy Price (Modal Beli Rata-Rata) */}
+                                    <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
+                                      <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
+                                      <input
+                                        type="number"
+                                        step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                        min={0}
+                                        placeholder="Modal Beli"
+                                        value={h.avgBuyPrice ?? ''}
+                                        onChange={(e) => {
+                                          const val = e.target.value ? Number(e.target.value) : undefined;
+                                          onUpdateHolding(item.assetId, {
+                                            avgBuyPrice: val && val > 0 ? val : undefined,
+                                          });
+                                        }}
+                                        className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
+                                        style={{ width: asset?.currency === 'USD' ? '4.8rem' : '5.8rem' }}
+                                        aria-label={`Harga modal beli rata-rata ${item.symbol}`}
+                                      />
+                                      {h.avgBuyPrice && (
                                         <button
-                                          key={dropPct}
                                           type="button"
                                           onClick={() =>
                                             onUpdateHolding(item.assetId, {
-                                              currentPrice: discountedPrice,
+                                              avgBuyPrice: undefined,
                                             })
                                           }
-                                          className={`rounded px-1 py-0.2 font-mono text-[9px] transition ${
-                                            isActive
-                                              ? 'bg-rose-500 text-white font-bold'
-                                              : 'ui-subtle ui-text-muted hover:text-rose-500'
-                                          }`}
-                                          title={`Simulasi harga anjlok -${dropPct}% menjadi ${formatPriceDisplay(discountedPrice, asset?.currency)}`}
+                                          aria-label="Hapus modal beli"
+                                          className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
+                                          title="Hapus modal beli"
                                         >
-                                          -{dropPct}%
+                                          ✕
                                         </button>
-                                      );
-                                    })}
-                                  </div>
-
-                                  {/* Feature 5: Optional Avg Buy Price (Modal Beli Rata-Rata) */}
-                                  <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
-                                    <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
-                                    <input
-                                      type="number"
-                                      step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
-                                      min={0}
-                                      placeholder="Modal Beli"
-                                      value={h.avgBuyPrice ?? ''}
-                                      onChange={(e) => {
-                                        const val = e.target.value ? Number(e.target.value) : undefined;
-                                        onUpdateHolding(item.assetId, {
-                                          avgBuyPrice: val && val > 0 ? val : undefined,
-                                        });
-                                      }}
-                                      className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
-                                      style={{ width: asset?.currency === 'USD' ? '4.8rem' : '5.8rem' }}
-                                      aria-label={`Harga modal beli rata-rata ${item.symbol}`}
-                                    />
-                                    {h.avgBuyPrice && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          onUpdateHolding(item.assetId, {
-                                            avgBuyPrice: undefined,
-                                          })
-                                        }
-                                        aria-label="Hapus modal beli"
-                                        className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
-                                        title="Hapus modal beli"
-                                      >
-                                        ✕
-                                      </button>
-                                    )}
-                                  </div>
+                                      )}
+                                    </div>
+                                     </div>
+                                   )}
                                 </div>
                               </div>
                             );
@@ -3301,8 +3341,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           </div>
         </div>
 
-        {/* Right 4 Cols: Drift Chart & Cashflow Summary */}
-        <div className="space-y-5 lg:col-span-4">
+        {/* Right 4 Cols: Drift Chart & Cashflow Summary (Sticky on Desktop) */}
+        <div className="space-y-5 lg:col-span-4 lg:sticky lg:top-20 lg:self-start">
           <div className="ui-card rounded-xl p-5">
             <h3 className="ui-text-main text-sm font-bold">
               Bobot Saat Ini vs Target Optimal
@@ -3389,7 +3429,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
                 Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 && (
                   <div
-                    className={`ui-border flex justify-between border-b pb-2 ${
+                    className={`ui-border flex items-center justify-between border-b pb-2 ${
                       rebalanceResult.unallocatedCashRemainderIdr < 0
                         ? 'text-rose-500 font-bold'
                         : 'text-emerald-600 dark:text-emerald-400'
@@ -3400,9 +3440,24 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         ? 'Defisit Kas (Kekurangan Dana):'
                         : 'Sisa Kas Belum Terpakai:'}
                     </span>
-                    <span className="font-mono font-semibold">
-                      {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-semibold">
+                        {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                      </span>
+                      {rebalanceResult.unallocatedCashRemainderIdr < 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const deficit = Math.abs(rebalanceResult.unallocatedCashRemainderIdr!);
+                            setCashInjectionIdr(cashInjectionIdr + Math.ceil(deficit));
+                          }}
+                          className="rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 px-1.5 py-0.5 font-sans text-[10px] font-semibold transition"
+                          title="Otomatis tambahkan nominal defisit ini ke Top-Up Kas"
+                        >
+                          + Tutup Defisit
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               <div className="flex justify-between pt-1 text-sm font-bold">

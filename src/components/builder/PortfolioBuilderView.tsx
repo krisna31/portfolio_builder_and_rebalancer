@@ -62,6 +62,9 @@ import {
   Pencil,
   Check,
   X,
+  Coins,
+  SlidersHorizontal,
+  GitMerge,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -1161,6 +1164,68 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* In-Page Quick Jump Sub-Navigation Pills */}
+      <nav
+        aria-label="Navigasi Bagian Builder"
+        className="sticky top-14 z-20 -mx-1 px-1 py-1.5 sm:px-2 rounded-xl ui-card border ui-border shadow-xs"
+      >
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5">
+          <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider px-1">
+            Lompat ke:
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-quick-dca')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Coins className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>1. Quick DCA</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Table2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>2. Tabel 15 Portofolio</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-builder-sliders')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>3. Quant Solver &amp; Bobot</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-pareto-chart')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <Layers className="h-3.5 w-3.5 text-amber-500" />
+            <span>4. Grafik Risiko &amp; Pareto</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById('tour-correlation-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <GitMerge className="h-3.5 w-3.5 text-sky-500" />
+            <span>5. Korelasi &amp; Benchmark</span>
+          </button>
+        </div>
+      </nav>
 
       {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA &rarr; PTBA & PINNED CUSTOM ROWS) */}
       <section id="tour-table-section" className="ui-card rounded-xl p-5">
