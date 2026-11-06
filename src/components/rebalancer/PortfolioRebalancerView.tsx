@@ -282,6 +282,28 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     return () => document.removeEventListener('mousedown', handleClosePriceTool);
   }, [activePriceToolAssetId]);
 
+  // Collapsible cards state
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('quantporto_rebalancer_collapsed_v1');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSectionCollapse = (key: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('quantporto_rebalancer_collapsed_v1', JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
   const [rebalanceViewMode, setRebalanceViewMode] = useState<'table' | 'cards'>(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return 'cards';
@@ -1952,12 +1974,24 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
       {/* MAIN REBALANCING TABLE & DRIFT CHART */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div id="tour-rebalance-table-container" className="ui-card rounded-xl p-5 lg:col-span-8">
+        <div id="tour-rebalance-table-container" className="ui-card rounded-xl p-3.5 sm:p-5 lg:col-span-8">
           <div className="ui-border flex flex-wrap items-center justify-between gap-3 border-b pb-3">
             <div>
-              <h3 className="ui-text-main text-sm font-bold">
-                Tabel Instruksi Jual / Beli Rebalancing
-              </h3>
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('rebalanceTable')}
+                className="flex items-center gap-2 text-left group focus:outline-none"
+                aria-expanded={!collapsedSections['rebalanceTable']}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                    collapsedSections['rebalanceTable'] ? '-rotate-90' : ''
+                  }`}
+                />
+                <h3 className="ui-text-main text-sm font-bold">
+                  Tabel Instruksi Jual / Beli Rebalancing
+                </h3>
+              </button>
               <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-400">
                 <span>Ubah nilai saldo atau unit untuk menghitung order eksekusi:</span>
                 {rebalanceResult.unallocatedCashRemainderIdr &&
@@ -2153,11 +2187,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <Download className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">CSV</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('rebalanceTable')}
+                className="ui-subtle ui-border rounded-lg border px-2 py-1.5 text-xs font-medium ui-text-secondary hover:ui-text-main transition"
+              >
+                {collapsedSections['rebalanceTable'] ? 'Buka' : 'Ciutkan'}
+              </button>
             </div>
           </div>
 
-          {/* Action Filter Bar */}
-          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-3 text-xs">
+          {!collapsedSections['rebalanceTable'] ? (
+            <>
+              {/* Action Filter Bar */}
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-3 text-xs">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-1">
                 Filter Tindakan:
@@ -3487,6 +3531,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </button>
             </div>
           </div>
+            </>
+          ) : (
+            <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+              <span>Tabel instruksi rebalancing disembunyikan.</span>
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('rebalanceTable')}
+                className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+              >
+                Buka Tabel Instruksi &rarr;
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right 4 Cols: Drift Chart & Cashflow Summary (Sticky on Desktop) */}
@@ -3671,47 +3728,64 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       </section>
 
       {/* PRE-PLANNED LIMIT ORDER & CRASH BUYING LADDER (-10%, -20%, -35%, -50%) */}
-      <section id="tour-crash-ladder" className="ui-card rounded-xl p-5">
-        <div className="ui-border flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <ListOrdered className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="ui-text-main text-sm font-bold">
-                Pre-Planned Limit Order &amp; Crash Buying Ladder (-10%, -20%, -35%,
-                -50%)
-              </h3>
-            </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Siapkan antrean Limit Order dari sekarang agar saat market crash (Menit
-              15:48) kamu tinggal serok sesuai rumus Rebalancing tanpa panik:
-            </p>
-          </div>
+      <section id="tour-crash-ladder" className="ui-card rounded-xl p-3.5 sm:p-5">
+        <div className="ui-border flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+          <button
+            type="button"
+            onClick={() => toggleSectionCollapse('crashLadder')}
+            className="flex items-center gap-2 text-left group focus:outline-none"
+            aria-expanded={!collapsedSections['crashLadder']}
+          >
+            <ChevronDown
+              className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                collapsedSections['crashLadder'] ? '-rotate-90' : ''
+              }`}
+            />
+            <ListOrdered className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="ui-text-main text-sm font-bold">
+              Pre-Planned Limit Order &amp; Crash Buying Ladder (-10% s/d -50%)
+            </h3>
+          </button>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="ui-text-muted text-xs">Pilih Aset:</span>
-            {activeCandidateAssets.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => setLadderAssetId(a.id)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
-                  effectiveLadderAssetId === a.id
-                    ? 'bg-emerald-600 font-semibold text-white'
-                    : 'ui-subtle ui-text-secondary hover:opacity-80'
-                }`}
-              >
-                {a.id} ({targetWeights[a.id] ?? 0}%)
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="ui-text-muted text-xs hidden sm:inline">Pilih:</span>
+              {activeCandidateAssets.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => {
+                    if (collapsedSections['crashLadder']) toggleSectionCollapse('crashLadder');
+                    setLadderAssetId(a.id);
+                  }}
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium transition ${
+                    effectiveLadderAssetId === a.id
+                      ? 'bg-emerald-600 font-semibold text-white'
+                      : 'ui-subtle ui-text-secondary hover:opacity-80'
+                  }`}
+                >
+                  {a.id}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('crashLadder')}
+              className="ui-subtle ui-border rounded-md border px-2 py-0.5 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+            >
+              {collapsedSections['crashLadder'] ? 'Buka' : 'Ciutkan'}
+            </button>
           </div>
         </div>
 
-        <div
-          tabIndex={0}
-          role="region"
-          aria-label="Pre-Planned Limit Order Crash Buying Ladder"
-          className="ui-border mt-4 overflow-x-auto rounded-lg border"
-        >
+        {!collapsedSections['crashLadder'] ? (
+          <div
+            tabIndex={0}
+            role="region"
+            aria-label="Pre-Planned Limit Order Crash Buying Ladder"
+            className="ui-border mt-3 overflow-x-auto rounded-lg border"
+          >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <thead className="ui-subtle text-[11px] font-semibold uppercase">
               <tr>
@@ -3779,40 +3853,66 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </tbody>
           </table>
         </div>
+        ) : (
+          <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+            <span>Skenario crash buying disembunyikan.</span>
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('crashLadder')}
+              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+            >
+              Buka Crash Ladder &rarr;
+            </button>
+          </div>
+        )}
       </section>
 
       {/* REBALANCING HISTORY JOURNAL & NET WORTH TRACKER */}
-      <section id="tour-rebalance-journal" className="ui-card rounded-xl p-5">
+      <section id="tour-rebalance-journal" className="ui-card rounded-xl p-3.5 sm:p-5">
         <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toggleSectionCollapse('journal')}
+            className="flex items-center gap-2 text-left group focus:outline-none"
+            aria-expanded={!collapsedSections['journal']}
+          >
+            <ChevronDown
+              className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                collapsedSections['journal'] ? '-rotate-90' : ''
+              }`}
+            />
             <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <h3 className="ui-text-main text-sm font-bold">
-                Jurnal Riwayat Rebalancing &amp; Pertumbuhan Net Worth
-              </h3>
-              <p className="ui-text-muted text-xs">
-                Rekam jejak disiplin rebalancing kamu dari waktu ke waktu (tersimpan di
-                browser):
-              </p>
-            </div>
-          </div>
+            <h3 className="ui-text-main text-sm font-bold">
+              Jurnal Riwayat Rebalancing &amp; Net Worth
+            </h3>
+          </button>
           <div className="flex items-center gap-2">
-            <span className="ui-subtle ui-text-secondary rounded-md px-2.5 py-1 font-mono text-xs font-semibold">
-              {rebalanceHistory.length} Snapshot Tersimpan
+            <span className="ui-subtle ui-text-secondary rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
+              {rebalanceHistory.length} Snapshot
             </span>
             {rebalanceHistory.length > 0 && (
               <button
                 type="button"
                 onClick={exportCsvHistory}
-                className="ui-subtle ui-text-secondary flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition shadow-xs"
+                className="ui-subtle ui-text-secondary flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium hover:ui-text-main transition shadow-xs"
                 title="Unduh seluruh riwayat rebalancing sebagai file CSV"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span>Unduh Jurnal CSV</span>
+                <span className="hidden sm:inline">Unduh CSV</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('journal')}
+              className="ui-subtle ui-border rounded-md border px-2 py-0.5 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+            >
+              {collapsedSections['journal'] ? 'Buka' : 'Ciutkan'}
+            </button>
           </div>
         </div>
+
+        {!collapsedSections['journal'] ? (
+          <>
 
         {rebalanceHistory.length === 0 ? (
           <div className="ui-subtle ui-text-muted mt-4 rounded-lg p-6 text-center text-xs">
@@ -3945,6 +4045,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </table>
               </div>
             </div>
+          </div>
+        )}
+          </>
+        ) : (
+          <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+            <span>Jurnal riwayat rebalancing disembunyikan.</span>
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('journal')}
+              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+            >
+              Buka Jurnal &rarr;
+            </button>
           </div>
         )}
       </section>

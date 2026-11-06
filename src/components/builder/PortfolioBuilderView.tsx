@@ -65,6 +65,7 @@ import {
   Coins,
   SlidersHorizontal,
   GitMerge,
+  ChevronDown,
 } from 'lucide-react';
 
 interface PortfolioBuilderViewProps {
@@ -232,6 +233,61 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     'both' | 'percent' | 'nominal'
   >('both');
   const [comparePresetId, setComparePresetId] = useState<string>('opt-4-rb-btc-90');
+
+  // Collapsible cards state
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('quantporto_builder_collapsed_v1');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSectionCollapse = (key: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem('quantporto_builder_collapsed_v1', JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  const areAllSectionsCollapsed = useMemo(() => {
+    return !!(
+      collapsedSections.table &&
+      collapsedSections.solver &&
+      collapsedSections.pareto &&
+      collapsedSections.comparator
+    );
+  }, [collapsedSections]);
+
+  const toggleAllSections = () => {
+    setCollapsedSections((prev) => {
+      const allCollapsed = !!(
+        prev.table &&
+        prev.solver &&
+        prev.pareto &&
+        prev.comparator
+      );
+      const next = {
+        ...prev,
+        table: !allCollapsed,
+        solver: !allCollapsed,
+        pareto: !allCollapsed,
+        comparator: !allCollapsed,
+      };
+      try {
+        localStorage.setItem('quantporto_builder_collapsed_v1', JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
 
   const [tickerInput, setTickerInput] = useState('');
   const [isLookingUpTicker, setIsLookingUpTicker] = useState(false);
@@ -1184,9 +1240,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       {/* In-Page Quick Jump Sub-Navigation Pills */}
       <nav
         aria-label="Navigasi Bagian Builder"
-        className="sticky top-14 z-20 -mx-1 px-1 py-1.5 sm:px-2 rounded-xl ui-card border ui-border shadow-xs"
+        className="sticky top-14 z-20 -mx-1 px-2 py-1.5 rounded-xl ui-card border ui-border shadow-xs flex items-center justify-between gap-2"
       >
-        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5">
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5 scrollbar-thin">
           <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider px-1">
             Lompat ke:
           </span>
@@ -1195,7 +1251,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             onClick={() => {
               document.getElementById('tour-quick-dca')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
           >
             <Coins className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>1. Quick DCA</span>
@@ -1203,9 +1259,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           <button
             type="button"
             onClick={() => {
+              setCollapsedSections((prev) => ({ ...prev, table: false }));
               document.getElementById('tour-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
           >
             <Table2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>2. Tabel 15 Portofolio</span>
@@ -1213,9 +1270,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           <button
             type="button"
             onClick={() => {
+              setCollapsedSections((prev) => ({ ...prev, solver: false }));
               document.getElementById('tour-builder-sliders')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
           >
             <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>3. Quant Solver &amp; Bobot</span>
@@ -1223,9 +1281,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           <button
             type="button"
             onClick={() => {
+              setCollapsedSections((prev) => ({ ...prev, pareto: false }));
               document.getElementById('tour-pareto-chart')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
           >
             <Layers className="h-3.5 w-3.5 text-amber-500" />
             <span>4. Grafik Risiko &amp; Pareto</span>
@@ -1235,48 +1294,144 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             onClick={() => {
               document.getElementById('tour-correlation-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
-            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2.5 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
           >
             <GitMerge className="h-3.5 w-3.5 text-sky-500" />
             <span>5. Korelasi &amp; Benchmark</span>
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCollapsedSections((prev) => ({ ...prev, comparator: false }));
+              document.getElementById('tour-comparator-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle px-2 py-1 text-xs font-semibold ui-text-secondary hover:ui-text-main transition"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5 text-indigo-500" />
+            <span>6. Komparator</span>
+          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={toggleAllSections}
+          className="shrink-0 flex items-center gap-1 text-[11px] font-medium ui-subtle border ui-border px-2 py-1 rounded-lg ui-text-secondary hover:ui-text-main transition"
+          title={areAllSectionsCollapsed ? 'Buka semua card di halaman' : 'Ciutkan semua card untuk ringkas'}
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${areAllSectionsCollapsed ? '-rotate-90' : ''}`} />
+          <span className="hidden sm:inline">{areAllSectionsCollapsed ? 'Buka Semua' : 'Ciutkan Semua'}</span>
+        </button>
       </nav>
 
       {/* SECTION 2: THE 15 OPTIMAL PORTFOLIOS TABLE (WITH DYNAMIC SLOT SWAP e.g. BBCA &rarr; PTBA & PINNED CUSTOM ROWS) */}
-      <section id="tour-table-section" className="ui-card rounded-xl p-5">
-        <div className="ui-border flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="ui-text-main text-sm font-bold uppercase tracking-wide sm:text-base">
-                Tabel 15 Portfolio Optimal &amp; Simulasi Custom Slot
-              </h2>
-              {isSlotMapCustomized && (
-                <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
-                  Mode Custom Slot Aktif (Dihitung Ulang oleh Solver)
-                </span>
+      <section id="tour-table-section" className="ui-card rounded-xl p-3 sm:p-4">
+        {/* Compact Header Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: Collapsible Title & Badges */}
+          <button
+            type="button"
+            onClick={() => toggleSectionCollapse('table')}
+            className="flex items-center gap-2 text-left group focus:outline-none"
+            aria-expanded={!collapsedSections['table']}
+            aria-label={collapsedSections['table'] ? 'Buka Tabel 15 Portofolio' : 'Ciutkan Tabel 15 Portofolio'}
+          >
+            <ChevronDown
+              className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                collapsedSections['table'] ? '-rotate-90' : ''
+              }`}
+            />
+            <h2 className="ui-text-main text-xs sm:text-sm font-bold uppercase tracking-wide">
+              Tabel 15 Portofolio Optimal
+            </h2>
+            <span className="ui-subtle rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              {displayedPresetRows.length} Strategi
+            </span>
+            {isSlotMapCustomized && (
+              <span className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                Custom Slot Aktif
+              </span>
+            )}
+          </button>
+
+          {/* Right: Search, View Mode, Collapse Toggle */}
+          <div className="flex items-center gap-2">
+            {/* Instant Search Bar */}
+            <div className="relative flex items-center">
+              <Search className="absolute left-2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+              <input
+                type="text"
+                value={presetSearchQuery}
+                onChange={(e) => setPresetSearchQuery(e.target.value)}
+                placeholder="Cari preset / aset..."
+                className="ui-subtle ui-border ui-text-main h-7 w-32 sm:w-44 rounded-md border pl-7 pr-6 text-xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              {presetSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setPresetSearchQuery('')}
+                  className="absolute right-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  title="Hapus pencarian"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               )}
             </div>
-            <p className="ui-text-muted mt-0.5 text-xs">
-              Anda bisa mengganti instrumen di header kolom tabel (contoh: ubah{' '}
-              <strong>BBCA &rarr; PTBA</strong>) untuk melihat bagaimana bobot ke-15
-              strategi berubah secara otomatis, atau pin racikan custom Anda ke tabel.
-            </p>
-          </div>
 
-          <div className="space-y-2.5">
-            {/* Tier 1: Filter Strategi & Slot Benchmark */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-2.5">
+            {/* Hybrid Table vs Mobile Card View Toggle */}
+            <div className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs">
+              <button
+                type="button"
+                onClick={() => setTableViewMode('table')}
+                title="Tampilan Tabel"
+                className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
+                  tableViewMode === 'table'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <Table2 className="h-3 w-3" />
+                <span className="hidden sm:inline">Tabel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTableViewMode('cards')}
+                title="Tampilan Kartu"
+                className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
+                  tableViewMode === 'cards'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                <LayoutGrid className="h-3 w-3" />
+                <span className="hidden sm:inline">Kartu</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('table')}
+              className="ui-subtle ui-border rounded-md border px-2 py-1 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+            >
+              {collapsedSections['table'] ? 'Buka' : 'Ciutkan'}
+            </button>
+          </div>
+        </div>
+
+        {/* When Expanded: Slim Filter & Controls Toolbar + Table */}
+        {!collapsedSections['table'] ? (
+          <>
+            {/* Slim Utilitarian Controls Strip (Single row or wraps cleanly without multi-tier vertical bloating) */}
+            <div className="mt-2.5 pt-2 border-t ui-border flex flex-wrap items-center justify-between gap-2 text-xs">
+              {/* Left: Filter Archetypes + Sub-optimal + Slot Swap */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-0.5">
+                <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
                   Filter:
                 </span>
-                {/* Archetype Filter Segmented Control */}
-                <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+                <div className="ui-subtle inline-flex rounded-md p-0.5 border text-xs">
                   <button
                     type="button"
                     onClick={() => setArchetypeFilter('all')}
-                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    className={`rounded px-2 py-1 font-medium transition ${
                       archetypeFilter === 'all'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1287,7 +1442,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setArchetypeFilter('business-owner')}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                       archetypeFilter === 'business-owner'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1299,7 +1454,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setArchetypeFilter('hybrid-conviction')}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                       archetypeFilter === 'hybrid-conviction'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1311,7 +1466,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setArchetypeFilter('full-time-investor')}
-                    className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                       archetypeFilter === 'full-time-investor'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1325,91 +1480,58 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowDominated25(!showDominated25)}
-                  className="ui-subtle ui-text-muted flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:ui-text-main transition"
+                  className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:ui-text-main transition"
                 >
-                  {showDominated25 ? (
-                    <EyeOff className="h-3 w-3" />
-                  ) : (
-                    <Eye className="h-3 w-3" />
-                  )}
+                  {showDominated25 ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                   <span>{showDominated25 ? 'Sembunyikan' : '+10 Sub-optimal'}</span>
                 </button>
 
-                {/* Instant Search Bar */}
-                <div className="relative flex items-center">
-                  <Search className="absolute left-2.5 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={presetSearchQuery}
-                    onChange={(e) => setPresetSearchQuery(e.target.value)}
-                    placeholder="Cari preset / aset (misal: Barbell, BTC)..."
-                    className="ui-subtle ui-border ui-text-main h-7.5 w-44 sm:w-56 rounded-lg border pl-8 pr-7 text-xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                  {presetSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setPresetSearchQuery('')}
-                      className="absolute right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                      title="Hapus pencarian"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Slot Benchmark Customization */}
-              <div className="flex flex-wrap items-center gap-1.5">
+                {/* Quick Swap */}
                 <button
                   type="button"
                   onClick={onQuickSwapBbcaToPtba}
-                  className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition ${
+                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition ${
                     slotMap.BBCA === 'PTBA'
                       ? 'border-emerald-500 bg-emerald-600 text-white'
                       : 'ui-subtle ui-text-main hover:opacity-80'
                   }`}
+                  title="Ganti slot benchmark BBCA dengan PTBA untuk melihat dampak rotasi dividen"
                 >
                   <Repeat className="h-3 w-3" />
-                  <span>Contoh: Ubah BBCA &rarr; PTBA</span>
+                  <span>BBCA &rarr; PTBA</span>
                 </button>
 
                 {isSlotMapCustomized && (
                   <button
                     type="button"
                     onClick={onResetSlotMap}
-                    className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium hover:opacity-80"
+                    className="ui-subtle ui-text-muted flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium hover:opacity-80"
                   >
                     <RotateCcw className="h-3 w-3" />
-                    <span>Reset 8 Benchmark</span>
+                    <span>Reset Slot</span>
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* Tier 2: Tampilan Nilai Sel & Urutan / View Mode */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-              {/* Left: 3-Mode Cell Value Display Selector (% + Rp | % Bobot | Rp Nominal) */}
-              <div className="flex items-center gap-1.5">
-                <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider hidden sm:inline">
-                  Tampilan:
-                </span>
-                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
+              {/* Right: Display Mode & Sorting */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {/* 3-Mode Cell Value Display */}
+                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs">
+                  <span className="ui-text-muted px-1 text-[10px] font-medium hidden sm:inline">
+                    Nilai:
+                  </span>
                   {(
                     [
                       { id: 'both', label: '% + Rp' },
-                      { id: 'percent', label: '% Saja' },
-                      { id: 'nominal', label: 'Rp Juta' },
+                      { id: 'percent', label: '%' },
+                      { id: 'nominal', label: 'Rp' },
                     ] as const
                   ).map((mode) => (
                     <button
                       key={mode.id}
                       type="button"
                       onClick={() => setCellDisplayMode(mode.id)}
-                      title={`Tampilkan pembagian porsi aset dari Modal Awal ${formatIdr(
-                        initialCapitalIdr,
-                        true
-                      )}`}
-                      className={`rounded-md px-2 py-1 font-medium transition ${
+                      className={`rounded px-1.5 py-0.5 font-medium transition ${
                         cellDisplayMode === mode.id
                           ? 'ui-card ui-text-main font-semibold shadow-2xs'
                           : 'ui-text-muted hover:ui-text-main'
@@ -1419,18 +1541,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Right: Quick Sorting Selector & Table/Cards Mode */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
-                  <span className="ui-text-muted px-1.5 text-[10px] font-medium hidden sm:inline">
+                {/* Sorting */}
+                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs">
+                  <span className="ui-text-muted px-1 text-[10px] font-medium hidden sm:inline">
                     Sort:
                   </span>
                   <button
                     type="button"
                     onClick={() => handleToggleTableSort('rank')}
-                    className={`rounded px-2 py-1 font-medium transition ${
+                    className={`rounded px-1.5 py-0.5 font-medium transition ${
                       tableSortKey === 'rank'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1441,7 +1561,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleToggleTableSort('cagr')}
-                    className={`rounded px-2 py-1 font-medium transition ${
+                    className={`rounded px-1.5 py-0.5 font-medium transition ${
                       tableSortKey === 'cagr'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1452,7 +1572,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleToggleTableSort('maxDrawdown')}
-                    className={`rounded px-2 py-1 font-medium transition ${
+                    className={`rounded px-1.5 py-0.5 font-medium transition ${
                       tableSortKey === 'maxDrawdown'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1463,7 +1583,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <button
                     type="button"
                     onClick={() => handleToggleTableSort('calmar')}
-                    className={`rounded px-2 py-1 font-medium transition ${
+                    className={`rounded px-1.5 py-0.5 font-medium transition ${
                       tableSortKey === 'calmar'
                         ? 'ui-card ui-text-main font-semibold shadow-2xs'
                         : 'ui-text-muted hover:ui-text-main'
@@ -1472,38 +1592,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     Calmar {tableSortKey === 'calmar' ? (tableSortOrder === 'desc' ? '↓' : '↑') : ''}
                   </button>
                 </div>
-
-                {/* Hybrid Table vs Mobile Card View Toggle */}
-                <div className="ui-subtle inline-flex items-center gap-0.5 rounded-lg p-0.5 border text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setTableViewMode('table')}
-                    className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
-                      tableViewMode === 'table'
-                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                        : 'ui-text-muted hover:ui-text-main'
-                    }`}
-                  >
-                    <Table2 className="h-3 w-3" />
-                    <span>Tabel</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTableViewMode('cards')}
-                    className={`flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
-                      tableViewMode === 'cards'
-                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                        : 'ui-text-muted hover:ui-text-main'
-                    }`}
-                  >
-                    <LayoutGrid className="h-3 w-3" />
-                    <span>Kartu</span>
-                  </button>
-                </div>
               </div>
             </div>
-          </div>
-        </div>
 
         {/* Mobile Quick Slot Switcher Bar when in Card View */}
         {tableViewMode === 'cards' && (
@@ -2063,43 +2153,83 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           )}
           </div>
         )}
+          </>
+        ) : (
+          <div className="mt-2.5 pt-2 border-t ui-border flex items-center justify-between text-xs ui-text-muted">
+            <span className="text-[11px]">Tabel disembunyikan untuk menghemat ruang vertikal.</span>
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('table')}
+              className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+            >
+              Buka Tabel Portofolio &rarr;
+            </button>
+          </div>
+        )}
       </section>
 
       {/* SECTION 3: CUSTOM QUANT SOLVER & MANUAL WEIGHT BUILDER */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div id="tour-builder-sliders" className="ui-card space-y-5 rounded-xl p-5 lg:col-span-7">
+        <div id="tour-builder-sliders" className="ui-card rounded-xl p-3.5 sm:p-5 lg:col-span-7">
           <div className="ui-border flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSectionCollapse('solver')}
+              className="flex items-center gap-2 text-left group focus:outline-none"
+              aria-expanded={!collapsedSections['solver']}
+              aria-label={collapsedSections['solver'] ? 'Buka Quant Lab & Bobot Editor' : 'Ciutkan Quant Lab & Bobot Editor'}
+            >
+              <ChevronDown
+                className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                  collapsedSections['solver'] ? '-rotate-90' : ''
+                }`}
+              />
               <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               <h2 className="ui-text-main text-sm font-bold">
                 Custom Portfolio Quant Lab &amp; Bobot Editor
               </h2>
-            </div>
+            </button>
 
-            <div className="ui-subtle flex flex-wrap gap-1 rounded-lg p-1">
-              {(
-                [
-                  { id: 'risk-parity', label: 'Risk Parity' },
-                  { id: 'risk-budgeting', label: 'Risk Budgeting' },
-                  { id: 'all-in', label: 'All-In' },
-                  { id: 'custom', label: 'Manual' },
-                ] as const
-              ).map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setAllocationMethod(m.id)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                    allocationMethod === m.id
-                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                      : 'ui-text-muted hover:ui-text-main'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <div className="ui-subtle flex flex-wrap gap-1 rounded-lg p-0.5 text-xs">
+                {(
+                  [
+                    { id: 'risk-parity', label: 'Risk Parity' },
+                    { id: 'risk-budgeting', label: 'Risk Budgeting' },
+                    { id: 'all-in', label: 'All-In' },
+                    { id: 'custom', label: 'Manual' },
+                  ] as const
+                ).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      if (collapsedSections['solver']) toggleSectionCollapse('solver');
+                      setAllocationMethod(m.id);
+                    }}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition ${
+                      allocationMethod === m.id
+                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                        : 'ui-text-muted hover:ui-text-main'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('solver')}
+                className="ui-subtle ui-border rounded-md border px-2 py-0.5 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+              >
+                {collapsedSections['solver'] ? 'Buka' : 'Ciutkan'}
+              </button>
             </div>
           </div>
+
+          {!collapsedSections['solver'] ? (
+            <div className="mt-4 space-y-4">
 
           {/* Pin Current Custom Lab Configuration into the Main Comparison Table */}
           <div className="ui-subtle flex flex-col gap-2 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2845,6 +2975,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               </form>
             )}
           </div>
+            </div>
+          ) : (
+            <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+              <span>Quant Solver disembunyikan.</span>
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('solver')}
+                className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+              >
+                Buka Editor &rarr;
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right 5 Cols: Visual Quant Charts */}
@@ -2955,44 +3098,63 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           </div>
 
           {/* Chart 2: Interactive Pareto Frontier ScatterChart */}
-          <div id="tour-pareto-chart" className="ui-card rounded-xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
+          <div id="tour-pareto-chart" className="ui-card rounded-xl p-3.5 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b ui-border">
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('pareto')}
+                className="flex items-center gap-2 text-left group focus:outline-none"
+                aria-expanded={!collapsedSections['pareto']}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                    collapsedSections['pareto'] ? '-rotate-90' : ''
+                  }`}
+                />
                 <h3 className="ui-text-main text-sm font-bold">
                   Spektrum Return vs Risiko (Pareto Frontier)
                 </h3>
-                <p className="ui-text-muted mt-0.5 text-xs">
-                  Klik titik mana saja di grafik untuk langsung menerapkan portfolio
-                  tersebut:
-                </p>
-              </div>
+              </button>
 
-              {/* Zoom / Filter Controls */}
-              <div className="ui-subtle flex rounded-lg p-0.5 text-[11px]">
-                {[
-                  { id: 'all', label: 'Semua' },
-                  { id: 'cluster-35', label: 'Zoom <35% DD' },
-                  { id: 'optimal-only', label: '15 Optimal' },
-                ].map((z) => (
-                  <button
-                    key={z.id}
-                    type="button"
-                    onClick={() =>
-                      setParetoZoomMode(z.id as typeof paretoZoomMode)
-                    }
-                    className={`rounded-md px-2 py-0.5 font-medium transition ${
-                      paretoZoomMode === z.id
-                        ? 'ui-card ui-text-main font-semibold shadow-2xs'
-                        : 'ui-text-muted hover:ui-text-main'
-                    }`}
-                  >
-                    {z.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                {/* Zoom / Filter Controls */}
+                <div className="ui-subtle flex rounded-lg p-0.5 text-[11px]">
+                  {[
+                    { id: 'all', label: 'Semua' },
+                    { id: 'cluster-35', label: 'Zoom <35% DD' },
+                    { id: 'optimal-only', label: '15 Optimal' },
+                  ].map((z) => (
+                    <button
+                      key={z.id}
+                      type="button"
+                      onClick={() => {
+                        if (collapsedSections['pareto']) toggleSectionCollapse('pareto');
+                        setParetoZoomMode(z.id as typeof paretoZoomMode);
+                      }}
+                      className={`rounded px-2 py-0.5 font-medium transition ${
+                        paretoZoomMode === z.id
+                          ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
+                    >
+                      {z.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSectionCollapse('pareto')}
+                  className="ui-subtle ui-border rounded-md border px-2 py-0.5 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+                >
+                  {collapsedSections['pareto'] ? 'Buka' : 'Ciutkan'}
+                </button>
               </div>
             </div>
 
-            <div className="mt-3 h-64 w-full">
+            {!collapsedSections['pareto'] ? (
+              <div className="mt-3">
+                <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 10, right: 15, bottom: 10, left: -15 }}>
                   <XAxis
@@ -3201,6 +3363,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </button>
               </div>
             </div>
+              </div>
+            ) : (
+              <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+                <span>Grafik Pareto disembunyikan.</span>
+                <button
+                  type="button"
+                  onClick={() => toggleSectionCollapse('pareto')}
+                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                >
+                  Buka Grafik &rarr;
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -3257,36 +3432,44 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         );
 
         return (
-          <section id="tour-comparator-section" className="ui-card rounded-xl p-5">
-            <div className="ui-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <ArrowLeftRight className="h-4 w-4" />
+          <section id="tour-comparator-section" className="ui-card rounded-xl p-3.5 sm:p-5">
+            <div className="ui-border flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapse('comparator')}
+                className="flex items-center gap-2 text-left group focus:outline-none"
+                aria-expanded={!collapsedSections['comparator']}
+              >
+                <ChevronDown
+                  className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                    collapsedSections['comparator'] ? '-rotate-90' : ''
+                  }`}
+                />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <h2 className="ui-text-main text-sm font-bold sm:text-base">
-                    Bandingkan 2 Portfolio (Head-to-Head Comparator)
+                  <h2 className="ui-text-main text-xs sm:text-sm font-bold">
+                    Bandingkan 2 Portfolio (Head-to-Head)
                   </h2>
-                  <p className="ui-text-muted text-xs">
-                    Bandingkan langsung racikan aktif Anda (Kiri) melawan strategi
-                    lain (Kanan) dari segi Return, Risiko Drawdown, Kecepatan Capai{' '}
-                    {formatIdr(targetGoalIdr, true)}, dan Selisih Bobot.
-                  </p>
                 </div>
-              </div>
+              </button>
 
               <div className="flex flex-wrap items-center gap-2">
                 <label
                   htmlFor="compare-preset-select"
                   className="ui-text-secondary text-xs font-semibold"
                 >
-                  Lawan Pembanding:
+                  Lawan:
                 </label>
                 <select
                   id="compare-preset-select"
                   value={compareTarget.id}
-                  onChange={(e) => setComparePresetId(e.target.value)}
-                  className="ui-subtle ui-text-main max-w-xs rounded-lg border px-2.5 py-1.5 text-xs font-semibold focus:outline-none"
+                  onChange={(e) => {
+                    if (collapsedSections['comparator']) toggleSectionCollapse('comparator');
+                    setComparePresetId(e.target.value);
+                  }}
+                  className="ui-subtle ui-border ui-text-main max-w-xs rounded-lg border px-2.5 py-1 text-xs font-semibold focus:outline-none"
                 >
                   {allSelectablePresets.map((p) => (
                     <option
@@ -3298,8 +3481,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSectionCollapse('comparator')}
+                  className="ui-subtle ui-border rounded-md border px-2 py-1 text-[11px] font-medium ui-text-secondary hover:ui-text-main transition"
+                >
+                  {collapsedSections['comparator'] ? 'Buka' : 'Ciutkan'}
+                </button>
               </div>
             </div>
+
+            {!collapsedSections['comparator'] ? (
+              <div className="mt-3">
 
             {/* Side-by-Side Metric Cards */}
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -3503,6 +3697,19 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 })}
               </div>
             </div>
+              </div>
+            ) : (
+              <div className="pt-2 text-xs ui-text-muted flex items-center justify-between">
+                <span>Komparator portofolio disembunyikan.</span>
+                <button
+                  type="button"
+                  onClick={() => toggleSectionCollapse('comparator')}
+                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                >
+                  Buka Komparator &rarr;
+                </button>
+              </div>
+            )}
           </section>
         );
       })()}
