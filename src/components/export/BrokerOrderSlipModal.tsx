@@ -457,6 +457,35 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
         {/* Content Body: Platform Cards */}
         <div className="overflow-y-auto p-4 sm:p-6 space-y-4 bg-zinc-50/70 dark:bg-zinc-950/60">
+          {/* Celebration Banner when 100% of trades are executed */}
+          {progressPercent === 100 && totalActionCount > 0 && (
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-wrap items-center justify-between gap-3 text-emerald-900 dark:text-emerald-100 shadow-xs animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30">
+                  <Check className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+                    <span>Semua Order Selesai Dieksekusi!</span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono px-2 py-0.2 rounded-full font-bold">
+                      100% Selesai
+                    </span>
+                  </div>
+                  <p className="text-[11px] opacity-80 mt-0.5">
+                    Seluruh transaksi rebalancing telah Anda centang. Portofolio kini telah selaras dengan bobot target optimal.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 transition shadow-xs"
+              >
+                Tutup Slip Order
+              </button>
+            </div>
+          )}
+
           {platformGroups.length === 0 ? (
             <div className="p-8 text-center ui-text-muted ui-card rounded-xl border ui-border">
               <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
@@ -493,6 +522,32 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {/* Batch Check All in Platform */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const activeGroupItems = group.items.filter((item) => item.action !== 'HOLD');
+                        const allGroupExecuted = activeGroupItems.length > 0 && activeGroupItems.every((item) => executedMap[item.assetId]);
+                        setExecutedMap((prev) => {
+                          const next = { ...prev };
+                          for (const item of activeGroupItems) {
+                            next[item.assetId] = !allGroupExecuted;
+                          }
+                          return next;
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded border ui-border transition-colors shadow-2xs"
+                      title={`Centang atau lepas centang semua order di ${group.apps}`}
+                    >
+                      <CheckSquare className="w-3 h-3 text-emerald-500" />
+                      <span>
+                        {group.items.filter((i) => i.action !== 'HOLD').length > 0 &&
+                        group.items.filter((i) => i.action !== 'HOLD').every((i) => executedMap[i.assetId])
+                          ? 'Lepas Centang'
+                          : 'Centang Semua'}
+                      </span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleSendWhatsApp(group.id)}

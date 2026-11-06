@@ -602,20 +602,24 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   Kas Rebalance ({formatIdr(cashInjectionIdr, true)})
                 </button>
               )}
-              {[1_000_000, 3_000_000, 5_000_000, 10_000_000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => handleSetMonthlyBudgetIdr(preset)}
-                  className={`ui-subtle rounded px-2 py-1 text-[11px] font-mono transition hover:ui-text-main ${
-                    monthlyBudgetIdr === preset
-                      ? 'bg-zinc-300 dark:bg-zinc-700 font-bold ui-text-main'
-                      : 'ui-text-secondary'
-                  }`}
-                >
-                  {preset / 1_000_000} Juta
-                </button>
-              ))}
+              {[500_000, 1_000_000, 2_000_000, 3_000_000, 5_000_000, 10_000_000, 25_000_000].map((preset) => {
+                const label = preset < 1_000_000 ? '500 Rb' : `${preset / 1_000_000} Jt`;
+                const isActive = monthlyBudgetIdr === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleSetMonthlyBudgetIdr(preset)}
+                    className={`rounded px-2 py-1 text-[11px] font-mono transition shadow-2xs ${
+                      isActive
+                        ? 'bg-emerald-600 text-white font-bold ring-1 ring-emerald-500'
+                        : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

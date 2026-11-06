@@ -64,6 +64,7 @@ import {
   Compass,
   RefreshCw,
   Target,
+  Zap,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -295,6 +296,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   // Feature 4: Interactive +1 Lot / -1 Lot lot overrides for IDX stocks
   const [lotOverrides, setLotOverrides] = useState<Record<string, number>>({});
 
+  type TableActionFilter = 'all' | 'active' | 'buy' | 'sell' | 'hold';
+  const [tableActionFilter, setTableActionFilter] = useState<TableActionFilter>('all');
+
   // Reset lot overrides when user changes input holdings or rebalance parameters
   useEffect(() => {
     setLotOverrides({});
@@ -442,6 +446,34 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       onPlanOverrideChange?.(null);
     }
   }, [rebalanceResult, lotOverrides, onPlanOverrideChange]);
+
+  const actionCounts = useMemo(() => {
+    const items = rebalanceResult?.items ?? [];
+    return {
+      all: items.length,
+      active: items.filter((i) => i.action === 'BUY' || i.action === 'SELL').length,
+      buy: items.filter((i) => i.action === 'BUY').length,
+      sell: items.filter((i) => i.action === 'SELL').length,
+      hold: items.filter((i) => i.action === 'HOLD').length,
+    };
+  }, [rebalanceResult?.items]);
+
+  const filteredTableItems = useMemo(() => {
+    const items = rebalanceResult?.items ?? [];
+    if (tableActionFilter === 'active') {
+      return items.filter((i) => i.action === 'BUY' || i.action === 'SELL');
+    }
+    if (tableActionFilter === 'buy') {
+      return items.filter((i) => i.action === 'BUY');
+    }
+    if (tableActionFilter === 'sell') {
+      return items.filter((i) => i.action === 'SELL');
+    }
+    if (tableActionFilter === 'hold') {
+      return items.filter((i) => i.action === 'HOLD');
+    }
+    return items;
+  }, [rebalanceResult?.items, tableActionFilter]);
 
   const [percentReferenceTotalIdr, setPercentReferenceTotalIdr] = useState<number>(() => {
     return baseRebalanceResult?.initialTotalIdr > 0
@@ -2112,6 +2144,84 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
           </div>
 
+          {/* Action Filter Bar */}
+          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-3 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-1">
+                Filter Tindakan:
+              </span>
+              <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTableActionFilter('all')}
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    tableActionFilter === 'all'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  Semua ({actionCounts.all})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableActionFilter('active')}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    tableActionFilter === 'active'
+                      ? 'ui-card text-emerald-600 dark:text-emerald-400 font-bold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                  title="Hanya tampilkan aset yang perlu order Beli atau Jual"
+                >
+                  <Zap className="h-3 w-3 text-emerald-500" />
+                  <span>Order Aktif ({actionCounts.active})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableActionFilter('buy')}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    tableActionFilter === 'buy'
+                      ? 'ui-card text-emerald-600 dark:text-emerald-400 font-bold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  <span>Beli ({actionCounts.buy})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableActionFilter('sell')}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                    tableActionFilter === 'sell'
+                      ? 'ui-card text-rose-600 dark:text-rose-400 font-bold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  <span>Jual ({actionCounts.sell})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTableActionFilter('hold')}
+                  className={`rounded-md px-2.5 py-1 font-medium transition ${
+                    tableActionFilter === 'hold'
+                      ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                      : 'ui-text-muted hover:ui-text-main'
+                  }`}
+                >
+                  Hold ({actionCounts.hold})
+                </button>
+              </div>
+            </div>
+
+            {tableActionFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setTableActionFilter('all')}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+              >
+                Tampilkan Semua ({actionCounts.all} Aset)
+              </button>
+            )}
+          </div>
+
           {rebalanceViewMode === 'table' ? (
             <div
               id="tour-rebalance-table"
@@ -2148,7 +2258,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   </tr>
                 </thead>
                 <tbody>
-                  {rebalanceResult.items.map((item) => {
+                  {filteredTableItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-xs ui-text-muted">
+                        Tidak ada aset dengan tindakan "{tableActionFilter.toUpperCase()}".
+                        <button
+                          type="button"
+                          onClick={() => setTableActionFilter('all')}
+                          className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                        >
+                          Tampilkan Semua Aset
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTableItems.map((item) => {
                     const asset = allAssets.find((a) => a.id === item.assetId)!;
                     const h = holdings[item.assetId] ?? {
                       assetId: item.assetId,
@@ -2732,14 +2856,26 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </td>
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>
           ) : (
             /* Mode 2: Zero-Horizontal-Scroll Mobile Card View for Rebalancer */
             <div id="tour-rebalance-cards" className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {rebalanceResult.items.map((item) => {
+              {filteredTableItems.length === 0 ? (
+                <div className="col-span-full py-8 text-center text-xs ui-text-muted ui-card rounded-xl border ui-border p-6">
+                  Tidak ada aset dengan tindakan "{tableActionFilter.toUpperCase()}".
+                  <button
+                    type="button"
+                    onClick={() => setTableActionFilter('all')}
+                    className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    Tampilkan Semua Aset
+                  </button>
+                </div>
+              ) : (
+                filteredTableItems.map((item) => {
                 const asset = allAssets.find((a) => a.id === item.assetId)!;
                 const h = holdings[item.assetId] ?? {
                   assetId: item.assetId,
@@ -3283,7 +3419,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     )}
                   </div>
                 );
-              })}
+              }))}
             </div>
           )}
 
@@ -3460,6 +3596,57 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     </div>
                   </div>
                 )}
+              {/* Mini Visual Cash Flow Balance Meter */}
+              {rebalanceResult.finalTargetTotalIdr > 0 && (
+                <div className="rounded-lg bg-black/5 dark:bg-white/5 p-2.5 space-y-1.5 border ui-border">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="ui-text-muted font-medium">Keseimbangan Kas:</span>
+                    {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
+                    Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
+                      rebalanceResult.unallocatedCashRemainderIdr < 0 ? (
+                        <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Defisit {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <Check className="h-3 w-3" />
+                          Sisa Kas {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        Kas 100% Teralokasi
+                      </span>
+                    )}
+                  </div>
+                  {/* Progress ratio of Total Buy vs Available Cash */}
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10 flex">
+                    {(() => {
+                      const available = rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr;
+                      const buy = rebalanceResult.totalBuyIdr;
+                      if (available <= 0 && buy <= 0) {
+                        return <div className="h-full w-full bg-emerald-500/40" />;
+                      }
+                      const pct = available > 0 ? Math.min(100, Math.round((buy / available) * 100)) : 100;
+                      return (
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            buy > available + 100 ? 'bg-rose-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      );
+                    })()}
+                  </div>
+                  <div className="flex justify-between text-[10px] ui-text-muted font-mono">
+                    <span>Kas Masuk: {formatIdr(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr)}</span>
+                    <span>Kas Keluar: {formatIdr(rebalanceResult.totalBuyIdr)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between pt-1 text-sm font-bold">
                 <span className="ui-text-main">Nilai Akhir Portfolio:</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400">

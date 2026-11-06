@@ -311,6 +311,22 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     });
   }, [combinedRows, tableSortKey, tableSortOrder, pinnedPresetIds]);
 
+  const [presetSearchQuery, setPresetSearchQuery] = useState('');
+
+  const displayedPresetRows = React.useMemo(() => {
+    const q = presetSearchQuery.trim().toLowerCase();
+    if (!q) return sortedCombinedRows;
+    return sortedCombinedRows.filter((p) => {
+      const nameMatch = p.name.toLowerCase().includes(q);
+      const descMatch = (p.videoNote ?? '').toLowerCase().includes(q);
+      const methodMatch = (p.method ?? '').toLowerCase().includes(q);
+      const assetMatch = Object.keys(p.weights).some(
+        (k) => (p.weights[k] ?? 0) > 0 && k.toLowerCase().includes(q)
+      );
+      return nameMatch || descMatch || methodMatch || assetMatch;
+    });
+  }, [sortedCombinedRows, presetSearchQuery]);
+
   const handleToggleTableSort = (key: 'rank' | 'cagr' | 'maxDrawdown' | 'calmar') => {
     if (tableSortKey === key) {
       setTableSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -1318,6 +1334,28 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   )}
                   <span>{showDominated25 ? 'Sembunyikan 10 Kalah' : '+10 Tereliminasi'}</span>
                 </button>
+
+                {/* Instant Search Bar */}
+                <div className="relative flex items-center">
+                  <Search className="absolute left-2.5 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={presetSearchQuery}
+                    onChange={(e) => setPresetSearchQuery(e.target.value)}
+                    placeholder="Cari preset / aset (misal: Barbell, BTC)..."
+                    className="ui-subtle ui-border ui-text-main h-7.5 w-44 sm:w-56 rounded-lg border pl-8 pr-7 text-xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                  {presetSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setPresetSearchQuery('')}
+                      className="absolute right-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                      title="Hapus pencarian"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Slot Benchmark Customization */}
@@ -1537,7 +1575,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     title="Klik untuk sortir berdasarkan Rank / Default"
                   >
                     <div className="flex items-center justify-between">
-                      <span>Strategy ({sortedCombinedRows.length})</span>
+                      <span>Strategy ({displayedPresetRows.length})</span>
                       <span className="font-mono text-[10px]">
                         {tableSortKey === 'rank' ? (tableSortOrder === 'asc' ? '▲' : '▼') : ''}
                       </span>
@@ -1666,7 +1704,21 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {sortedCombinedRows.map((preset, index) => {
+                {displayedPresetRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={15} className="py-8 text-center text-xs ui-text-muted">
+                      Tidak ada strategi portofolio yang cocok dengan pencarian "{presetSearchQuery}".
+                      <button
+                        type="button"
+                        onClick={() => setPresetSearchQuery('')}
+                        className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        Reset Pencarian
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  displayedPresetRows.map((preset, index) => {
                   const isSelected = activePresetId === preset.id;
                   const isPinned = pinnedPresetIds.includes(preset.id);
                   const badge = getRiskTierBadge(preset.riskTier);
@@ -1825,14 +1877,27 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       )}
                     </tr>
                   );
-                })}
+                })
+              )}
               </tbody>
             </table>
           </div>
         ) : (
           /* Mode 2: Zero-Horizontal-Scroll Responsive Card View */
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {sortedCombinedRows.map((preset, index) => {
+            {displayedPresetRows.length === 0 ? (
+              <div className="col-span-full py-8 text-center text-xs ui-text-muted ui-card rounded-xl border ui-border p-6">
+                Tidak ada strategi portofolio yang cocok dengan pencarian "{presetSearchQuery}".
+                <button
+                  type="button"
+                  onClick={() => setPresetSearchQuery('')}
+                  className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  Reset Pencarian
+                </button>
+              </div>
+            ) : (
+              displayedPresetRows.map((preset, index) => {
               const isSelected = activePresetId === preset.id;
               const badge = getRiskTierBadge(preset.riskTier);
               const nonZeroWeights = Object.entries(preset.weights)
@@ -1994,7 +2059,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         )}
       </section>
