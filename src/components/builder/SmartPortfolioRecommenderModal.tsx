@@ -214,7 +214,38 @@ export const SmartPortfolioRecommenderModal: React.FC<
         {/* Main 2-Column Layout: Left = Multiple Choice Questions, Right = Live Estimated Portfolio */}
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* LEFT 7 COLS: MULTIPLE-CHOICE QUESTIONS */}
-          <div className="space-y-5 lg:col-span-7">
+          <div className="space-y-4 lg:col-span-7">
+            {/* Stepped Diagnostic Progress Tracker */}
+            <div className="ui-card rounded-xl p-3 border ui-border shadow-xs">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-bold ui-text-main flex items-center gap-1.5">
+                  <Compass className="h-4 w-4 text-emerald-500" />
+                  <span>Kuis Diagnostik Profil Risiko Kuantitatif</span>
+                </span>
+                <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  4 Langkah Terisi
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+                <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  <div className="font-bold">1. Universe</div>
+                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{selectedAssetIds.length} aset aktif</div>
+                </div>
+                <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  <div className="font-bold">2. Slot IDX</div>
+                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{idxEquitySlotChoice}</div>
+                </div>
+                <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  <div className="font-bold">3. Drawdown</div>
+                  <div className="truncate text-[9px] ui-text-muted mt-0.5 capitalize">{crashTolerance}</div>
+                </div>
+                <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  <div className="font-bold">4. Conviction</div>
+                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{convictionPreference === 'auto-equal' ? 'Equal' : 'Custom'}</div>
+                </div>
+              </div>
+            </div>
+
             {/* Q1: Asset Universe Choice */}
             <div className="ui-subtle rounded-xl p-4">
               <div className="ui-text-main text-xs font-bold">

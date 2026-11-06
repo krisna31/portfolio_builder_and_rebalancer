@@ -58,6 +58,16 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
     return parseHoldingsText(inputText, allAssets, defaultMode, usdIdrRate);
   }, [inputText, allAssets, defaultMode, usdIdrRate]);
 
+  // Auto-detect format delimiter
+  const detectedFormat = useMemo(() => {
+    if (!inputText.trim()) return null;
+    if (inputText.includes('	')) return { label: 'TSV / Excel Spreadsheet Table' };
+    if (inputText.includes(';') || (inputText.includes(',') && !inputText.match(/^\s*[A-Z]+\s+[\d.,]+\s*$/m))) {
+      return { label: 'CSV (Comma / Semicolon)' };
+    }
+    return { label: 'Teks Bebas (Spasi / Line-by-Line)' };
+  }, [inputText]);
+
   // Export current holdings
   const exportText = useMemo(() => {
     return exportHoldingsToText(currentHoldings, allAssets, exportFormat, usdIdrRate);
@@ -206,9 +216,16 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
             /* IMPORT TAB */
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label htmlFor="holdings-import-textarea" className="ui-text-main text-xs font-semibold">
-                  Tempelkan Baris Aset (Excel / CSV / Teks Bebas):
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="holdings-import-textarea" className="ui-text-main text-xs font-semibold">
+                    Tempelkan Baris Aset:
+                  </label>
+                  {detectedFormat && (
+                    <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                      Terdeteksi: {detectedFormat.label}
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"

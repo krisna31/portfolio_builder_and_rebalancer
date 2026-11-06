@@ -2221,12 +2221,34 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     Reset Asumsi 5Y Video
                   </button>
                 )}
-                <span className="ui-text-main font-mono text-xs font-semibold">
-                  Total Bobot: {manualSum.toFixed(1)}% ➔ CAGR{' '}
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    {solvedMetrics.cagr.toFixed(2)}%
-                  </span>
-                </span>
+                {/* Visual Reactive Status Badge for 100% Weight */}
+                {Math.abs(manualSum - 100) <= 0.2 ? (
+                  <div className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    <span className="font-mono">100.0% Seimbang</span>
+                    <span className="ui-text-muted font-normal">•</span>
+                    <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                      CAGR +{solvedMetrics.cagr.toFixed(2)}%
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold ${
+                      manualSum > 100.2
+                        ? 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    <span className="font-mono">
+                      Total: {manualSum.toFixed(1)}% (
+                      {manualSum < 100
+                        ? `Kurang ${(100 - manualSum).toFixed(1)}%`
+                        : `Lebih +${(manualSum - 100).toFixed(1)}%`}
+                      )
+                    </span>
+                  </div>
+                )}
                 {/* Locked Assets Badge & Unlock All */}
                 {lockedCount > 0 && (
                   <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-300">

@@ -1020,9 +1020,15 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                         >
                           {item.actionLabel}
                         </span>
-                        <span className="text-[10px] font-mono font-semibold ui-text-muted">
-                          Multiplier: {item.multiplier}x
-                        </span>
+                        <div className="flex items-center gap-1 text-[10px] font-mono font-semibold ui-text-muted">
+                          <span>Multiplier: {item.multiplier}x</span>
+                          <span
+                            className="rounded bg-black/5 dark:bg-white/10 px-1 py-0.2 text-[9px] font-sans ui-text-muted cursor-help"
+                            title={`Pilar 1 (Valuasi Pasar): ${item.explanation.valuationScore}/100 • Pilar 2 (Defisit Bobot Portofolio): ${item.explanation.driftScore}/100`}
+                          >
+                            V:${item.explanation.valuationScore} • D:${item.explanation.driftScore}
+                          </span>
+                        </div>
                       </div>
                     </td>
 
@@ -1156,6 +1162,9 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       }`}
                     >
                       {item.actionLabel} ({item.multiplier}x)
+                    </span>
+                    <span className="text-[9px] font-mono ui-text-muted">
+                      V:${item.explanation.valuationScore} • D:${item.explanation.driftScore}
                     </span>
                   </div>
                 </div>

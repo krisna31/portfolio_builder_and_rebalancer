@@ -2592,7 +2592,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, -1);
                                               }}
-                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                              className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                               title="Kurangi 1 Lot"
                                 aria-label="Kurangi 1 Lot"
                                             >
@@ -2604,7 +2604,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, 1);
                                               }}
-                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                              className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                               title="Tambah 1 Lot"
                                 aria-label="Tambah 1 Lot"
                                             >
@@ -2669,7 +2669,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, -1);
                                               }}
-                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                              className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                               title="Kurangi 1 Lot"
                                 aria-label="Kurangi 1 Lot"
                                             >
@@ -2681,7 +2681,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                                 e.stopPropagation();
                                                 handleAdjustLotOverride(item.assetId, 1);
                                               }}
-                                              className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                              className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                               title="Tambah 1 Lot"
                                 aria-label="Tambah 1 Lot"
                                             >
@@ -2979,7 +2979,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, -1);
                                   }}
-                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                  className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                   title="Kurangi 1 Lot Jual"
                                 aria-label="Kurangi 1 Lot Jual"
                                 >
@@ -2991,7 +2991,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, 1);
                                   }}
-                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                  className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                   title="Tambah 1 Lot Beli"
                                 aria-label="Tambah 1 Lot Beli"
                                 >
@@ -3228,7 +3228,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, -1);
                                   }}
-                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                  className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                   title="Kurangi 1 Lot"
                                 aria-label="Kurangi 1 Lot"
                                 >
@@ -3240,7 +3240,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     e.stopPropagation();
                                     handleAdjustLotOverride(item.assetId, 1);
                                   }}
-                                  className="h-6 w-6 rounded ui-card border ui-border ui-text-main hover:opacity-80 font-mono text-[11px] flex items-center justify-center leading-none"
+                                  className="h-7 w-7 rounded-md ui-card border ui-border ui-text-main hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-95 transition font-mono text-xs font-bold flex items-center justify-center leading-none shadow-2xs"
                                   title="Tambah 1 Lot"
                                 aria-label="Tambah 1 Lot"
                                 >
