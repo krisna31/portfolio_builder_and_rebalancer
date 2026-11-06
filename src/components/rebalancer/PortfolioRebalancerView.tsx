@@ -1064,6 +1064,20 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <ArrowUpRight className="h-3.5 w-3.5" />
                 <span>Beli Perdana (Rp 0)</span>
               </button>
+
+              <button
+                type="button"
+                onClick={onClearHoldingsForManualInput}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  rebalanceResult.initialTotalIdr === 0 && cashInjectionIdr === 0
+                    ? 'bg-zinc-600 text-white shadow-2xs'
+                    : 'ui-text-secondary hover:ui-text-main'
+                }`}
+                title="Reset semua saldo aset menjadi Rp 0 untuk mulai mengetik portofolio baru dari awal"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                <span>Kosongkan (Rp 0)</span>
+              </button>
             </div>
 
             {/* Consolidated Technical Settings Popover Menu */}

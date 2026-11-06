@@ -2340,16 +2340,17 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   </span>
                 )}
 
-                {Math.abs(manualSum - 100) > 0.2 && (
-                  <div className="flex items-center gap-1.5">
+                {/* Sliders Quick Actions Bar */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {Math.abs(manualSum - 100) > 0.2 && (
                     <button
                       type="button"
                       disabled={isLockedSumOverLimit}
                       onClick={() => onNormalizeManualWeights('proportional')}
-                      className={`rounded px-2 py-0.5 text-xs font-semibold transition ${
+                      className={`rounded px-2.5 py-0.5 text-xs font-bold transition shadow-2xs ${
                         isLockedSumOverLimit
                           ? 'bg-zinc-300/30 text-zinc-400 cursor-not-allowed'
-                          : 'ui-subtle ui-text-main hover:bg-emerald-500/20'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                       }`}
                       title={
                         lockedCount > 0
@@ -2359,24 +2360,37 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     >
                       Normalize 100%
                     </button>
+                  )}
 
-                    {lockedCount > 0 && (
-                      <button
-                        type="button"
-                        disabled={isLockedSumOverLimit}
-                        onClick={() => onNormalizeManualWeights('equal')}
-                        className={`rounded px-2 py-0.5 text-xs font-medium transition ${
-                          isLockedSumOverLimit
-                            ? 'bg-zinc-300/30 text-zinc-400 cursor-not-allowed'
-                            : 'ui-subtle text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15'
-                        }`}
-                        title="Bagi rata sisa persentase sama besar ke seluruh aset yang tidak digembok"
-                      >
-                        Bagi Rata (Equalize)
-                      </button>
-                    )}
-                  </div>
-                )}
+                  <button
+                    type="button"
+                    disabled={isLockedSumOverLimit}
+                    onClick={() => onNormalizeManualWeights('equal')}
+                    className={`rounded px-2 py-0.5 text-xs font-medium transition ${
+                      isLockedSumOverLimit
+                        ? 'bg-zinc-300/30 text-zinc-400 cursor-not-allowed'
+                        : 'ui-subtle text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 border ui-border'
+                    }`}
+                    title="Bagi rata bobot (100% / N) sama besar ke seluruh aset yang aktif / tidak digembok"
+                  >
+                    Bagi Rata (Equal)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      for (const asset of allAssets) {
+                        if (!lockedAssetIds?.includes(asset.id) && (activeWeights[asset.id] ?? 0) > 0) {
+                          onManualWeightChange(asset.id, 0);
+                        }
+                      }
+                    }}
+                    className="ui-subtle rounded px-2 py-0.5 text-xs font-medium ui-text-muted hover:text-rose-500 hover:bg-rose-500/10 border ui-border transition"
+                    title="Nol-kan semua slider aset yang tidak digembok"
+                  >
+                    Nol-kan Semua
+                  </button>
+                </div>
               </div>
             </div>
 

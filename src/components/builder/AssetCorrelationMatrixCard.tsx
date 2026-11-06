@@ -46,6 +46,25 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
     return calculatePortfolioDiversificationScore(allAssets, activeWeights);
   }, [allAssets, activeWeights]);
 
+  // Best Hedging Pair: Pair with lowest (or most negative) pairwise correlation
+  const bestDiversificationPair = useMemo(() => {
+    if (displayAssets.length < 2) return null;
+    let minCorr = 2.0;
+    let bestPair: { a: AssetDefinition; b: AssetDefinition; r: number } | null = null;
+    for (let i = 0; i < displayAssets.length; i++) {
+      for (let j = i + 1; j < displayAssets.length; j++) {
+        const a = displayAssets[i];
+        const b = displayAssets[j];
+        const r = getAssetPairwiseCorrelation(a, b);
+        if (r < minCorr) {
+          minCorr = r;
+          bestPair = { a, b, r };
+        }
+      }
+    }
+    return bestPair;
+  }, [displayAssets]);
+
   // Active selected pair
   const activePair = useMemo(() => {
     if (selectedPair) {
@@ -264,6 +283,39 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                 className="rounded-md bg-amber-500/20 px-2.5 py-1 font-semibold text-amber-900 dark:text-amber-100 hover:bg-amber-500/30 transition"
               >
                 Lihat 8 Aset Inti
+              </button>
+            </div>
+          )}
+
+          {/* Best Hedging Pair Highlight Banner */}
+          {bestDiversificationPair && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                  🏆
+                </span>
+                <div>
+                  <span className="font-bold ui-text-main">
+                    Pasangan Diversifikasi Terkuat:{' '}
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {bestDiversificationPair.a.symbol} ↔ {bestDiversificationPair.b.symbol}
+                    </span>
+                  </span>
+                  <span className="font-mono text-[11px] text-zinc-400 ml-1.5">
+                    (r = {bestDiversificationPair.r >= 0 ? `+${bestDiversificationPair.r.toFixed(2)}` : bestDiversificationPair.r.toFixed(2)})
+                  </span>
+                  <span className="hidden sm:inline text-zinc-400 text-[11px] ml-1.5">
+                    • Dekorrelasi optimal untuk meredam drawdown saat krisis pasar.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPair([bestDiversificationPair.a.id, bestDiversificationPair.b.id])}
+                className="rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2.5 py-1 text-[11px] font-semibold transition"
+                title="Pilih pasangan ini untuk analisis perbandingan mendalam di kolom kanan"
+              >
+                Analisis Pasangan Ini &rarr;
               </button>
             </div>
           )}

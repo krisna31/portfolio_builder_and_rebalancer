@@ -209,6 +209,32 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     targetGoalIdr,
   ]);
 
+  const [dividendFilter, setDividendFilter] = useState<'all' | 'paying' | 'stocks' | 'bonds'>('all');
+
+  const dividendCounts = useMemo(() => {
+    const items = dividendBreakdown.activeItems ?? [];
+    return {
+      all: items.length,
+      paying: items.filter((i) => i.netYieldPct > 0).length,
+      stocks: items.filter((i) => i.asset.category === 'idx-equity' || i.asset.category === 'us-equity').length,
+      bonds: items.filter((i) => i.asset.category === 'bonds' || i.asset.category === 'money-market').length,
+    };
+  }, [dividendBreakdown.activeItems]);
+
+  const filteredDividendItems = useMemo(() => {
+    const items = dividendBreakdown.activeItems ?? [];
+    if (dividendFilter === 'paying') {
+      return items.filter((i) => i.netYieldPct > 0);
+    }
+    if (dividendFilter === 'stocks') {
+      return items.filter((i) => i.asset.category === 'idx-equity' || i.asset.category === 'us-equity');
+    }
+    if (dividendFilter === 'bonds') {
+      return items.filter((i) => i.asset.category === 'bonds' || i.asset.category === 'money-market');
+    }
+    return items;
+  }, [dividendBreakdown.activeItems, dividendFilter]);
+
   // If user selects "Cashout Passive Income", total return compounding reduces by the cashout dividend yield (since historical CAGR includes reinvested yield/total return)
   const effectiveCompoundingCagr =
     dividendUsageMode === 'cashout-passive'
@@ -638,17 +664,26 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             </div>
 
             <div>
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between items-center text-xs">
                 <label className="ui-text-secondary font-medium">
-                  Target Kekayaan:
+                  Target Kekayaan Pokok:
                 </label>
-                <span className="ui-text-main font-mono font-semibold">
-                  {formatIdr(targetGoalIdr)}
-                </span>
+                <div className="ui-subtle flex items-center gap-1 rounded-md border ui-border px-2 py-0.5">
+                  <span className="ui-text-muted font-mono text-[11px]">Rp</span>
+                  <FormattedNumberInput
+                    step={500_000_000}
+                    min={100_000_000}
+                    value={targetGoalIdr}
+                    onChange={(val) => setTargetGoalIdr(val)}
+                    className="ui-text-main w-28 bg-transparent font-mono text-xs font-bold focus:outline-none text-right"
+                    ariaLabel="Target Kekayaan Pokok in IDR"
+                  />
+                </div>
               </div>
-              <div className="mt-1.5 flex gap-1.5 text-xs">
+              <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
                 {[
                   1_000_000_000,
+                  2_500_000_000,
                   5_000_000_000,
                   10_000_000_000,
                   25_000_000_000,
@@ -658,10 +693,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     key={g}
                     type="button"
                     onClick={() => setTargetGoalIdr(g)}
-                    className={`flex-1 rounded py-1 font-mono text-[11px] font-medium ${
+                    className={`flex-1 rounded px-2 py-1 font-mono text-[11px] font-medium transition shadow-2xs ${
                       targetGoalIdr === g
-                        ? 'bg-emerald-600 font-semibold text-white'
-                        : 'ui-subtle ui-text-secondary'
+                        ? 'bg-emerald-600 font-semibold text-white ring-1 ring-emerald-500'
+                        : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
                     }`}
                   >
                     {formatIdr(g, true)}
@@ -1550,11 +1585,78 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         </div>
 
         {/* Per-Asset Dividend Yield Table */}
+        {/* Dividend Table Filter Sub-Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border pb-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider mr-1">
+              Filter Dividen:
+            </span>
+            <div className="ui-subtle inline-flex rounded-lg p-0.5 border text-xs">
+              <button
+                type="button"
+                onClick={() => setDividendFilter('all')}
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                  dividendFilter === 'all'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Semua ({dividendCounts.all})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDividendFilter('paying')}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition ${
+                  dividendFilter === 'paying'
+                    ? 'ui-card text-emerald-600 dark:text-emerald-400 font-bold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+                title="Hanya tampilkan instrumen yang memiliki yield dividen / kupon > 0%"
+              >
+                <Banknote className="h-3 w-3 text-emerald-500" />
+                <span>Ada Dividen/Kupon ({dividendCounts.paying})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDividendFilter('stocks')}
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                  dividendFilter === 'stocks'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Saham &amp; ETF ({dividendCounts.stocks})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDividendFilter('bonds')}
+                className={`rounded-md px-2.5 py-1 font-medium transition ${
+                  dividendFilter === 'bonds'
+                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    : 'ui-text-muted hover:ui-text-main'
+                }`}
+              >
+                Obligasi &amp; Pasar Uang ({dividendCounts.bonds})
+              </button>
+            </div>
+          </div>
+
+          {dividendFilter !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setDividendFilter('all')}
+              className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              Tampilkan Semua ({dividendCounts.all} Aset)
+            </button>
+          )}
+        </div>
+
         <div
           tabIndex={0}
           role="region"
           aria-label="Per-Asset Dividend and Passive Income Table"
-          className="ui-border mt-4 overflow-x-auto rounded-lg border"
+          className="ui-border mt-3 overflow-x-auto rounded-lg border"
         >
           <table className="w-full border-separate border-spacing-0 text-left text-xs">
             <caption className="sr-only">Tabel Rincian Dividen dan Passive Income Per-Instrumen Portofolio</caption>
@@ -1582,7 +1684,21 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {dividendBreakdown.activeItems.map((row) => (
+              {filteredDividendItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-xs ui-text-muted">
+                    Tidak ada instrumen yang sesuai dengan filter "{dividendFilter}".
+                    <button
+                      type="button"
+                      onClick={() => setDividendFilter('all')}
+                      className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      Tampilkan Semua
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                filteredDividendItems.map((row) => (
                 <tr key={row.asset.id} className="hover:bg-zinc-500/5">
                   <th
                     scope="row"
@@ -1637,7 +1753,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     {formatIdr(row.annualDividendAtGoalIdr)}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
