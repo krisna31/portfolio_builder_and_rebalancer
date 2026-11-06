@@ -1,18 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Lock,
   Eye,
   EyeOff,
-  ShieldCheck,
-  AlertCircle,
-  Clock,
   ArrowRight,
   Fingerprint,
 } from 'lucide-react';
 import { BrandLogo } from '../BrandLogo';
 import { stopInteractiveTour } from '../../services/tourGuide';
 import {
-  sha256Hash,
   verifyPasswordHash,
   authenticateSession,
   recordFailedAttempt,
@@ -78,7 +73,6 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         const registered = hasRegisteredBiometric();
 
         if (mounted) {
-          // Biometric is supported if platform authenticator is physically available OR already registered
           setIsBiometricSupported(platformAvailable || registered);
           setIsRegistered(registered);
         }
@@ -125,7 +119,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     return () => clearInterval(timer);
   }, [lockoutSec]);
 
-  // Biometric Instant Login Handler
+  // Biometric Login Handler
   const handleBiometricLogin = async () => {
     if (isVerifyingBiometric || lockoutSec > 0) return;
 
@@ -141,7 +135,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         setBiometricError(result.error);
       }
     } catch {
-      setBiometricError('Terjadi kendala saat memverifikasi sensor sidik jari.');
+      setBiometricError('Gagal verifikasi biometrik.');
     } finally {
       setIsVerifyingBiometric(false);
     }
@@ -162,7 +156,6 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
       if (isMatch) {
         authenticateSession();
 
-        // If biometric is supported on this device but not yet registered and not dismissed, offer registration
         if (isBiometricSupported && !isRegistered && !isBiometricPromptDismissed()) {
           setShowRegisterPrompt(true);
         } else {
@@ -175,19 +168,15 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
 
         if (attemptResult.isLocked) {
           setLockoutSec(attemptResult.remainingSec);
-          setErrorMessage(
-            `Terlalu banyak percobaan salah (${MAX_AUTH_ATTEMPTS}/${MAX_AUTH_ATTEMPTS}). Akses ditangguhkan sementara.`
-          );
+          setErrorMessage(`Terkunci (${attemptResult.remainingSec}s)`);
         } else {
-          setErrorMessage(
-            `Kata sandi salah. Sisa kesempatan: ${attemptResult.attemptsLeft} dari ${MAX_AUTH_ATTEMPTS}.`
-          );
+          setErrorMessage(`Sandi salah (${attemptResult.attemptsLeft}x lagi)`);
         }
         setPassword('');
         inputRef.current?.focus();
       }
     } catch {
-      setErrorMessage('Terjadi kesalahan saat memverifikasi sandi. Silakan coba lagi.');
+      setErrorMessage('Gagal memverifikasi sandi.');
     } finally {
       setIsVerifying(false);
     }
@@ -207,7 +196,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         setRegisterError(res.error);
       }
     } catch {
-      setRegisterError('Gagal mendaftarkan sidik jari di perangkat ini.');
+      setRegisterError('Gagal mendaftar biometrik.');
     } finally {
       setIsRegisteringBiometric(false);
     }
@@ -220,202 +209,143 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen ui-page flex flex-col justify-center items-center p-4 selection:bg-emerald-500/30">
-      <div className="w-full max-w-md relative z-10 space-y-6">
-        {/* Brand & Security Title */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <BrandLogo className="w-12 h-12" />
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase mt-1">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Sesi Akses Portofolio Terproteksi</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight ui-text-main mt-1">
-            {showRegisterPrompt ? 'Pendaftaran Sidik Jari' : 'Masukkan Kata Sandi'}
+    <div className="min-h-screen ui-page flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-[280px] space-y-3.5">
+        {/* Minimalist Brand Logo & App Name */}
+        <div className="flex flex-col items-center text-center">
+          <BrandLogo className="w-8 h-8 mb-1.5" />
+          <h1 className="text-xs font-semibold tracking-wider uppercase ui-text-muted">
+            {showRegisterPrompt ? 'Biometrik' : 'QuantPorto'}
           </h1>
-          <p className="text-xs ui-text-secondary max-w-xs">
-            {showRegisterPrompt
-              ? 'Daftarkan sensor biometrik perangkat ini untuk kemudahan login cepat di masa mendatang.'
-              : 'Akses dashboard QuantPorto dilindungi untuk keamanan strategi investasi dan data portofolio Anda.'}
-          </p>
         </div>
 
-        {/* Lock Screen Card */}
+        {/* Minimalist Card */}
         <div
-          className={`ui-card ui-border rounded-xl p-6 shadow-sm transition duration-150 ${
+          className={`ui-card ui-border rounded-xl p-4 border shadow-xs transition duration-150 ${
             isShaking ? 'animate-shake border-rose-500/50' : ''
           }`}
         >
           {showRegisterPrompt ? (
-            /* Post-Login Biometric Registration Prompt */
-            <div className="space-y-4 text-center">
-              <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-inner">
-                <Fingerprint className="w-8 h-8" />
-              </div>
-
-              <div>
-                <h2 className="text-base font-bold ui-text-main">
-                  Aktifkan Login Sidik Jari?
-                </h2>
-                <p className="text-xs ui-text-secondary mt-1.5 leading-relaxed">
-                  Buka kunci dashboard pada browser ini langsung dengan sensor sidik jari (Windows Hello / Touch ID) tanpa mengetik kata sandi lagi.
-                </p>
-              </div>
+            /* Post-Login Biometric Registration (Minimalist) */
+            <div className="space-y-3 text-center">
+              <Fingerprint className="w-6 h-6 mx-auto text-emerald-500" />
+              <p className="text-xs ui-text-main font-medium">
+                Aktifkan biometrik perangkat?
+              </p>
 
               {registerError && (
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs text-left">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{registerError}</span>
+                <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px]">
+                  {registerError}
                 </div>
               )}
 
-              <div className="space-y-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleRegisterBiometricNow}
-                  disabled={isRegisteringBiometric}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm py-2.5 rounded-xl transition duration-150"
-                >
-                  <Fingerprint className={`w-4 h-4 ${isRegisteringBiometric ? 'animate-pulse' : ''}`} />
-                  <span>
-                    {isRegisteringBiometric ? 'Memindai Sensor...' : 'Aktifkan Sidik Jari Sekarang'}
-                  </span>
-                </button>
-
+              <div className="flex gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={handleSkipRegistration}
                   disabled={isRegisteringBiometric}
-                  className="w-full flex items-center justify-center gap-1.5 ui-subtle border ui-border ui-text-secondary hover:ui-text-main font-medium text-xs py-2 rounded-xl transition"
+                  className="flex-1 ui-subtle border ui-border ui-text-muted hover:ui-text-main text-xs py-1.5 rounded-lg transition"
                 >
-                  <span>Lewati (Lanjut ke Dashboard)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Lewati
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegisterBiometricNow}
+                  disabled={isRegisteringBiometric}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs py-1.5 rounded-lg transition"
+                >
+                  {isRegisteringBiometric ? '...' : 'Aktifkan'}
                 </button>
               </div>
             </div>
           ) : (
-            /* Normal Login Card */
-            <div>
-              {/* Prominent Biometric Login Button when registered & supported */}
+            /* Minimalist Login Form */
+            <div className="space-y-3">
+              {/* Biometric Button if registered */}
               {isRegistered && isBiometricSupported && (
-                <div className="space-y-3 mb-5">
+                <div className="space-y-2">
                   <button
                     type="button"
                     id="biometric-login-btn"
                     onClick={handleBiometricLogin}
                     disabled={isVerifyingBiometric || lockoutSec > 0}
-                    aria-label="Masuk dengan Sidik Jari atau Biometrik"
-                    className="w-full py-3 px-4 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 hover:border-emerald-500/70 text-emerald-700 dark:text-emerald-300 font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
+                    aria-label="Masuk dengan Sidik Jari"
+                    className="w-full py-2 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-medium text-xs rounded-lg flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                   >
                     <Fingerprint
-                      className={`w-5 h-5 text-emerald-600 dark:text-emerald-400 ${
-                        isVerifyingBiometric ? 'animate-pulse' : ''
-                      }`}
+                      className={`w-4 h-4 ${isVerifyingBiometric ? 'animate-pulse' : ''}`}
                     />
                     <span>
-                      {isVerifyingBiometric ? 'Memindai Sidik Jari...' : 'Masuk dengan Sidik Jari'}
+                      {isVerifyingBiometric ? 'Memindai...' : 'Sidik Jari'}
                     </span>
                   </button>
 
                   {biometricError && (
-                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{biometricError}</span>
+                    <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px] text-center">
+                      {biometricError}
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 pt-0.5">
                     <div className="flex-1 border-t ui-border" />
-                    <span className="text-[10px] ui-text-muted uppercase tracking-wider font-medium">
-                      atau gunakan kata sandi
+                    <span className="text-[10px] ui-text-muted uppercase tracking-wider">
+                      atau sandi
                     </span>
                     <div className="flex-1 border-t ui-border" />
                   </div>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="access-password"
-                    className="block text-xs font-medium ui-text-secondary mb-1.5"
+              <form onSubmit={handleSubmit} className="space-y-2.5">
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    id="access-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isVerifying || lockoutSec > 0}
+                    placeholder={lockoutSec > 0 ? `Tunggu ${lockoutSec}s...` : 'Sandi...'}
+                    autoComplete="current-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className="w-full ui-input disabled:opacity-50 rounded-lg pl-3 pr-8 py-2 text-xs placeholder:text-zinc-500 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center ui-text-muted hover:ui-text-main transition"
+                    aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                   >
-                    Kata Sandi Akses:
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none ui-text-muted">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      ref={inputRef}
-                      id="access-password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isVerifying || lockoutSec > 0}
-                      placeholder={lockoutSec > 0 ? 'Terkunci sementara...' : 'Ketik kata sandi...'}
-                      autoComplete="current-password"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      className="w-full ui-input disabled:opacity-50 rounded-lg pl-10 pr-11 py-2.5 text-sm placeholder:text-zinc-500 transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-pressed={showPassword}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center ui-text-muted hover:ui-text-main transition"
-                      aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
 
-                {/* Error / Lockout Banner */}
+                {/* Lockout or Error message */}
                 {lockoutSec > 0 ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs">
-                    <Clock className="w-4 h-4 shrink-0" />
-                    <span>
-                      Terlalu banyak percobaan. Silakan tunggu{' '}
-                      <strong className="font-mono font-bold text-amber-800 dark:text-amber-300">
-                        {lockoutSec} detik
-                      </strong>{' '}
-                      lagi.
-                    </span>
+                  <div className="text-[11px] text-amber-600 dark:text-amber-400 text-center font-mono py-0.5">
+                    Tunggu {lockoutSec} detik
                   </div>
                 ) : errorMessage ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{errorMessage}</span>
+                  <div className="text-[11px] text-rose-500 text-center py-0.5">
+                    {errorMessage}
                   </div>
                 ) : null}
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={!password || isVerifying || lockoutSec > 0}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl transition duration-150"
+                  className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-medium text-xs py-2 rounded-lg transition shadow-2xs"
                 >
-                  {isVerifying ? (
-                    <span>Memverifikasi...</span>
-                  ) : (
-                    <>
-                      <span>Buka Dashboard</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
+                  <span>{isVerifying ? 'Memeriksa...' : 'Buka'}</span>
+                  {!isVerifying && <ArrowRight className="w-3.5 h-3.5" />}
                 </button>
               </form>
             </div>
           )}
-
-          {/* Tab Session Note */}
-          <div className="mt-4 pt-4 border-t ui-border text-center">
-            <p className="text-[11px] ui-text-muted">
-              Sesi login aktif selama tab browser ini terbuka. Gunakan tombol Kunci di Header untuk mengunci sewaktu-waktu.
-            </p>
-          </div>
         </div>
       </div>
     </div>
