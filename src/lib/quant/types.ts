@@ -285,6 +285,14 @@ export interface RebalanceHistoryEntry {
   totalSellIdr: number;
   tradesSummary: string[];
   weightsAfter: Record<string, number>;
+  /** Snapshot of holdings prior to this commit for 1-click Undo restoration */
+  holdingsBefore?: Record<string, HoldingEntry>;
+  /** Snapshot of holdings after this commit */
+  holdingsAfter?: Record<string, HoldingEntry>;
+  /** Cash injection state prior to this commit */
+  cashInjectionBeforeIdr?: number;
+  /** Unspent cash remainder preserved in Sisa Kas Belanja (if table input was less than planned DCA) */
+  unspentCashRemainderIdr?: number;
 }
 
 export interface CrashLadderStep {

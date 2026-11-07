@@ -109,6 +109,7 @@ interface PortfolioRebalancerViewProps {
   rebalanceHistory: RebalanceHistoryEntry[];
   onCommitRebalanceToHoldings: (note?: string, planOverride?: RebalanceSummaryResult, isTopUpConfirmed?: boolean) => void;
   onDeleteRebalanceHistoryEntry: (id: string) => void;
+  onUndoRebalanceHistoryEntry?: (id: string) => void;
   initialCapitalMenu1Idr: number;
   monthlySavingsMenu1Idr: number;
   activePortfolioName: string;
@@ -172,6 +173,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   rebalanceHistory,
   onCommitRebalanceToHoldings,
   onDeleteRebalanceHistoryEntry,
+  onUndoRebalanceHistoryEntry,
   initialCapitalMenu1Idr,
   monthlySavingsMenu1Idr,
   activePortfolioName,
@@ -317,6 +319,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const [quickTotalIdr, setQuickTotalIdr] = useState<number>(initialCapitalMenu1Idr);
   // Feature 4: Interactive +1 Lot / -1 Lot lot overrides for IDX stocks
   const [lotOverrides, setLotOverrides] = useState<Record<string, number>>({});
+  const [undoTargetEntry, setUndoTargetEntry] = useState<RebalanceHistoryEntry | null>(null);
 
   type TableActionFilter = 'all' | 'active' | 'buy' | 'sell' | 'hold';
   const [tableActionFilter, setTableActionFilter] = useState<TableActionFilter>('all');
@@ -3991,7 +3994,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         Ringkasan Eksekusi
                       </th>
                       <th scope="col" className="ui-border border-b px-2 py-2 text-center">
-                        Hapus
+                        Aksi
                       </th>
                     </tr>
                   </thead>
@@ -4006,6 +4009,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           <div className="ui-text-muted text-[10px]">
                             Top-Up: {formatIdr(h.cashInjectedIdr, true)} • Beli:{' '}
                             {formatIdr(h.totalBuyIdr, true)}
+                            {h.unspentCashRemainderIdr !== undefined && h.unspentCashRemainderIdr > 0 && (
+                              <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                • Sisa Kas: {formatIdr(h.unspentCashRemainderIdr, true)}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="ui-border border-b px-3 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
@@ -4033,15 +4041,28 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
                         </td>
                         <td className="ui-border border-b px-2 py-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => onDeleteRebalanceHistoryEntry(h.id)}
-                            className="ui-text-muted hover:text-rose-600 p-1.5 rounded"
-                            title="Hapus log ini"
-                            aria-label={`Hapus log rebalance ${h.timestamp}`}
-                          >
-                            <Trash2 className="mx-auto h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            {onUndoRebalanceHistoryEntry && h.holdingsBefore && (
+                              <button
+                                type="button"
+                                onClick={() => setUndoTargetEntry(h)}
+                                className="ui-text-muted hover:text-amber-500 p-1.5 rounded transition"
+                                title="Kembalikan (Undo) posisi portfolio ke sebelum rebalance ini"
+                                aria-label={`Kembalikan rebalance ${h.timestamp}`}
+                              >
+                                <RotateCcw className="mx-auto h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => onDeleteRebalanceHistoryEntry(h.id)}
+                              className="ui-text-muted hover:text-rose-600 p-1.5 rounded transition"
+                              title="Hapus log ini dari riwayat"
+                              aria-label={`Hapus log rebalance ${h.timestamp}`}
+                            >
+                              <Trash2 className="mx-auto h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -4161,6 +4182,86 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm"
               >
                 Ya, Setujui Top-Up &amp; Terapkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Undo Rebalance Confirmation Modal */}
+      {undoTargetEntry && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="undo-modal-title"
+          onClick={() => setUndoTargetEntry(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200"
+        >
+          <div
+            tabIndex={-1}
+            className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-md p-6 space-y-4 outline-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                <RotateCcw className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 id="undo-modal-title" className="text-sm font-bold ui-text-main">
+                  Kembalikan (Undo) Rebalance?
+                </h3>
+                <p className="text-xs ui-text-muted">
+                  Memulihkan posisi holdings dan sisa kas ke kondisi sebelumnya
+                </p>
+              </div>
+            </div>
+
+            <div className="ui-subtle border ui-border rounded-lg p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="ui-text-secondary">Snapshot Rebalance:</span>
+                <span className="font-mono font-bold ui-text-main">{undoTargetEntry.timestamp}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="ui-text-secondary">Catatan:</span>
+                <span className="font-medium ui-text-main">{undoTargetEntry.note}</span>
+              </div>
+              <div className="flex justify-between items-center border-t ui-border pt-1.5">
+                <span className="ui-text-secondary">Total Portofolio Saat Dicatat:</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatIdr(undoTargetEntry.totalValueAfterIdr)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="ui-text-secondary">Akan Dikembalikan ke Total:</span>
+                <span className="font-mono font-bold ui-text-main">
+                  {formatIdr(undoTargetEntry.totalValueBeforeIdr)}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs ui-text-secondary leading-relaxed">
+              Tindakan ini akan mengembalikan seluruh unit/nilai aset portofolio dan nominal kas belanja ke kondisi tepat sebelum rebalance ini dicatat. Log ini akan dihapus dari jurnal riwayat.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setUndoTargetEntry(null)}
+                className="px-3.5 py-2 rounded-lg ui-subtle ui-border hover:opacity-90 ui-text-main text-xs font-semibold transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onUndoRebalanceHistoryEntry) {
+                    onUndoRebalanceHistoryEntry(undoTargetEntry.id);
+                  }
+                  setUndoTargetEntry(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition shadow-sm"
+              >
+                Ya, Kembalikan Posisi Ini
               </button>
             </div>
           </div>
