@@ -349,13 +349,20 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 overflow-y-auto animate-in fade-in"
     >
-      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-4xl my-auto ui-card border ui-border rounded-xl shadow-md overflow-hidden flex flex-col max-h-[92vh] outline-none">
+      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-4xl my-auto ui-modal overflow-hidden flex flex-col max-h-[92vh] outline-none">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2.5">
             <Building2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 id="broker-slip-modal-title" className="text-base font-bold ui-text-main flex items-center gap-2">
+              <h2
+                id="broker-slip-modal-title"
+                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                }}
+              >
                 <span>Multi-Platform Broker Order Slips</span>
                 <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border">
                   {platformGroups.length} Platform

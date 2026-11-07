@@ -40,12 +40,18 @@ export const MissingEnvScreen: React.FC = () => {
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>Keamanan Akses Terproteksi</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight ui-text-main mt-1">
+          <h1
+            className="text-2xl sm:text-3xl font-normal tracking-tight ui-text-main mt-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+            }}
+          >
             Konfigurasi Sandi Belum Ditemukan
           </h1>
           <p className="text-sm ui-text-secondary max-w-md">
             Sesuai standar keamanan, QuantPorto mewajibkan variabel lingkungan{' '}
-            <code className="text-rose-600 dark:text-rose-400 font-mono bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/30">
+            <code className="text-[#9E472A] dark:text-[#E08263] font-mono bg-[#9E472A]/10 px-1.5 py-0.5 rounded-[var(--radius-xs)] border border-[#9E472A]/30">
               VITE_APP_PASSWORD_HASH
             </code>{' '}
             disetel di file <code className="ui-text-main font-mono">.env</code> sebelum aplikasi dapat dibuka.
@@ -53,8 +59,8 @@ export const MissingEnvScreen: React.FC = () => {
         </div>
 
         {/* Interactive Hash Generator Card */}
-        <div className="ui-card ui-border rounded-xl p-5 sm:p-6 shadow-lg space-y-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+        <div className="ui-card rounded-[var(--radius-lg)] p-5 sm:p-6 shadow-surface space-y-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#21543D] dark:text-[#68B68E]">
             <KeyRound className="w-4 h-4" />
             <span>Alat Generator Hash SHA-256 Otomatis</span>
           </div>

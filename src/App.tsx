@@ -2917,7 +2917,7 @@ export function App() {
       {/* Keyboard Accessibility Skip Link (WCAG 2.4.1 Bypass Blocks) */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-lg focus:shadow-md focus:outline-none focus:text-xs focus:font-semibold"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3.5 focus:py-2 focus:bg-[#21543D] focus:text-[#F9F8F4] focus:rounded-[var(--radius-sm)] focus:shadow-md focus:outline-none focus:text-xs focus:font-semibold"
       >
         Lewati ke konten utama
       </a>
@@ -3214,11 +3214,11 @@ export function App() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border border-emerald-500/40 ui-card p-4 text-xs ui-text-main shadow-lg animate-in fade-in slide-in-from-bottom-5 duration-300"
+          className="fixed bottom-5 right-5 z-50 max-w-sm rounded-[var(--radius-lg)] border border-[#21543D]/30 ui-card p-4 text-xs ui-text-main shadow-elevated animate-in fade-in slide-in-from-bottom-5 duration-300"
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-              <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="flex items-center gap-2 font-bold text-[#21543D] dark:text-[#68B68E]">
+              <Check className="h-4 w-4 shrink-0 text-[#21543D] dark:text-[#68B68E]" />
               <span>{backupToast.message}</span>
             </div>
             <button
@@ -3233,7 +3233,7 @@ export function App() {
           <ul className="mt-2 space-y-1 text-[11px] ui-text-secondary border-t ui-border pt-2 font-mono">
             {backupToast.details.map((d, i) => (
               <li key={i} className="flex items-center gap-1.5">
-                <span className="text-emerald-500">•</span>
+                <span className="text-[#21543D] dark:text-[#68B68E]">•</span>
                 <span>{d}</span>
               </li>
             ))}

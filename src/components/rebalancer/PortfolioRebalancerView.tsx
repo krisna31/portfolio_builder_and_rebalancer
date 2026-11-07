@@ -3591,14 +3591,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <Bar
                     dataKey="Current"
                     name="Saat Ini (%)"
-                    fill="#f59e0b"
-                    radius={[3, 3, 0, 0]}
+                    fill="#8F580A"
+                    radius={[4, 4, 0, 0]}
                   />
                   <Bar
                     dataKey="Target"
                     name="Target (%)"
-                    fill="#10b981"
-                    radius={[3, 3, 0, 0]}
+                    fill="#21543D"
+                    radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -3966,9 +3966,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       <Area
                         type="monotone"
                         dataKey="NetWorthJuta"
-                        stroke="#10b981"
-                        fill="#10b981"
-                        fillOpacity={0.2}
+                        stroke="#21543D"
+                        fill="#21543D"
+                        fillOpacity={0.18}
                       />
                     </AreaChart>
                   </ResponsiveContainer>

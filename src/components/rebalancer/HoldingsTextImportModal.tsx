@@ -156,14 +156,21 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 animate-in fade-in duration-200"
     >
-      <div ref={containerRef} tabIndex={-1} className="ui-card ui-border relative flex max-h-[92vh] w-full max-w-3xl flex-col rounded-xl border shadow-md overflow-hidden outline-none">
+      <div ref={containerRef} tabIndex={-1} className="ui-modal relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden outline-none">
         {/* Header */}
         <div className="ui-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2.5">
             <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 id="holdings-import-modal-title" className="ui-text-main text-base font-bold sm:text-lg">
-                Import / Export Saldo Holding (Teks & Excel)
+              <h2
+                id="holdings-import-modal-title"
+                className="ui-text-main text-base sm:text-lg font-normal tracking-tight"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                }}
+              >
+                Import / Export Saldo Holding (Teks &amp; Excel)
               </h2>
               <p className="ui-text-muted text-xs">
                 Salin-tempel daftar aset dari Excel, Google Sheets, atau teks bebas tanpa perlu input satu per satu

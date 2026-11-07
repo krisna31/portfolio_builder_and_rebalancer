@@ -1,132 +1,371 @@
+/* ==========================================================================
+   QuantPorto — Theme 04: Limestone & Moss (ui-theme-mineral-botanical)
+   Lineage: Aesop Spaces / Muji Materiality / Raw Unglazed Stoneware
+   Stack: Vanilla CSS Variables + Tailwind v4 @theme + Verified Tokens
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,100..900,0..100,0..1;1,9..144,100..900,0..100,0..1&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *, :root:has(> head > meta[name="color-scheme"][content="dark"]), :root:has(> head > meta[name="color-scheme"][content="dark"]) *));
 
-:root {
-  /* Raw tokens for fallback & light-dark() */
-  --bg-page-light: #fafafa;
-  --bg-page-dark: #09090b;
+:root,
+[data-theme="light"],
+.light {
+  color-scheme: light;
 
-  --bg-card-light: #ffffff;
-  --bg-card-dark: #121215;
+  /* 1. Raw Travertine Limestone Ladders (Hue 95deg-106deg) */
+  --bg-canvas: #F1F0EA;
+  --bg-subtle: #E6E5DC;
+  --bg-surface: #F9F8F4;
+  --bg-elevated: #FFFFFF;
 
-  --bg-subtle-light: #f4f4f5;
-  --bg-subtle-dark: #18181b;
+  /* 2. Verified AAA/AA Botanical Ink Hierarchy */
+  --text-primary: #19201C;   /* 15.63:1 vs surface (AAA) */
+  --text-secondary: #424D46; /* 8.30:1 vs surface (AAA) */
+  --text-muted: #606E65;     /* 5.05:1 vs surface (AA) */
 
-  --bg-muted-light: #e4e4e7;
-  --bg-muted-dark: #27272a;
+  /* 3. Mineral Stoneware Borders */
+  --border-subtle: #DCDCD2;
+  --border-default: #C3C5B8;
+  --border-strong: #828A80;
 
-  --border-light: #e4e4e7;
-  --border-dark: #27272a;
+  /* 4. Deep Cypress Moss & Kiln Terracotta Clay */
+  --accent-primary: #21543D;
+  --accent-hover: #173D2C;
+  --accent-tint: oklch(40.4% 0.068 161.5 / 0.09);
+  --text-on-accent: #F9F8F4;
+  --accent-secondary: #9E472A;
 
-  --text-main-light: #09090b;
-  --text-main-dark: #fafafa;
+  --status-success: #216644;
+  --status-warning: #8F580A;
+  --status-danger: #A62E2E;
+  --status-info: #25586B;
 
-  --text-secondary-light: #3f3f46;
-  --text-secondary-dark: #d4d4d8;
+  /* 5. 6-Color Botanical & Mineral Data Scale */
+  --chart-1: #21543D; /* Deep Cypress */
+  --chart-2: #9E472A; /* Kiln Terracotta */
+  --chart-3: #25586B; /* Mineral Fjord */
+  --chart-4: #8F580A; /* Amber Resin */
+  --chart-5: #5D536B; /* Dried Lavender */
+  --chart-6: #606E65; /* Lichen Olive */
 
-  --text-muted-light: #71717a;
-  --text-muted-dark: #a1a1aa;
+  /* 6. Natural Overhead Penumbra Diffusion */
+  --shadow-surface: 0 4px 16px -4px rgba(25, 32, 28, 0.05);
+  --shadow-elevated: 0 12px 32px -8px rgba(25, 32, 28, 0.12), 0 2px 6px rgba(25, 32, 28, 0.04);
 
-  --brand-accent-light: #059669;
-  --brand-accent-dark: #10b981;
+  /* 7. Typography, Radii & Ceramic Motion */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --fraunces-soft: 10;
+  --fraunces-wonk: 0;
 
-  --scrollbar-track-light: #f4f4f5;
-  --scrollbar-track-dark: #121215;
-  --scrollbar-thumb-light: #d4d4d8;
-  --scrollbar-thumb-dark: #3f3f46;
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
 
-  /* Default fallback (light) */
-  --bg-page: var(--bg-page-light);
-  --bg-card: var(--bg-card-light);
-  --bg-subtle: var(--bg-subtle-light);
-  --bg-muted: var(--bg-muted-light);
-  --border-subtle: var(--border-light);
-  --text-main: var(--text-main-light);
-  --text-secondary: var(--text-secondary-light);
-  --text-muted: var(--text-muted-light);
-  --accent-color: var(--brand-accent-light);
-  --scrollbar-track: var(--scrollbar-track-light);
-  --scrollbar-thumb: var(--scrollbar-thumb-light);
+  --ctrl-sm: 34px;
+  --ctrl-md: 40px;
+  --ctrl-lg: 48px;
 
-  /* MANDATORY: Fallback for browsers without light-dark support */
-  @media (prefers-color-scheme: dark) {
-    --bg-page: var(--bg-page-dark);
-    --bg-card: var(--bg-card-dark);
-    --bg-subtle: var(--bg-subtle-dark);
-    --bg-muted: var(--bg-muted-dark);
-    --border-subtle: var(--border-dark);
-    --text-main: var(--text-main-dark);
-    --text-secondary: var(--text-secondary-dark);
-    --text-muted: var(--text-muted-dark);
-    --accent-color: var(--brand-accent-dark);
-    --scrollbar-track: var(--scrollbar-track-dark);
-    --scrollbar-thumb: var(--scrollbar-thumb-dark);
-  }
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 220ms;
+  --duration-panel: 320ms;
 
-  /* Use light-dark() when supported so <meta name="color-scheme"> override works automatically */
-  @supports (color: light-dark(white, black)) {
-    --bg-page: light-dark(var(--bg-page-light), var(--bg-page-dark));
-    --bg-card: light-dark(var(--bg-card-light), var(--bg-card-dark));
-    --bg-subtle: light-dark(var(--bg-subtle-light), var(--bg-subtle-dark));
-    --bg-muted: light-dark(var(--bg-muted-light), var(--bg-muted-dark));
-    --border-subtle: light-dark(var(--border-light), var(--border-dark));
-    --text-main: light-dark(var(--text-main-light), var(--text-main-dark));
-    --text-secondary: light-dark(var(--text-secondary-light), var(--text-secondary-dark));
-    --text-muted: light-dark(var(--text-muted-light), var(--text-muted-dark));
-    --accent-color: light-dark(var(--brand-accent-light), var(--brand-accent-dark));
-    --scrollbar-track: light-dark(var(--scrollbar-track-light), var(--scrollbar-track-dark));
-    --scrollbar-thumb: light-dark(var(--scrollbar-thumb-light), var(--scrollbar-thumb-dark));
-  }
+  /* Backward Compatibility Aliases for QuantPorto components */
+  --bg-page: var(--bg-canvas);
+  --bg-card: var(--bg-surface);
+  --bg-muted: var(--bg-subtle);
+  --text-main: var(--text-primary);
+  --accent-color: var(--accent-primary);
+  --scrollbar-track: var(--bg-subtle);
+  --scrollbar-thumb: var(--border-default);
 
-  /* MANDATORY: Automatically adapt native UI to user system preferences */
-  color-scheme: light dark;
+  /* Semantic UI Tokens */
+  --background: var(--bg-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--bg-surface);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-elevated);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: var(--text-on-accent);
+  --secondary: var(--bg-subtle);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-subtle);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--bg-subtle);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--status-danger);
+  --destructive-foreground: var(--text-on-accent);
+  --border: var(--border-subtle);
+  --input: var(--border-default);
+  --ring: var(--accent-primary);
+  --radius: var(--radius-md);
 
-  &:has(> head > meta[name="color-scheme"][content="dark"]) {
-    color-scheme: dark;
-  }
-  &:has(> head > meta[name="color-scheme"][content="light"]) {
-    color-scheme: light;
-  }
-
-  accent-color: var(--accent-color);
+  accent-color: var(--accent-primary);
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-color: var(--border-default) var(--bg-subtle);
+}
+
+/* System Dark Polarity (Wet Volcanic Basalt Hue 158deg) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not(.light) {
+    color-scheme: dark;
+    --bg-canvas: #111613;
+    --bg-subtle: #161D19;
+    --bg-surface: #1B231E;
+    --bg-elevated: #242E28;
+    --text-primary: #EAECE7;
+    --text-secondary: #B0B8B1;
+    --text-muted: #828D84;
+    --border-subtle: #26302A;
+    --border-default: #35423A;
+    --border-strong: #53665A;
+    --accent-primary: #68B68E;
+    --accent-hover: #82C7A3;
+    --accent-tint: oklch(71.5% 0.098 160.2 / 0.14);
+    --text-on-accent: #111613;
+    --accent-secondary: #E08263;
+    --status-success: #68B68E;
+    --status-warning: #E3A646;
+    --status-danger: #E87474;
+    --status-info: #6EB5C9;
+    --chart-1: #68B68E;
+    --chart-2: #E08263;
+    --chart-3: #6EB5C9;
+    --chart-4: #E3A646;
+    --chart-5: #B3A5C7;
+    --chart-6: #95A399;
+    --shadow-surface: inset 0 1px 0 rgba(234, 236, 231, 0.04);
+    --shadow-elevated: 0 16px 36px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(234, 236, 231, 0.05);
+
+    --bg-page: var(--bg-canvas);
+    --bg-card: var(--bg-surface);
+    --bg-muted: var(--bg-subtle);
+    --text-main: var(--text-primary);
+    --accent-color: var(--accent-primary);
+    --scrollbar-track: var(--bg-subtle);
+    --scrollbar-thumb: var(--border-default);
+  }
+}
+
+/* Explicit Persisted Dark Mode */
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+  --bg-canvas: #111613;
+  --bg-subtle: #161D19;
+  --bg-surface: #1B231E;
+  --bg-elevated: #242E28;
+  --text-primary: #EAECE7;   /* 13.52:1 vs surface (AAA) */
+  --text-secondary: #B0B8B1; /* 7.92:1 vs surface (AAA) */
+  --text-muted: #828D84;     /* 4.67:1 vs surface (AA) */
+  --border-subtle: #26302A;
+  --border-default: #35423A;
+  --border-strong: #53665A;
+  --accent-primary: #68B68E;
+  --accent-hover: #82C7A3;
+  --accent-tint: oklch(71.5% 0.098 160.2 / 0.14);
+  --text-on-accent: #111613;
+  --accent-secondary: #E08263;
+  --status-success: #68B68E;
+  --status-warning: #E3A646;
+  --status-danger: #E87474;
+  --status-info: #6EB5C9;
+  --chart-1: #68B68E;
+  --chart-2: #E08263;
+  --chart-3: #6EB5C9;
+  --chart-4: #E3A646;
+  --chart-5: #B3A5C7;
+  --chart-6: #95A399;
+  --shadow-surface: inset 0 1px 0 rgba(234, 236, 231, 0.04);
+  --shadow-elevated: 0 16px 36px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(234, 236, 231, 0.05);
+
+  --bg-page: var(--bg-canvas);
+  --bg-card: var(--bg-surface);
+  --bg-muted: var(--bg-subtle);
+  --text-main: var(--text-primary);
+  --accent-color: var(--accent-primary);
+  --scrollbar-track: var(--bg-subtle);
+  --scrollbar-thumb: var(--border-default);
+}
+
+/* Tailwind CSS v4 @theme inline Token Bridge */
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-subtle: var(--bg-subtle);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-ink: var(--text-primary);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-signal: var(--accent-primary);
+  --color-signal-hover: var(--accent-hover);
+  --color-signal-tint: var(--accent-tint);
+  --color-on-signal: var(--text-on-accent);
+  --color-signal-secondary: var(--accent-secondary);
+  --color-success: var(--status-success);
+  --color-warning: var(--status-warning);
+  --color-danger: var(--status-danger);
+  --color-info: var(--status-info);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  /* Deep Cypress Moss scale mapped to emerald utilities */
+  --color-emerald-50: #EBF5F0;
+  --color-emerald-100: #D5EBE0;
+  --color-emerald-200: #AFD7C2;
+  --color-emerald-300: #8FC9A8;
+  --color-emerald-400: #68B68E;
+  --color-emerald-500: #3D8B66;
+  --color-emerald-600: #21543D;
+  --color-emerald-700: #1A4431;
+  --color-emerald-800: #143526;
+  --color-emerald-900: #0E251B;
+  --color-emerald-950: #081610;
+
+  /* Kiln Terracotta scale mapped to rose utilities */
+  --color-rose-50: #FDF5F3;
+  --color-rose-100: #F9E5E0;
+  --color-rose-200: #F2C7BC;
+  --color-rose-300: #EAA89B;
+  --color-rose-400: #E08263;
+  --color-rose-500: #C25B40;
+  --color-rose-600: #9E472A;
+  --color-rose-700: #7D351F;
+  --color-rose-800: #5E2615;
+  --color-rose-900: #42180C;
+  --color-rose-950: #260D06;
+
+  /* Warm Amber Resin scale mapped to amber utilities */
+  --color-amber-50: #FEF9EE;
+  --color-amber-100: #FBF0D5;
+  --color-amber-200: #F7DEAA;
+  --color-amber-300: #F3CA7E;
+  --color-amber-400: #E3A646;
+  --color-amber-500: #B87B1E;
+  --color-amber-600: #8F580A;
+  --color-amber-700: #6F4106;
+  --color-amber-800: #502E03;
+  --color-amber-900: #361E01;
+  --color-amber-950: #211100;
+
+  /* Mineral Fjord Slate scale mapped to sky & blue utilities */
+  --color-sky-50: #F1F8FA;
+  --color-sky-100: #DEEEF3;
+  --color-sky-200: #BCDEE7;
+  --color-sky-300: #95CCD9;
+  --color-sky-400: #6EB5C9;
+  --color-sky-500: #448FA3;
+  --color-sky-600: #25586B;
+  --color-sky-700: #1B404E;
+  --color-sky-800: #132D37;
+  --color-sky-900: #0C1D23;
+  --color-sky-950: #060E12;
+
+  /* Limestone Travertine & Volcanic Basalt scale mapped to zinc & slate */
+  --color-zinc-50: #F9F8F4;
+  --color-zinc-100: #F1F0EA;
+  --color-zinc-200: #E6E5DC;
+  --color-zinc-300: #DCDCD2;
+  --color-zinc-400: #C3C5B8;
+  --color-zinc-500: #A8A492;
+  --color-zinc-600: #828A80;
+  --color-zinc-700: #606E65;
+  --color-zinc-800: #35423A;
+  --color-zinc-900: #1B231E;
+  --color-zinc-950: #111613;
 }
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-page);
-    color: var(--text-main);
+    margin: 0;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     overflow-wrap: break-word;
   }
 
-  /* Balanced headline wrapping for cleaner institutional typography (Modern Web Guidance: typography) */
+  /* CRITICAL: Lock WONK=0 and refined weight 380 on Fraunces to suppress goofy arches */
   h1,
   h2,
-  h3,
-  h4,
-  th {
+  .mineral-display {
+    font-family: var(--font-display);
+    font-weight: 380;
+    font-optical-sizing: none;
+    font-variation-settings: "opsz" 72, "SOFT" 10, "WONK" 0;
+    letter-spacing: -0.022em;
+    line-height: 1.15;
+    color: var(--text-primary);
     text-wrap: balance;
   }
 
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  h3,
+  h4 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.28;
+    color: var(--text-primary);
+    text-wrap: balance;
   }
 
-  /* Institutional Tabular Numeric Precision: prevent digit width shifts / layout jittering */
+  /* Apothecary Numerals & Financial Tables (DM Mono maxes out at 500 — never faux bold) */
+  code,
+  pre,
+  .font-mono,
+  .mineral-price,
+  .mineral-spec,
   table,
   input[type="number"],
-  .font-mono,
   .tabular-nums {
+    font-family: var(--font-mono);
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
-    font-feature-settings: 'tnum' 1;
   }
 }
 
-/* Prevent scroll gestures inside modal dialogs or over backdrops from chaining to the underlying page
-   (Modern Web Guidance: prevent-page-scroll-under-modal-dialog) */
+/* Modal containment */
 dialog:modal,
 [role="dialog"][aria-modal="true"] {
   overscroll-behavior: contain;
@@ -150,63 +389,70 @@ dialog::backdrop {
   }
 }
 
-/* Tone down persistent spin/pulse animations when user requests reduced motion (Modern Web Guidance: motion) */
 @media (prefers-reduced-motion: reduce) {
-  .animate-spin,
-  .animate-pulse {
-    animation: none !important;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Ensure native select options adapt cleanly in both Light and Dark mode */
+/* Select option adapting cleanly */
 select option {
-  background-color: var(--bg-card);
-  color: var(--text-main);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
 }
 
-/* Semantic Minimalist Utility Classes that adapt seamlessly between Light & Dark */
+/* Semantic Minimalist Mineral & Botanical Utility Classes */
 .ui-page {
-  background-color: var(--bg-page);
-  color: var(--text-main);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
 }
 
 .ui-card {
-  background-color: var(--bg-card);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-surface);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .ui-subtle {
   background-color: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
 }
 
 .ui-input {
   background-color: var(--bg-subtle);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-main);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
 .ui-input:focus {
-  border-color: var(--accent-color);
+  border-color: var(--accent-primary);
 }
 
 .ui-input:focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Global Keyboard Accessibility Focus Ring (Modern Web Guidance compliant: 3:1+ contrast with outline-offset) */
+/* Global Keyboard Accessibility Focus Ring */
 :where(a:any-link, button, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 .ui-modal {
-  background-color: var(--bg-card);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
 }
 
-/* Defer rendering heavy below-the-fold sections (Modern Web Guidance: defer-rendering-heavy-content) */
 .ui-section-deferred {
   content-visibility: auto;
   contain-intrinsic-size: auto none auto 420px;
@@ -217,7 +463,7 @@ select option {
 }
 
 .ui-text-main {
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .ui-text-secondary {
@@ -228,38 +474,24 @@ select option {
   color: var(--text-muted);
 }
 
-/* Legacy fallback for WebKit/Blink browsers without scrollbar-color */
-@supports not (scrollbar-color: auto) {
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
-  }
-}
-
-/* Custom Driver.js Spotlight & Popover Theme for QuantPorto (Crisp Minimalist Terminal) */
+/* Custom Driver.js Spotlight & Popover Theme (Limestone & Moss Edition) */
 .driver-popover {
-  background-color: var(--bg-card) !important;
-  color: var(--text-main) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25), 0 4px 6px -4px rgba(0, 0, 0, 0.15) !important;
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-elevated) !important;
   padding: 1.125rem !important;
   max-width: 380px !important;
-  font-family: inherit !important;
+  font-family: var(--font-sans) !important;
 }
 
 .driver-popover-title {
-  color: var(--text-main) !important;
-  font-size: 0.95rem !important;
-  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-display) !important;
+  font-variation-settings: "opsz" 48, "SOFT" 10, "WONK" 0 !important;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
   margin-bottom: 0.5rem !important;
 }
 
@@ -270,25 +502,25 @@ select option {
 }
 
 .driver-popover-description strong {
-  color: var(--text-main) !important;
+  color: var(--text-primary) !important;
 }
 
 .driver-popover-progress-text {
   color: var(--text-muted) !important;
   font-size: 0.75rem !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: var(--font-mono) !important;
 }
 
 .driver-popover-next-btn {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
+  background-color: var(--accent-primary) !important;
+  color: var(--text-on-accent) !important;
   border: none !important;
-  border-radius: 0.5rem !important;
+  border-radius: var(--radius-sm) !important;
   padding: 0.4rem 0.85rem !important;
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   text-shadow: none !important;
-  transition: opacity 0.2s ease !important;
+  transition: opacity var(--duration-fast) var(--ease-out) !important;
 }
 
 .driver-popover-next-btn:hover {
@@ -299,7 +531,7 @@ select option {
   background-color: var(--bg-subtle) !important;
   color: var(--text-secondary) !important;
   border: 1px solid var(--border-subtle) !important;
-  border-radius: 0.5rem !important;
+  border-radius: var(--radius-sm) !important;
   padding: 0.4rem 0.75rem !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
@@ -311,20 +543,20 @@ select option {
 }
 
 .driver-popover-close-btn:hover {
-  color: var(--text-main) !important;
+  color: var(--text-primary) !important;
 }
 
 .driver-popover-arrow-side-left.driver-popover-arrow {
-  border-left-color: var(--bg-card) !important;
+  border-left-color: var(--bg-surface) !important;
 }
 .driver-popover-arrow-side-right.driver-popover-arrow {
-  border-right-color: var(--bg-card) !important;
+  border-right-color: var(--bg-surface) !important;
 }
 .driver-popover-arrow-side-top.driver-popover-arrow {
-  border-top-color: var(--bg-card) !important;
+  border-top-color: var(--bg-surface) !important;
 }
 .driver-popover-arrow-side-bottom.driver-popover-arrow {
-  border-bottom-color: var(--bg-card) !important;
+  border-bottom-color: var(--bg-surface) !important;
 }
 
 /* =========================================================================
@@ -336,7 +568,6 @@ select option {
     margin: 8mm 10mm;
   }
 
-  /* Completely remove background app layout from print flow */
   header,
   main,
   footer,
@@ -348,8 +579,8 @@ select option {
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    background: #ffffff !important;
-    color: #0f172a !important;
+    background: #FFFFFF !important;
+    color: #19201C !important;
     font-size: 8.5pt !important;
     line-height: 1.3 !important;
     height: auto !important;
@@ -357,7 +588,6 @@ select option {
     overflow: visible !important;
   }
 
-  /* Reset modal backdrop for printing */
   .factsheet-modal-backdrop {
     position: static !important;
     display: block !important;
@@ -405,17 +635,13 @@ select option {
     break-inside: avoid !important;
   }
 
-  /* Force background colors and borders to print properly */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Prevent awkward table or block page breaks */
   tr, .card, table {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 }
-
-

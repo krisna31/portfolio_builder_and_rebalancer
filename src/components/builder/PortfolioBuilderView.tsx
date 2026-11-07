@@ -3069,8 +3069,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Bar
                     dataKey="capitalWeight"
                     name="Bobot Modal (%)"
-                    fill="#10b981"
-                    radius={[3, 3, 0, 0]}
+                    fill="#21543D"
+                    radius={[4, 4, 0, 0]}
                     className="cursor-pointer"
                     onClick={(data) => {
                       if (data?.assetId) {
@@ -3082,8 +3082,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Bar
                     dataKey="riskContribution"
                     name="Kontribusi Risiko (%)"
-                    fill="#f59e0b"
-                    radius={[3, 3, 0, 0]}
+                    fill="#8F580A"
+                    radius={[4, 4, 0, 0]}
                     className="cursor-pointer"
                     onClick={(data) => {
                       if (data?.assetId) {
@@ -3254,18 +3254,18 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <ReferenceLine
                     x={solvedMetrics.maxDrawdown}
-                    stroke="#0ea5e9"
+                    stroke="#25586B"
                     strokeDasharray="3 3"
                   />
                   <ReferenceLine
                     y={solvedMetrics.cagr}
-                    stroke="#0ea5e9"
+                    stroke="#25586B"
                     strokeDasharray="3 3"
                   />
                   <Scatter
                     name="15 Optimal"
                     data={scatterOptimalData}
-                    fill="#10b981"
+                    fill="#21543D"
                     className="cursor-pointer"
                     onClick={(pt) => {
                       if (pt?.preset) {
@@ -3277,7 +3277,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     <Scatter
                       name="10 Dominated"
                       data={scatterDominatedData}
-                      fill="#f43f5e"
+                      fill="#9E472A"
                       className="cursor-pointer"
                       onClick={(pt) => {
                         if (pt?.preset) {
@@ -3289,10 +3289,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Scatter
                     name="Active Portfolio"
                     data={activePointData}
-                    fill="#0ea5e9"
+                    fill="#25586B"
                   >
                     {activePointData.map((_, idx) => (
-                      <Cell key={idx} fill="#0ea5e9" />
+                      <Cell key={idx} fill="#25586B" />
                     ))}
                   </Scatter>
                 </ScatterChart>

@@ -36,16 +36,23 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
       <div
         ref={containerRef}
         tabIndex={-1}
-        className="relative w-full max-w-md ui-card border ui-border rounded-xl shadow-md overflow-hidden ui-text-main outline-none"
+        className="relative w-full max-w-md ui-modal overflow-hidden ui-text-main outline-none"
       >
         {/* Header with warning accent */}
         <div className="flex items-center justify-between p-4 border-b ui-border bg-rose-500/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-rose-500/20 text-rose-500 border border-rose-500/30 flex items-center justify-center">
               <AlertTriangle className="w-4 h-4 text-rose-500" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="reset-modal-title" className="text-sm font-semibold ui-text-main">
+              <h2
+                id="reset-modal-title"
+                className="text-base font-normal tracking-tight ui-text-main"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                }}
+              >
                 Reset Semua ke Kondisi Awal?
               </h2>
               <p className="text-xs ui-text-muted">

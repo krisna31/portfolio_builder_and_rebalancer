@@ -60,13 +60,19 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen ui-page flex items-center justify-center p-4">
-          <div className="w-full max-w-lg ui-card ui-border rounded-xl p-6 sm:p-8 shadow-lg space-y-5">
+          <div className="w-full max-w-lg ui-card rounded-[var(--radius-lg)] p-6 sm:p-8 shadow-surface space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[#9E472A]/15 text-[#9E472A] dark:text-[#E08263] border border-[#9E472A]/30 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold ui-text-main">
+                <h1
+                  className="text-lg sm:text-xl font-normal tracking-tight ui-text-main"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                  }}
+                >
                   Terjadi Kendala Tampilan
                 </h1>
                 <p className="text-xs ui-text-muted mt-0.5">
@@ -75,9 +81,9 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            <div className="p-3.5 ui-subtle rounded-lg ui-border text-xs space-y-2">
+            <div className="p-3.5 ui-subtle rounded-[var(--radius-sm)] ui-border text-xs space-y-2">
               <div className="ui-text-secondary font-semibold">Pesan Kesalahan:</div>
-              <div className="font-mono text-rose-600 dark:text-rose-400 text-[11px] break-words">
+              <div className="font-mono text-[#9E472A] dark:text-[#E08263] text-[11px] break-words">
                 {this.state.error?.message || 'Unknown Application Error'}
               </div>
             </div>
@@ -86,7 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#21543D] hover:bg-[#173D2C] dark:bg-[#68B68E] dark:hover:bg-[#82C7A3] text-white dark:text-[#111613] rounded-[var(--radius-sm)] text-xs font-semibold shadow-sm transition"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Muat Ulang Halaman</span>
@@ -95,9 +101,9 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleResetStorage}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 ui-subtle hover:opacity-90 ui-text-main ui-border rounded-lg text-xs font-semibold transition"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 ui-subtle hover:opacity-90 ui-text-main ui-border rounded-[var(--radius-sm)] text-xs font-semibold transition"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+                <RotateCcw className="w-3.5 h-3.5 text-[#9E472A] dark:text-[#E08263]" />
                 <span>Reset Data ke Awal</span>
               </button>
             </div>

@@ -284,13 +284,20 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       }}
       className="factsheet-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 overflow-y-auto"
     >
-      <div ref={containerRef} tabIndex={-1} className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-card ui-border rounded-xl shadow-md overflow-hidden flex flex-col max-h-[95vh] outline-none">
+      <div ref={containerRef} tabIndex={-1} className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-modal overflow-hidden flex flex-col max-h-[95vh] outline-none">
         {/* Top Control Bar (Hidden on print) */}
         <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 ui-subtle border-b ui-border">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h2 id="factsheet-modal-title" className="text-sm sm:text-base font-semibold ui-text-main">
+              <h2
+                id="factsheet-modal-title"
+                className="text-base sm:text-lg font-normal ui-text-main tracking-tight"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                }}
+              >
                 Institutional 1-Page Factsheet
               </h2>
               <p className="text-[11px] ui-text-muted">

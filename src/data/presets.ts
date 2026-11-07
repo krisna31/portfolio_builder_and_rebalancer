@@ -39,7 +39,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     lotSize: 1,
     allowFractional: true,
     isCoreBenchmark: true,
-    color: '#94a3b8', // Slate
+    color: '#606E65', // Lichen Olive
     description: 'Instrumen paling aman & stabil tanpa drawdown (3.76% CAGR). Cocok untuk dana darurat & parkir kas.',
     dividendYield: 3.76,
     dividendTaxPercent: 0,
@@ -59,7 +59,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     lotSize: 1,
     allowFractional: true,
     isCoreBenchmark: true,
-    color: '#38bdf8', // Sky Blue
+    color: '#424D46', // Travertine Slate
     description: 'Jangkar utama (anchor) di semua strategi Risk Parity & Risk Budgeting (ABF Indonesia Bond Index / Obligasi Negara).',
     dividendYield: 6.2,
     dividendTaxPercent: 0,
@@ -80,7 +80,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     allowFractional: false,
     isCoreBenchmark: true,
     yahooSymbol: 'BBCA.JK',
-    color: '#3b82f6', // Blue
+    color: '#21543D', // Deep Cypress Moss
     description: 'Benchmark saham Indonesia terbaik menurut sejarah dibanding LQ45/Reksa Dana Saham (06:17).',
     dividendYield: 2.8,
     dividendTaxPercent: 10,
@@ -102,7 +102,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: true,
     coingeckoId: 'pax-gold',
     yahooSymbol: 'GLD',
-    color: '#f59e0b', // Amber / Gold
+    color: '#8F580A', // Amber Ochre Resin
     description: 'Lindung nilai (hedge) inflasi dan krisis geopolitik dengan korelasi rendah terhadap saham.',
     dividendYield: 0,
     dividendTaxPercent: 0,
@@ -123,7 +123,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     allowFractional: true,
     isCoreBenchmark: true,
     yahooSymbol: 'SPY',
-    color: '#10b981', // Emerald
+    color: '#25586B', // Mineral Fjord Slate
     description: '500 perusahaan terbesar di AS. Base case ekuitas global dengan efisiensi return/risiko tinggi.',
     dividendYield: 1.3,
     dividendTaxPercent: 15,
@@ -144,7 +144,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     allowFractional: true,
     isCoreBenchmark: true,
     yahooSymbol: 'QQQ',
-    color: '#8b5cf6', // Violet
+    color: '#5D536B', // Dried Lavender Slate
     description: 'Indeks teknologi & pertumbuhan AS (Nasdaq-100). Return lebih agresif dibanding S&P 500.',
     dividendYield: 0.6,
     dividendTaxPercent: 15,
@@ -166,7 +166,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: true,
     coingeckoId: 'bitcoin',
     yahooSymbol: 'BTC-USD',
-    color: '#f97316', // Orange
+    color: '#9E472A', // Kiln Terracotta
     description: 'Aset kripto dengan kapitalisasi terbesar (49.39% CAGR, 70.61% Max DD). Pendorong alpha utama di Risk Budgeting.',
     dividendYield: 0,
     dividendTaxPercent: 0,
@@ -188,7 +188,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: true,
     coingeckoId: 'ethereum',
     yahooSymbol: 'ETH-USD',
-    color: '#ec4899', // Pink/Magenta
+    color: '#B45330', // Warm Sienna Terracotta
     description: 'Return tertinggi di data 5 tahun (76.55% CAGR) namun dengan drawdown ekstrem (76.15%).',
     dividendYield: 3.1, // ETH Staking yield
     dividendTaxPercent: 0,
@@ -212,7 +212,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'BMRI.JK',
-    color: '#2563eb',
+    color: '#2D6A4F', // Cypress Pine
     description: 'Diversifikasi saham Big 4 Banking Indonesia pendamping BBCA (disebut di menit 14:32).',
     dividendYield: 5.2,
     dividendTaxPercent: 10,
@@ -234,7 +234,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'BBRI.JK',
-    color: '#1d4ed8',
+    color: '#1B4332', // Deep Forest Pine
     description: 'Diversifikasi saham Big 4 Banking Indonesia dengan dividen yield tinggi (14:32).',
     dividendYield: 6.4,
     dividendTaxPercent: 10,
@@ -256,7 +256,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'BBNI.JK',
-    color: '#60a5fa',
+    color: '#3E5C50', // Moss Sage
     description: 'Diversifikasi saham Big 4 Banking Indonesia (14:32).',
     dividendYield: 5.4,
     dividendTaxPercent: 10,
@@ -278,7 +278,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'NISP.JK',
-    color: '#dc2626',
+    color: '#52796F', // Earthy Pine
     description: 'Saham perbankan second-liner dengan valuasi menarik & dividen kuat (disebut di 14:32).',
     dividendYield: 5.5,
     dividendTaxPercent: 10,
@@ -300,7 +300,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'PTBA.JK',
-    color: '#0284c7',
+    color: '#784421', // Coal Terracotta
     description: 'Saham batubara BUMN dengan dividend yield tinggi (contoh pengganti slot BBCA di tabel custom).',
     dividendYield: 12.5,
     dividendTaxPercent: 10,
@@ -322,7 +322,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'AADI.JK',
-    color: '#0d9488',
+    color: '#6B3A19', // Mineral Earth
     description: 'Spin-off batubara termal Adaro dengan arus kas & dividen kuat.',
     dividendYield: 11.0,
     dividendTaxPercent: 10,
@@ -344,7 +344,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'ADRO.JK',
-    color: '#059669',
+    color: '#8A5028', // Raw Earth
     description: 'Induk energi & mineral hijau (ex-Adaro Energy).',
     dividendYield: 9.5,
     dividendTaxPercent: 10,
@@ -366,7 +366,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'TLKM.JK',
-    color: '#e11d48',
+    color: '#8A4A4A', // Faded Madder
     description: 'Bluechip telekomunikasi terbesar di Indonesia.',
     dividendYield: 6.1,
     dividendTaxPercent: 10,
@@ -388,7 +388,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'BBCA',
     yahooSymbol: 'ASII.JK',
-    color: '#4f46e5',
+    color: '#455259', // Basalt Slate
     description: 'Konglomerasi otomotif, alat berat (UNTR), dan jasa keuangan.',
     dividendYield: 7.8,
     dividendTaxPercent: 10,
@@ -410,7 +410,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'SPY',
     yahooSymbol: 'SCHD',
-    color: '#059669',
+    color: '#366475', // Oceanic Slate
     description: 'ETF saham dividen AS defensif sebagai pelengkap SPY.',
     dividendYield: 3.6,
     dividendTaxPercent: 15,
@@ -432,7 +432,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     isCoreBenchmark: false,
     parentBenchmarkId: 'QQQ',
     yahooSymbol: 'SMH',
-    color: '#a855f7',
+    color: '#4B425A', // Muted Quartz
     description: 'ETF Semikonduktor & AI AS (NVDA, TSMC, Broadcom) untuk pencari alpha di sektor teknologi.',
     dividendYield: 0.5,
     dividendTaxPercent: 15,
@@ -455,7 +455,7 @@ export const CORE_AND_EXPANDED_ASSETS: AssetDefinition[] = [
     parentBenchmarkId: 'ETH',
     coingeckoId: 'solana',
     yahooSymbol: 'SOL-USD',
-    color: '#14b8a6',
+    color: '#803820', // Burnt Terracotta
     description: 'High-throughput Layer-1 ("Ethereum Killer" yang disinggung di menit 11:52 & 16:41).',
     dividendYield: 5.5, // Native SOL staking yield
     dividendTaxPercent: 0,

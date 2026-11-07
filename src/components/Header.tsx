@@ -443,32 +443,44 @@ export const Header: React.FC<HeaderProps> = ({
       <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-2.5">
           <div className="flex items-center justify-between gap-2">
-            {/* Minimalist Brand Title */}
-            <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Minimalist Botanical Brand Title (Fraunces & DM Mono) */}
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <BrandLogo className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
               <div>
-                <h1 className="ui-text-main text-sm font-bold tracking-tight sm:text-base leading-none">
-                  QuantPorto
-                </h1>
+                <div className="flex items-baseline gap-1.5">
+                  <h1
+                    className="ui-text-main text-base sm:text-lg leading-none"
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                      fontWeight: 400,
+                    }}
+                  >
+                    QuantPorto
+                  </h1>
+                  <span className="hidden sm:inline-block font-mono text-[9px] uppercase tracking-wider text-[#21543D] dark:text-[#68B68E] bg-[#21543D]/10 dark:bg-[#68B68E]/15 px-1.5 py-0.5 rounded-[var(--radius-xs)] font-medium">
+                    Rp10M Edition
+                  </span>
+                </div>
                 <p className="ui-text-muted hidden text-[11px] sm:block mt-0.5 font-medium">
-                  Risk Parity &amp; Rebalancing Engine
+                  Risk Parity &amp; Botanical Rebalancing
                 </p>
               </div>
             </div>
 
-            {/* Desktop Primary Navigation Tabs */}
+            {/* Desktop Primary Navigation Tabs (Tactile Segmented Control) */}
             <nav
               id="tour-nav-tabs"
               aria-label="Utama (Desktop)"
-              className="ui-subtle hidden items-center gap-1 rounded-lg p-1 lg:flex"
+              className="ui-subtle hidden items-center gap-1 rounded-[var(--radius-sm)] p-1 lg:flex border border-[var(--border-subtle)]"
             >
               <button
                 type="button"
                 onClick={() => setActiveTab('builder')}
                 title="Portfolio Builder (Shortcut: Alt+1)"
-                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'builder'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    ? 'ui-card text-[#21543D] dark:text-[#68B68E] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -479,9 +491,9 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
                 title="Portfolio Rebalancer (Shortcut: Alt+2)"
-                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'rebalancer'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    ? 'ui-card text-[#21543D] dark:text-[#68B68E] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -492,9 +504,9 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setActiveTab('roadmap')}
                 title="Wealth Simulator (Shortcut: Alt+3)"
-                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'roadmap'
-                    ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                    ? 'ui-card text-[#21543D] dark:text-[#68B68E] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
               >
@@ -511,9 +523,9 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenRecommender}
                 title="Tanya Quant: Kuis profil risiko"
-                className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-500/20"
+                className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[#21543D]/30 bg-[#21543D]/10 px-2.5 py-1.5 text-xs font-semibold text-[#21543D] dark:border-[#68B68E]/30 dark:bg-[#68B68E]/10 dark:text-[#68B68E] transition hover:bg-[#21543D]/20 dark:hover:bg-[#68B68E]/20"
               >
-                <Compass className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <Compass className="h-3.5 w-3.5 shrink-0 text-[#21543D] dark:text-[#68B68E]" />
                 <span>Tanya Quant</span>
               </button>
 
@@ -530,13 +542,13 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsToolsMenuOpen(false);
                   }}
                   title="Panduan & Pintasan (?)"
-                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
                     isHelpMenuOpen
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      ? 'border-[#21543D]/40 bg-[#21543D]/10 text-[#21543D] dark:border-[#68B68E]/40 dark:bg-[#68B68E]/10 dark:text-[#68B68E]'
                       : 'ui-subtle ui-text-main hover:opacity-80'
                   }`}
                 >
-                  <HelpCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <HelpCircle className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                   <span>Panduan</span>
                   <ChevronDown
                     className={`h-3 w-3 transition-transform ${
@@ -617,9 +629,9 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsToolsMenuOpen(false);
                     setIsHelpMenuOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
                     isExportMenuOpen
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      ? 'border-[#21543D]/40 bg-[#21543D]/10 text-[#21543D] dark:border-[#68B68E]/40 dark:bg-[#68B68E]/10 dark:text-[#68B68E]'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
                   title="Ekspor & Dokumen"
@@ -634,7 +646,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isExportMenuOpen && (
-                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-60 rounded-xl p-1.5 text-xs shadow-lg space-y-0.5">
+                  <div className="ui-modal absolute right-0 z-50 mt-1.5 w-60 p-1.5 text-xs space-y-0.5">
                     {onOpenFactsheet && (
                       <button
                         type="button"
@@ -642,10 +654,10 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenFactsheet();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
                         <div className="flex items-center gap-2">
-                          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <FileSpreadsheet className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                           <span>Factsheet</span>
                         </div>
                         <span className="font-mono text-[10px] ui-text-muted">A4</span>
@@ -659,10 +671,10 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenOrderSlip();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                          <Building2 className="h-3.5 w-3.5 text-[#25586B] dark:text-[#6EB5C9]" />
                           <span>Slip Broker</span>
                         </div>
                         <span className="font-mono text-[10px] ui-text-muted">App</span>
@@ -675,13 +687,13 @@ export const Header: React.FC<HeaderProps> = ({
                         onCopyShareUrl();
                         setTimeout(() => setIsExportMenuOpen(false), 800);
                       }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                     >
                       <div className="flex items-center gap-2">
                         {shareCopied ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <Check className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                         ) : (
-                          <Share2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <Share2 className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                         )}
                         <span>{shareCopied ? 'Tersalin' : 'Bagikan Link'}</span>
                       </div>
@@ -695,10 +707,10 @@ export const Header: React.FC<HeaderProps> = ({
                           setIsExportMenuOpen(false);
                           onOpenDataTransfer();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                       >
                         <div className="flex items-center gap-2">
-                          <Database className="h-3.5 w-3.5 text-emerald-500" />
+                          <Database className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                           <span>Transfer Data</span>
                         </div>
                         <span className="font-mono text-[10px] ui-text-muted">JSON</span>
@@ -709,12 +721,12 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={onQuickCopyConfig}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                         title="Salin konfigurasi sebagai teks JSON"
                       >
                         <div className="flex items-center gap-2">
                           {quickCopyFeedback ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-500" />
+                            <Check className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                           ) : (
                             <Copy className="h-3.5 w-3.5" />
                           )}
@@ -728,7 +740,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={onExportJson}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs hover:ui-text-main transition"
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs hover:ui-text-main transition"
                       >
                         <Download className="h-3 w-3" />
                         <span>Export</span>
@@ -736,7 +748,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs hover:ui-text-main transition"
+                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs hover:ui-text-main transition"
                       >
                         <Upload className="h-3 w-3" />
                         <span>Import</span>
@@ -758,9 +770,9 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsExportMenuOpen(false);
                     setIsHelpMenuOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      ? 'border-[#21543D]/40 bg-[#21543D]/10 text-[#21543D] dark:border-[#68B68E]/40 dark:bg-[#68B68E]/10 dark:text-[#68B68E]'
                       : 'ui-subtle ui-text-secondary hover:opacity-80'
                   }`}
                   title="Pengaturan & Pasar"
@@ -775,9 +787,9 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isToolsMenuOpen && (
-                  <div className="ui-card border ui-border absolute right-0 z-50 mt-1.5 w-64 rounded-xl p-2 text-xs shadow-lg space-y-2">
+                  <div className="ui-modal absolute right-0 z-50 mt-1.5 w-64 p-2 text-xs space-y-2">
                     {/* Kurs USD */}
-                    <div className="ui-subtle flex items-center justify-between rounded-lg px-2.5 py-1.5">
+                    <div className="ui-subtle flex items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5">
                       <span className="ui-text-secondary text-xs">Kurs USD:</span>
                       <div className="flex items-center gap-1">
                         <span className="ui-text-muted font-mono text-[11px]">Rp</span>
@@ -796,14 +808,14 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => setRdptPromoActive(!rdptPromoActive)}
-                      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition ${
+                      className={`flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
                         rdptPromoActive
-                          ? 'border border-emerald-500/40 bg-emerald-500/15 font-semibold text-emerald-700 dark:text-emerald-300'
+                          ? 'border border-[#21543D]/40 bg-[#21543D]/15 font-semibold text-[#21543D] dark:border-[#68B68E]/40 dark:bg-[#68B68E]/15 dark:text-[#68B68E]'
                           : 'ui-subtle ui-text-secondary hover:ui-text-main'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <TrendingUp className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                         <span>Promo RDPT (+3%)</span>
                       </div>
                       <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10">
@@ -816,12 +828,12 @@ export const Header: React.FC<HeaderProps> = ({
                       type="button"
                       onClick={onRefreshLivePrices}
                       disabled={isFetchingPrices}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80 disabled:opacity-50"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80 disabled:opacity-50"
                       title={priceSourceText ? `Sumber: ${priceSourceText}` : 'Perbarui harga pasar live'}
                     >
                       <div className="flex items-center gap-2">
                         <RefreshCw
-                          className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-emerald-600' : ''}`}
+                          className={`h-3.5 w-3.5 ${isFetchingPrices ? 'animate-spin text-[#21543D] dark:text-[#68B68E]' : ''}`}
                         />
                         <span>Sync Harga</span>
                       </div>
@@ -832,20 +844,20 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {/* Biometrik / Sidik Jari */}
                     {isBiometricSupported && (
-                      <div className="ui-subtle rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                      <div className="ui-subtle rounded-[var(--radius-xs)] px-2.5 py-1.5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
+                          <Fingerprint className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                           <span className="ui-text-main">Biometrik</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] font-mono ${hasBiometric ? 'text-emerald-600 dark:text-emerald-400' : 'ui-text-muted'}`}>
+                          <span className={`text-[10px] font-mono ${hasBiometric ? 'text-[#21543D] dark:text-[#68B68E] font-medium' : 'ui-text-muted'}`}>
                             {hasBiometric ? 'Aktif' : 'Nonaktif'}
                           </span>
                           {hasBiometric ? (
                             <button
                               type="button"
                               onClick={handleRevokeBiometric}
-                              className="text-[10px] text-rose-500 hover:underline ml-1"
+                              className="text-[10px] text-[#9E472A] dark:text-[#E08263] hover:underline ml-1"
                             >
                               Hapus
                             </button>
@@ -854,7 +866,7 @@ export const Header: React.FC<HeaderProps> = ({
                               type="button"
                               onClick={handleRegisterBiometric}
                               disabled={isRegisteringBiometric}
-                              className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold ml-1 disabled:opacity-50"
+                              className="text-[10px] text-[#21543D] dark:text-[#68B68E] hover:underline font-semibold ml-1 disabled:opacity-50"
                             >
                               {isRegisteringBiometric ? '...' : 'Daftar'}
                             </button>
@@ -870,13 +882,13 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsToolsMenuOpen(false);
                         dialogRef.current?.showModal();
                       }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
                     >
                       <div className="flex items-center gap-2">
-                        <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                        <BookmarkCheck className="h-3.5 w-3.5 text-[#21543D] dark:text-[#68B68E]" />
                         <span>Portofolio Tersimpan</span>
                       </div>
-                      <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                      <span className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.2 font-mono text-[10px] font-bold">
                         {savedPortfolios.length}
                       </span>
                     </button>
@@ -890,7 +902,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setIsToolsMenuOpen(false);
                             onOpenResetConfirm();
                           }}
-                          className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition"
+                          className="flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs font-medium text-[#9E472A] dark:text-[#E08263] hover:bg-[#9E472A]/10 transition"
                           title="Reset konfigurasi ke setelan awal"
                         >
                           <div className="flex items-center gap-2">
@@ -1197,15 +1209,15 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="ui-card border-t ui-border px-3 py-1 sm:px-6">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-              <span className="ui-text-main truncate max-w-[90px] sm:max-w-none font-semibold">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#21543D] dark:bg-[#68B68E]" />
+              <span className="ui-text-main truncate max-w-[90px] sm:max-w-none font-medium">
                 {activePortfolioName}
               </span>
               <span className="ui-text-muted hidden sm:inline">•</span>
-              <span className="shrink-0 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="shrink-0 font-mono font-medium text-[#21543D] dark:text-[#68B68E]">
                 +{activeCagr.toFixed(1)}%
               </span>
-              <span className="shrink-0 font-mono font-semibold text-rose-600 dark:text-rose-400">
+              <span className="shrink-0 font-mono font-medium text-[#9E472A] dark:text-[#E08263]">
                 -{activeMaxDrawdown.toFixed(1)}%
               </span>
               <span className="ui-text-muted hidden shrink-0 font-mono md:inline">
@@ -1216,21 +1228,21 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
-                className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full px-2 py-0.2 font-mono text-[10px] font-semibold transition hover:opacity-85 ${
+                className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full px-2 py-0.2 font-mono text-[10px] font-medium transition hover:opacity-85 ${
                   (rebalanceBreachedCount ?? 0) > 0
-                    ? 'border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                    : 'border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    ? 'border border-[#8F580A]/30 bg-[#8F580A]/10 text-[#8F580A] dark:border-[#E3A646]/30 dark:bg-[#E3A646]/10 dark:text-[#E3A646]'
+                    : 'border border-[#21543D]/30 bg-[#21543D]/10 text-[#21543D] dark:border-[#68B68E]/30 dark:bg-[#68B68E]/10 dark:text-[#68B68E]'
                 }`}
                 title="Status Drift Portofolio — Klik untuk buka tab Rebalancer"
               >
                 {(rebalanceBreachedCount ?? 0) > 0 ? (
                   <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#8F580A] dark:bg-[#E3A646] shrink-0" />
                     <span>{rebalanceBreachedCount} Drift</span>
                   </>
                 ) : (
                   <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#21543D] dark:bg-[#68B68E] shrink-0" />
                     <span>Seimbang</span>
                   </>
                 )}
@@ -1242,7 +1254,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() =>
                 setActiveTab(activeTab === 'builder' ? 'rebalancer' : 'builder')
               }
-              className="flex shrink-0 items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-300 text-xs"
+              className="flex shrink-0 items-center gap-1 font-medium text-[#21543D] dark:text-[#68B68E] hover:underline text-xs"
             >
               <span>
                 {activeTab === 'builder' ? 'Eksekusi' : 'Ubah Bobot'}
@@ -1433,9 +1445,9 @@ export const Header: React.FC<HeaderProps> = ({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             aria-current={activeTab === 'builder' ? 'page' : undefined}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] py-1.5 text-[11px] font-medium transition ${
               activeTab === 'builder'
-                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                ? 'bg-[#21543D]/12 font-medium text-[#21543D] dark:bg-[#68B68E]/15 dark:text-[#68B68E]'
                 : 'ui-text-muted hover:ui-text-main'
             }`}
           >
@@ -1450,9 +1462,9 @@ export const Header: React.FC<HeaderProps> = ({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             aria-current={activeTab === 'rebalancer' ? 'page' : undefined}
-            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+            className={`relative flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] py-1.5 text-[11px] font-medium transition ${
               activeTab === 'rebalancer'
-                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                ? 'bg-[#21543D]/12 font-medium text-[#21543D] dark:bg-[#68B68E]/15 dark:text-[#68B68E]'
                 : 'ui-text-muted hover:ui-text-main'
             }`}
           >
@@ -1460,7 +1472,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Scale className="h-4 w-4" />
               {(rebalanceBreachedCount ?? 0) > 0 && (
                 <span
-                  className="absolute -top-1 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[8px] font-bold text-zinc-950 ring-2 ring-white dark:ring-zinc-900"
+                  className="absolute -top-1 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#8F580A] dark:bg-[#E3A646] px-0.5 text-[8px] font-medium text-white ring-2 ring-[var(--bg-canvas)]"
                   title={`${rebalanceBreachedCount} aset drift`}
                 >
                   {rebalanceBreachedCount}
@@ -1477,9 +1489,9 @@ export const Header: React.FC<HeaderProps> = ({
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             aria-current={activeTab === 'roadmap' ? 'page' : undefined}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] py-1.5 text-[11px] font-medium transition ${
               activeTab === 'roadmap'
-                ? 'bg-emerald-500/12 font-bold text-emerald-700 dark:text-emerald-300'
+                ? 'bg-[#21543D]/12 font-medium text-[#21543D] dark:bg-[#68B68E]/15 dark:text-[#68B68E]'
                 : 'ui-text-muted hover:ui-text-main'
             }`}
           >
@@ -1494,9 +1506,9 @@ export const Header: React.FC<HeaderProps> = ({
             }}
             aria-expanded={isMobileMenuOpen}
             aria-label="Buka menu pengaturan & dokumen"
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium transition ${
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-sm)] py-1.5 text-[11px] font-medium transition ${
               isMobileMenuOpen
-                ? 'bg-emerald-500/20 font-bold text-emerald-700 dark:text-emerald-300'
+                ? 'bg-[#21543D]/20 font-medium text-[#21543D] dark:text-[#68B68E]'
                 : 'ui-text-muted hover:ui-text-main'
             }`}
           >

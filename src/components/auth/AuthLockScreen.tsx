@@ -213,28 +213,37 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
       <div className="w-full max-w-[280px] space-y-3.5">
         {/* Minimalist Brand Logo & App Name */}
         <div className="flex flex-col items-center text-center">
-          <BrandLogo className="w-8 h-8 mb-1.5" />
-          <h1 className="text-xs font-semibold tracking-wider uppercase ui-text-muted">
-            {showRegisterPrompt ? 'Biometrik' : 'QuantPorto'}
+          <BrandLogo className="w-9 h-9 mb-1.5" />
+          <h1
+            className="text-base font-normal tracking-tight ui-text-main"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+            }}
+          >
+            {showRegisterPrompt ? 'Aktivasi Biometrik' : 'QuantPorto'}
           </h1>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[#21543D] dark:text-[#68B68E] mt-0.5">
+            Rp10M Edition
+          </span>
         </div>
 
         {/* Minimalist Card */}
         <div
-          className={`ui-card ui-border rounded-xl p-4 border shadow-xs transition duration-150 ${
-            isShaking ? 'animate-shake border-rose-500/50' : ''
+          className={`ui-card rounded-[var(--radius-lg)] p-4 shadow-surface transition duration-150 ${
+            isShaking ? 'animate-shake border-[#9E472A]/50' : ''
           }`}
         >
           {showRegisterPrompt ? (
             /* Post-Login Biometric Registration (Minimalist) */
             <div className="space-y-3 text-center">
-              <Fingerprint className="w-6 h-6 mx-auto text-emerald-500" />
+              <Fingerprint className="w-6 h-6 mx-auto text-[#21543D] dark:text-[#68B68E]" />
               <p className="text-xs ui-text-main font-medium">
                 Aktifkan biometrik perangkat?
               </p>
 
               {registerError && (
-                <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px]">
+                <div className="p-1.5 rounded-[var(--radius-xs)] bg-[#9E472A]/10 border border-[#9E472A]/30 text-[#9E472A] dark:text-[#E08263] text-[11px]">
                   {registerError}
                 </div>
               )}
@@ -244,7 +253,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   type="button"
                   onClick={handleSkipRegistration}
                   disabled={isRegisteringBiometric}
-                  className="flex-1 ui-subtle border ui-border ui-text-muted hover:ui-text-main text-xs py-1.5 rounded-lg transition"
+                  className="flex-1 ui-subtle ui-text-muted hover:ui-text-main text-xs py-1.5 rounded-[var(--radius-sm)] transition"
                 >
                   Lewati
                 </button>
@@ -252,7 +261,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   type="button"
                   onClick={handleRegisterBiometricNow}
                   disabled={isRegisteringBiometric}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs py-1.5 rounded-lg transition"
+                  className="flex-1 bg-[#21543D] hover:bg-[#173D2C] dark:bg-[#68B68E] dark:hover:bg-[#82C7A3] disabled:opacity-50 text-[#F9F8F4] dark:text-[#111613] font-medium text-xs py-1.5 rounded-[var(--radius-sm)] transition"
                 >
                   {isRegisteringBiometric ? '...' : 'Aktifkan'}
                 </button>
@@ -270,7 +279,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     onClick={handleBiometricLogin}
                     disabled={isVerifyingBiometric || lockoutSec > 0}
                     aria-label="Masuk dengan Sidik Jari"
-                    className="w-full py-2 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-medium text-xs rounded-lg flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                    className="w-full py-2 px-3 bg-[#21543D]/10 hover:bg-[#21543D]/20 border border-[#21543D]/30 text-[#21543D] dark:bg-[#68B68E]/10 dark:hover:bg-[#68B68E]/20 dark:border-[#68B68E]/30 dark:text-[#68B68E] font-medium text-xs rounded-[var(--radius-sm)] flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                   >
                     <Fingerprint
                       className={`w-4 h-4 ${isVerifyingBiometric ? 'animate-pulse' : ''}`}
@@ -281,7 +290,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   </button>
 
                   {biometricError && (
-                    <div className="p-1.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[11px] text-center">
+                    <div className="p-1.5 rounded-[var(--radius-xs)] bg-[#9E472A]/10 border border-[#9E472A]/30 text-[#9E472A] dark:text-[#E08263] text-[11px] text-center">
                       {biometricError}
                     </div>
                   )}

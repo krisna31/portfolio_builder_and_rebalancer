@@ -1037,11 +1037,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <ReferenceLine
                       y={targetGoalIdr / 1_000_000}
-                      stroke="#f59e0b"
+                      stroke="#8F580A"
                       strokeDasharray="4 4"
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
-                        fill: '#f59e0b',
+                        fill: '#8F580A',
                         fontSize: 11,
                       }}
                     />
@@ -1049,8 +1049,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="NilaiPortfolio"
                       name="Nilai Portfolio (Compounding)"
-                      stroke="#10b981"
-                      fill="#10b981"
+                      stroke="#21543D"
+                      fill="#21543D"
                       fillOpacity={0.2}
                     />
                     {annualInflationPercent > 0 && (
@@ -1058,8 +1058,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         type="monotone"
                         dataKey="DayaBeliRiil"
                         name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
+                        stroke="#25586B"
+                        fill="#25586B"
                         strokeDasharray="4 4"
                         fillOpacity={0.08}
                       />
@@ -1068,16 +1068,16 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="WorstCaseCrash"
                       name={`Saat Market Crash (-${solvedMetrics.maxDrawdown}%)`}
-                      stroke="#f43f5e"
-                      fill="#f43f5e"
-                      fillOpacity={0.1}
+                      stroke="#9E472A"
+                      fill="#9E472A"
+                      fillOpacity={0.12}
                     />
                     <Area
                       type="monotone"
                       dataKey="ModalTabungan"
                       name="Akumulasi Modal Tabungan"
-                      stroke="#0ea5e9"
-                      fill="#0ea5e9"
+                      stroke="#606E65"
+                      fill="#606E65"
                       fillOpacity={0.12}
                     />
                   </AreaChart>
@@ -1110,11 +1110,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <ReferenceLine
                       y={targetGoalIdr / 1_000_000}
-                      stroke="#f59e0b"
+                      stroke="#8F580A"
                       strokeDasharray="4 4"
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
-                        fill: '#f59e0b',
+                        fill: '#8F580A',
                         fontSize: 11,
                       }}
                     />
@@ -1122,9 +1122,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="P90Bull"
                       name={isRealMonteCarlo ? 'P90: Optimis (Daya Beli Riil)' : 'P90: Skenario Optimis (Bull 10%)'}
-                      stroke="#10b981"
-                      fill="#10b981"
-                      fillOpacity={0.15}
+                      stroke="#3D8B66"
+                      fill="#3D8B66"
+                      fillOpacity={0.16}
                     />
                     <Area
                       type="monotone"
@@ -1134,8 +1134,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                           ? `P50: Ekspektasi Riil (Inflasi ${annualInflationPercent}%)`
                           : 'P50: Ekspektasi Median (Realistis)'
                       }
-                      stroke="#059669"
-                      fill="#059669"
+                      stroke="#21543D"
+                      fill="#21543D"
                       fillOpacity={0.25}
                       strokeWidth={2}
                     />
@@ -1143,17 +1143,17 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="P10Bear"
                       name={isRealMonteCarlo ? 'P10: Ujian Krisis (Daya Beli Riil)' : 'P10: Ujian Krisis (Bear 10%)'}
-                      stroke="#f43f5e"
-                      fill="#f43f5e"
-                      fillOpacity={0.12}
+                      stroke="#9E472A"
+                      fill="#9E472A"
+                      fillOpacity={0.14}
                     />
                     <Area
                       type="monotone"
                       dataKey="ModalPokok"
                       name={isRealMonteCarlo ? 'Modal Pokok Disimpan (Riil)' : 'Modal Pokok Disimpan'}
-                      stroke="#0ea5e9"
-                      fill="#0ea5e9"
-                      fillOpacity={0.08}
+                      stroke="#606E65"
+                      fill="#606E65"
+                      fillOpacity={0.10}
                       strokeDasharray="3 3"
                     />
                   </AreaChart>
@@ -2056,7 +2056,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Kuartalan3M"
                 name="Rebalance 3 Bulan (Kuartalan)"
-                stroke="#10b981"
+                stroke="#21543D"
                 strokeWidth={2.5}
                 dot={false}
               />
@@ -2064,7 +2064,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Bulanan"
                 name="Rebalance Bulanan"
-                stroke="#0ea5e9"
+                stroke="#25586B"
                 strokeWidth={1.8}
                 dot={false}
               />
@@ -2072,7 +2072,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Tahunan1Y"
                 name="Rebalance Tahunan"
-                stroke="#f59e0b"
+                stroke="#8F580A"
                 strokeWidth={1.8}
                 dot={false}
               />
@@ -2080,7 +2080,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="BuyAndHold"
                 name="Buy & Hold (Tanpa Rebalance)"
-                stroke="#f43f5e"
+                stroke="#9E472A"
                 strokeDasharray="4 4"
                 strokeWidth={1.8}
                 dot={false}

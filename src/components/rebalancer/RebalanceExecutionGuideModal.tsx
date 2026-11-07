@@ -80,19 +80,23 @@ export const RebalanceExecutionGuideModal: React.FC<
       aria-modal="true"
       aria-labelledby="guide-modal-title"
     >
-      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-3xl max-h-[90vh] flex flex-col rounded-xl border ui-border ui-card ui-text-main shadow-md overflow-hidden outline-none">
+      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-3xl max-h-[90vh] flex flex-col ui-modal ui-text-main overflow-hidden outline-none">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b ui-border px-5 py-3.5 ui-subtle shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] bg-[#21543D]/10 text-[#21543D] dark:bg-[#68B68E]/15 dark:text-[#68B68E] border border-[#21543D]/30 dark:border-[#68B68E]/30">
               <Lightbulb className="h-5 w-5" />
             </div>
             <div>
               <h2
                 id="guide-modal-title"
-                className="text-base sm:text-lg font-bold ui-text-main flex items-center gap-2"
+                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
+                }}
               >
-                <span>Buku Panduan & SOP Eksekusi Rebalancer</span>
+                <span>Buku Panduan &amp; SOP Eksekusi Rebalancer</span>
               </h2>
               <p className="text-xs ui-text-muted">
                 Panduan praktis berstandar kuantitatif untuk belanja perdana maupun rebalancing berkala.
