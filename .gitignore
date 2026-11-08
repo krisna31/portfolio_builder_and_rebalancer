@@ -8,3 +8,5 @@ dist-ssr
 !.env.example
 .vite
 coverage
+__pycache__
+*.pyc

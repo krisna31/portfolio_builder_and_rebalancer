@@ -53,30 +53,50 @@ def compute_metrics(closes: list[float]) -> dict:
         return {}
     first_p = closes[0]
     last_p = closes[-1]
+    if first_p <= 0 or last_p <= 0 or not math.isfinite(first_p) or not math.isfinite(last_p):
+        return {}
+
     years = max(0.5, len(closes) / 52.0)
-    cagr = ((last_p / first_p) ** (1.0 / years) - 1.0) * 100.0
+    try:
+        cagr = ((last_p / first_p) ** (1.0 / years) - 1.0) * 100.0
+    except (ZeroDivisionError, OverflowError, ValueError):
+        return {}
+
+    if not math.isfinite(cagr):
+        return {}
 
     peak = closes[0]
     max_dd = 0.0
     weekly_returns = []
     for i in range(1, len(closes)):
         p = closes[i]
+        if not math.isfinite(p) or p <= 0:
+            continue
         if p > peak:
             peak = p
-        dd = ((peak - p) / peak) * 100.0
-        if dd > max_dd:
-            max_dd = dd
-        weekly_returns.append((p - closes[i - 1]) / closes[i - 1])
+        if peak > 0:
+            dd = ((peak - p) / peak) * 100.0
+            if dd > max_dd:
+                max_dd = dd
+        prev = closes[i - 1]
+        if prev > 0:
+            weekly_returns.append((p - prev) / prev)
+
+    if not weekly_returns:
+        return {}
 
     mean_r = sum(weekly_returns) / len(weekly_returns)
     variance = sum((r - mean_r) ** 2 for r in weekly_returns) / max(1, len(weekly_returns) - 1)
-    vol = math.sqrt(variance * 52.0) * 100.0
+    vol = math.sqrt(max(0.0, variance) * 52.0) * 100.0
 
     # Young IPO (< 3 years) conservative risk floor & shrinkage
     if years < 3.0:
         cagr = cagr * 0.65 + 15.0 * 0.35
         max_dd = max(28.0, max_dd * 1.25)
         vol = max(26.0, vol)
+
+    if not (math.isfinite(cagr) and math.isfinite(max_dd) and math.isfinite(vol)):
+        return {}
 
     return {
         "price": round(last_p, 2),
@@ -98,7 +118,9 @@ def main():
     try:
         fx_hist = yf.Ticker("IDR=X").history(period="5d")
         if not fx_hist.empty:
-            usd_idr = round(float(fx_hist["Close"].iloc[-1]))
+            rate_val = float(fx_hist["Close"].iloc[-1])
+            if math.isfinite(rate_val) and rate_val > 1000:
+                usd_idr = round(rate_val)
     except Exception as exc:
         print(f"Warning: Failed to fetch IDR=X: {exc}")
 

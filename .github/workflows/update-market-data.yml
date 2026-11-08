@@ -7,23 +7,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   update_data:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.11"
 
       - name: Install yfinance
-        run: pip install "yfinance>=0.2.54,<0.3.0"
+        run: pip install --no-cache-dir "yfinance>=0.2.54,<0.3.0"
 
       - name: Fetch 5Y historical data & latest prices
         run: python scripts/fetch_market_data.py
