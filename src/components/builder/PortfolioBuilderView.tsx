@@ -3069,7 +3069,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Bar
                     dataKey="capitalWeight"
                     name="Bobot Modal (%)"
-                    fill="#21543D"
+                    fill="var(--accent-primary)"
                     radius={[4, 4, 0, 0]}
                     className="cursor-pointer"
                     onClick={(data) => {
@@ -3265,7 +3265,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Scatter
                     name="15 Optimal"
                     data={scatterOptimalData}
-                    fill="#21543D"
+                    fill="var(--accent-primary)"
                     className="cursor-pointer"
                     onClick={(pt) => {
                       if (pt?.preset) {

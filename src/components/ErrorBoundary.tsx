@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <div className="p-3.5 ui-subtle rounded-[var(--radius-sm)] ui-border text-xs space-y-2">
               <div className="ui-text-secondary font-semibold">Pesan Kesalahan:</div>
-              <div className="font-mono text-[#9E472A] dark:text-[#E08263] text-[11px] break-words">
+              <div className="font-mono text-[var(--status-danger)] text-[11px] break-words">
                 {this.state.error?.message || 'Unknown Application Error'}
               </div>
             </div>
@@ -92,7 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#21543D] hover:bg-[#173D2C] dark:bg-[#68B68E] dark:hover:bg-[#82C7A3] text-white dark:text-[#111613] rounded-[var(--radius-sm)] text-xs font-semibold shadow-sm transition"
+                className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-[var(--text-on-accent)] rounded-[var(--radius-sm)] text-xs font-semibold shadow-sm transition"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Muat Ulang Halaman</span>
@@ -103,7 +103,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleResetStorage}
                 className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 ui-subtle hover:opacity-90 ui-text-main ui-border rounded-[var(--radius-sm)] text-xs font-semibold transition"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-[#9E472A] dark:text-[#E08263]" />
+                <RotateCcw className="w-3.5 h-3.5 text-[var(--status-danger)]" />
                 <span>Reset Data ke Awal</span>
               </button>
             </div>

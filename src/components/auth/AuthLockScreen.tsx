@@ -223,7 +223,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
           >
             {showRegisterPrompt ? 'Aktivasi Biometrik' : 'QuantPorto'}
           </h1>
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[#21543D] dark:text-[#68B68E] mt-0.5">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] mt-0.5">
             Rp10M Edition
           </span>
         </div>
@@ -231,19 +231,19 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         {/* Minimalist Card */}
         <div
           className={`ui-card rounded-[var(--radius-lg)] p-4 shadow-surface transition duration-150 ${
-            isShaking ? 'animate-shake border-[#9E472A]/50' : ''
+            isShaking ? 'animate-shake border-[var(--status-danger)]/50' : ''
           }`}
         >
           {showRegisterPrompt ? (
             /* Post-Login Biometric Registration (Minimalist) */
             <div className="space-y-3 text-center">
-              <Fingerprint className="w-6 h-6 mx-auto text-[#21543D] dark:text-[#68B68E]" />
+              <Fingerprint className="w-6 h-6 mx-auto text-[var(--accent-primary)]" />
               <p className="text-xs ui-text-main font-medium">
                 Aktifkan biometrik perangkat?
               </p>
 
               {registerError && (
-                <div className="p-1.5 rounded-[var(--radius-xs)] bg-[#9E472A]/10 border border-[#9E472A]/30 text-[#9E472A] dark:text-[#E08263] text-[11px]">
+                <div className="p-1.5 rounded-[var(--radius-xs)] bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/30 text-[var(--status-danger)] text-[11px]">
                   {registerError}
                 </div>
               )}
@@ -261,7 +261,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   type="button"
                   onClick={handleRegisterBiometricNow}
                   disabled={isRegisteringBiometric}
-                  className="flex-1 bg-[#21543D] hover:bg-[#173D2C] dark:bg-[#68B68E] dark:hover:bg-[#82C7A3] disabled:opacity-50 text-[#F9F8F4] dark:text-[#111613] font-medium text-xs py-1.5 rounded-[var(--radius-sm)] transition"
+                  className="flex-1 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-[var(--text-on-accent)] font-medium text-xs py-1.5 rounded-[var(--radius-sm)] transition"
                 >
                   {isRegisteringBiometric ? '...' : 'Aktifkan'}
                 </button>
@@ -279,7 +279,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     onClick={handleBiometricLogin}
                     disabled={isVerifyingBiometric || lockoutSec > 0}
                     aria-label="Masuk dengan Sidik Jari"
-                    className="w-full py-2 px-3 bg-[#21543D]/10 hover:bg-[#21543D]/20 border border-[#21543D]/30 text-[#21543D] dark:bg-[#68B68E]/10 dark:hover:bg-[#68B68E]/20 dark:border-[#68B68E]/30 dark:text-[#68B68E] font-medium text-xs rounded-[var(--radius-sm)] flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+                    className="w-full py-2 px-3 bg-[var(--accent-tint)] hover:opacity-90 border border-[var(--accent-primary)]/30 text-[var(--accent-primary)] font-medium text-xs rounded-[var(--radius-sm)] flex items-center justify-center gap-1.5 transition disabled:opacity-50"
                   >
                     <Fingerprint
                       className={`w-4 h-4 ${isVerifyingBiometric ? 'animate-pulse' : ''}`}
@@ -290,7 +290,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   </button>
 
                   {biometricError && (
-                    <div className="p-1.5 rounded-[var(--radius-xs)] bg-[#9E472A]/10 border border-[#9E472A]/30 text-[#9E472A] dark:text-[#E08263] text-[11px] text-center">
+                    <div className="p-1.5 rounded-[var(--radius-xs)] bg-[var(--status-danger)]/10 border border-[var(--status-danger)]/30 text-[var(--status-danger)] text-[11px] text-center">
                       {biometricError}
                     </div>
                   )}

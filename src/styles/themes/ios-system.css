@@ -1,0 +1,127 @@
+/* Theme 07: Apple iOS System HIG (ui-theme-ios-system)
+   Lineage: Apple Human Interface Guidelines / Continuous Squircles / Frosted Translucency */
+
+:root[data-theme="ios-system"],
+[data-theme="ios-system"] {
+  /* 1. System Grouped Backgrounds */
+  --bg-canvas: #F2F2F7;
+  --bg-subtle: #E5E5EA;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+
+  /* 2. Apple Neutral Ink Typography */
+  --text-primary: #000000;
+  --text-secondary: #47474C;
+  --text-muted: #68686E;
+
+  /* 3. Hairline System Separators */
+  --border-subtle: #E5E5EA;
+  --border-default: #C6C6C8;
+  --border-strong: #8E8E93;
+
+  /* 4. Apple System Blue Accent */
+  --accent-primary: #0055D6;
+  --accent-hover: #0040A8;
+  --accent-tint: oklch(47.5% 0.210 260.0 / 0.10);
+  --text-on-accent: #FFFFFF;
+  --accent-secondary: #5856D6;
+
+  --status-success: #1E7E34;
+  --status-warning: #9E5D00;
+  --status-danger: #C5221F;
+  --status-info: #00629E;
+
+  /* 5. 6-Color System Chart Palette */
+  --chart-1: #0055D6;
+  --chart-2: #5856D6;
+  --chart-3: #1E7E34;
+  --chart-4: #9E5D00;
+  --chart-5: #68686E;
+  --chart-6: #00629E;
+
+  /* 6. Apple Soft Diffuse Shadows */
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 12px 28px rgba(0, 0, 0, 0.10);
+
+  /* 7. Typography, Continuous Squircle Radii & Fluid Springs */
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Helvetica Neue", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", Menlo, Monaco, "Courier New", monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+
+  --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 160ms;
+  --duration-panel: 240ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="ios-system"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #0A0A0C;
+    --bg-subtle: #141416;
+    --bg-surface: #1C1C1E;
+    --bg-elevated: #2C2C2E;
+    --text-primary: #FFFFFF;
+    --text-secondary: #B5B5BA;
+    --text-muted: #8E8E93;
+    --border-subtle: #2C2C2E;
+    --border-default: #38383A;
+    --border-strong: #636366;
+    --accent-primary: #479EFF;
+    --accent-hover: #6BB2FF;
+    --accent-tint: oklch(71.5% 0.165 255.0 / 0.15);
+    --text-on-accent: #00142A;
+    --accent-secondary: #5E5CE6;
+    --status-success: #30D158;
+    --status-warning: #FFD60A;
+    --status-danger: #FF453A;
+    --status-info: #64D2FF;
+    --chart-1: #479EFF;
+    --chart-2: #5E5CE6;
+    --chart-3: #30D158;
+    --chart-4: #FFD60A;
+    --chart-5: #8E8E93;
+    --chart-6: #64D2FF;
+    --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.20);
+    --shadow-elevated: 0 12px 28px rgba(0, 0, 0, 0.50);
+  }
+}
+
+/* Explicit Dark Mode */
+:root[data-theme="ios-system"].dark,
+:root[data-theme="ios-system"][data-mode="dark"],
+[data-theme="ios-system"].dark,
+[data-theme="ios-system"][data-mode="dark"] {
+  --bg-canvas: #0A0A0C;
+  --bg-subtle: #141416;
+  --bg-surface: #1C1C1E;
+  --bg-elevated: #2C2C2E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B5B5BA;
+  --text-muted: #8E8E93;
+  --border-subtle: #2C2C2E;
+  --border-default: #38383A;
+  --border-strong: #636366;
+  --accent-primary: #479EFF;
+  --accent-hover: #6BB2FF;
+  --accent-tint: oklch(71.5% 0.165 255.0 / 0.15);
+  --text-on-accent: #00142A;
+  --accent-secondary: #5E5CE6;
+  --status-success: #30D158;
+  --status-warning: #FFD60A;
+  --status-danger: #FF453A;
+  --status-info: #64D2FF;
+  --chart-1: #479EFF;
+  --chart-2: #5E5CE6;
+  --chart-3: #30D158;
+  --chart-4: #FFD60A;
+  --chart-5: #8E8E93;
+  --chart-6: #64D2FF;
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-elevated: 0 12px 28px rgba(0, 0, 0, 0.50);
+}

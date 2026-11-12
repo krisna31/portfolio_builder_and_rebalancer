@@ -1,0 +1,125 @@
+/* Theme 09: Pure Monolith (ui-theme-pure-monolith)
+   Lineage: Stark Swiss Brutalism / Architectural Monochrome / Zero Compromise */
+
+:root[data-theme="pure-monolith"],
+[data-theme="pure-monolith"] {
+  /* 1. Pure Stark White Canvas Ladders */
+  --bg-canvas: #FFFFFF;
+  --bg-subtle: #F2F2F2;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+
+  /* 2. Absolute Black & Deep Neutral Typography */
+  --text-primary: #000000;
+  --text-secondary: #404040;
+  --text-muted: #666666;
+
+  /* 3. Razor 1px Grid Hairlines */
+  --border-subtle: #E0E0E0;
+  --border-default: #A0A0A0;
+  --border-strong: #000000;
+
+  /* 4. Stark Black Accent Key */
+  --accent-primary: #000000;
+  --accent-hover: #262626;
+  --accent-tint: rgba(0, 0, 0, 0.06);
+  --text-on-accent: #FFFFFF;
+  --accent-secondary: #333333;
+
+  --status-success: #1B5E20;
+  --status-warning: #7A4B00;
+  --status-danger: #8A1818;
+  --status-info: #0D47A1;
+
+  /* 5. 6-Color Stark Statistical Chart Palette */
+  --chart-1: #000000;
+  --chart-2: #404040;
+  --chart-3: #666666;
+  --chart-4: #8A1818;
+  --chart-5: #1B5E20;
+  --chart-6: #0D47A1;
+
+  /* 6. Absolute Zero Shadow */
+  --shadow-surface: none;
+  --shadow-elevated: none;
+
+  /* 7. Typography, Razor 0px Radii & Instant Snap Motion */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-pill: 0px;
+
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --duration-fast: 100ms;
+  --duration-panel: 160ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="pure-monolith"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #050505;
+    --bg-subtle: #0F0F0F;
+    --bg-surface: #141414;
+    --bg-elevated: #1C1C1C;
+    --text-primary: #FFFFFF;
+    --text-secondary: #B8B8B8;
+    --text-muted: #858585;
+    --border-subtle: #262626;
+    --border-default: #444444;
+    --border-strong: #FFFFFF;
+    --accent-primary: #FFFFFF;
+    --accent-hover: #D9D9D9;
+    --accent-tint: rgba(255, 255, 255, 0.12);
+    --text-on-accent: #050505;
+    --accent-secondary: #CCCCCC;
+    --status-success: #4CAF50;
+    --status-warning: #FFB300;
+    --status-danger: #FF6B6B;
+    --status-info: #64B5F6;
+    --chart-1: #FFFFFF;
+    --chart-2: #B8B8B8;
+    --chart-3: #858585;
+    --chart-4: #FF6B6B;
+    --chart-5: #4CAF50;
+    --chart-6: #64B5F6;
+    --shadow-elevated: none;
+  }
+}
+
+/* Explicit Dark Mode */
+:root[data-theme="pure-monolith"].dark,
+:root[data-theme="pure-monolith"][data-mode="dark"],
+[data-theme="pure-monolith"].dark,
+[data-theme="pure-monolith"][data-mode="dark"] {
+  --bg-canvas: #050505;
+  --bg-subtle: #0F0F0F;
+  --bg-surface: #141414;
+  --bg-elevated: #1C1C1C;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B8B8B8;
+  --text-muted: #858585;
+  --border-subtle: #262626;
+  --border-default: #444444;
+  --border-strong: #FFFFFF;
+  --accent-primary: #FFFFFF;
+  --accent-hover: #D9D9D9;
+  --accent-tint: rgba(255, 255, 255, 0.12);
+  --text-on-accent: #050505;
+  --accent-secondary: #CCCCCC;
+  --status-success: #4CAF50;
+  --status-warning: #FFB300;
+  --status-danger: #FF6B6B;
+  --status-info: #64B5F6;
+  --chart-1: #FFFFFF;
+  --chart-2: #B8B8B8;
+  --chart-3: #858585;
+  --chart-4: #FF6B6B;
+  --chart-5: #4CAF50;
+  --chart-6: #64B5F6;
+  --shadow-elevated: none;
+}

@@ -1,0 +1,125 @@
+/* Theme 05: Werkbund Grid (ui-theme-werkbund-brutalist)
+   Lineage: Deutscher Werkbund / Bauhaus / Massimo Vignelli Subway / Swiss Poster Grids */
+
+:root[data-theme="werkbund-brutalist"],
+[data-theme="werkbund-brutalist"] {
+  /* 1. Gallery Plaster White Ladders */
+  --bg-canvas: #F7F7F5;
+  --bg-subtle: #EBEBE8;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+
+  /* 2. High-Contrast Monochrome Typography */
+  --text-primary: #0A0A0A;
+  --text-secondary: #383838;
+  --text-muted: #595959;
+
+  /* 3. Hairline Structural Grid Rules */
+  --border-subtle: #D4D4D0;
+  --border-default: #8F8F8A;
+  --border-strong: #0A0A0A;
+
+  /* 4. International Ultramarine Accent */
+  --accent-primary: #0033EE;
+  --accent-hover: #0022AA;
+  --accent-tint: oklch(46.5% 0.273 264.0 / 0.08);
+  --text-on-accent: #FFFFFF;
+  --accent-secondary: #C93B00;
+
+  --status-success: #006633;
+  --status-warning: #8F5200;
+  --status-danger: #CC1100;
+  --status-info: #0033EE;
+
+  /* 5. 6-Color Bauhaus Primary + Structural Palette */
+  --chart-1: #0033EE;
+  --chart-2: #C93B00;
+  --chart-3: #0A0A0A;
+  --chart-4: #006633;
+  --chart-5: #8F5200;
+  --chart-6: #6E6E6A;
+
+  /* 6. Absolute Zero Shadow */
+  --shadow-surface: none;
+  --shadow-elevated: none;
+
+  /* 7. Typography, Razor 0px Radii & Shutter Motion */
+  --font-display: 'Bricolage Grotesque', -apple-system, sans-serif;
+  --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
+  --radius-pill: 2px;
+
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --duration-fast: 110ms;
+  --duration-panel: 150ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="werkbund-brutalist"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #0A0A0A;
+    --bg-subtle: #121212;
+    --bg-surface: #171717;
+    --bg-elevated: #222222;
+    --text-primary: #FAFAFA;
+    --text-secondary: #C2C2C2;
+    --text-muted: #8E8E8E;
+    --border-subtle: #292929;
+    --border-default: #525252;
+    --border-strong: #FAFAFA;
+    --accent-primary: #5C85FF;
+    --accent-hover: #7DA0FF;
+    --accent-tint: oklch(64.9% 0.187 267.1 / 0.16);
+    --text-on-accent: #0A0A0A;
+    --accent-secondary: #E5FF00;
+    --status-success: #33D67A;
+    --status-warning: #FFB800;
+    --status-danger: #FF5C4D;
+    --status-info: #5C85FF;
+    --chart-1: #5C85FF;
+    --chart-2: #E5FF00;
+    --chart-3: #FAFAFA;
+    --chart-4: #33D67A;
+    --chart-5: #FF5C4D;
+    --chart-6: #8E8E8E;
+    --shadow-elevated: none;
+  }
+}
+
+/* Explicit Dark Mode */
+:root[data-theme="werkbund-brutalist"].dark,
+:root[data-theme="werkbund-brutalist"][data-mode="dark"],
+[data-theme="werkbund-brutalist"].dark,
+[data-theme="werkbund-brutalist"][data-mode="dark"] {
+  --bg-canvas: #0A0A0A;
+  --bg-subtle: #121212;
+  --bg-surface: #171717;
+  --bg-elevated: #222222;
+  --text-primary: #FAFAFA;
+  --text-secondary: #C2C2C2;
+  --text-muted: #8E8E8E;
+  --border-subtle: #292929;
+  --border-default: #525252;
+  --border-strong: #FAFAFA;
+  --accent-primary: #5C85FF;
+  --accent-hover: #7DA0FF;
+  --accent-tint: oklch(64.9% 0.187 267.1 / 0.16);
+  --text-on-accent: #0A0A0A;
+  --accent-secondary: #E5FF00;
+  --status-success: #33D67A;
+  --status-warning: #FFB800;
+  --status-danger: #FF5C4D;
+  --status-info: #5C85FF;
+  --chart-1: #5C85FF;
+  --chart-2: #E5FF00;
+  --chart-3: #FAFAFA;
+  --chart-4: #33D67A;
+  --chart-5: #FF5C4D;
+  --chart-6: #8E8E8E;
+  --shadow-elevated: none;
+}

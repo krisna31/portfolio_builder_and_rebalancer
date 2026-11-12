@@ -84,7 +84,7 @@ export const RebalanceExecutionGuideModal: React.FC<
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b ui-border px-5 py-3.5 ui-subtle shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] bg-[#21543D]/10 text-[#21543D] dark:bg-[#68B68E]/15 dark:text-[#68B68E] border border-[#21543D]/30 dark:border-[#68B68E]/30">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent-tint)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/30">
               <Lightbulb className="h-5 w-5" />
             </div>
             <div>

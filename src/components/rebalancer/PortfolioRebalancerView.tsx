@@ -3597,7 +3597,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <Bar
                     dataKey="Target"
                     name="Target (%)"
-                    fill="#21543D"
+                    fill="var(--accent-primary)"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -3966,8 +3966,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       <Area
                         type="monotone"
                         dataKey="NetWorthJuta"
-                        stroke="#21543D"
-                        fill="#21543D"
+                        stroke="var(--accent-primary)"
+                        fill="var(--accent-primary)"
                         fillOpacity={0.18}
                       />
                     </AreaChart>

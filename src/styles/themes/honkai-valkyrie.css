@@ -1,0 +1,125 @@
+/* Theme 11: Hyperion Valkyrie (ui-theme-honkai-valkyrie)
+   Lineage: Honkai Impact 3rd / Hyperion Battleship Bridge / Tactical Sci-Fi HUD */
+
+:root[data-theme="honkai-valkyrie"],
+[data-theme="honkai-valkyrie"] {
+  /* 1. Aerospace Titanium Surface Ladders */
+  --bg-canvas: #F0F4F8;
+  --bg-subtle: #E1E8F0;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+
+  /* 2. Verified AAA/AA High-Contrast Typography */
+  --text-primary: #0A111C;
+  --text-secondary: #364559;
+  --text-muted: #5C708A;
+
+  /* 3. Airframe Structural Seams & Panel Frames */
+  --border-subtle: #D0DCE8;
+  --border-default: #A8BFD4;
+  --border-strong: #005B8C;
+
+  /* 4. Hyperion Tactical Cyan & Thruster Amber */
+  --accent-primary: #006E8C;
+  --accent-hover: #00556E;
+  --accent-tint: oklch(50.1% 0.095 225.1 / 0.10);
+  --text-on-accent: #FFFFFF;
+  --accent-secondary: #C26E00;
+
+  --status-success: #136B3E;
+  --status-warning: #995A00;
+  --status-danger: #A81B2B;
+  --status-info: #0070A0;
+
+  /* 5. 6-Color Valkyrie Tactical Chart Palette */
+  --chart-1: #006E8C;
+  --chart-2: #C26E00;
+  --chart-3: #136B3E;
+  --chart-4: #A81B2B;
+  --chart-5: #5B4A8C;
+  --chart-6: #47667B;
+
+  /* 6. Tactical Telemetry Shadows */
+  --shadow-surface: none;
+  --shadow-elevated: 0 8px 24px rgba(10, 17, 28, 0.08);
+
+  /* 7. Typography, Tactical Radii & Servo Motion */
+  --font-display: 'Chakra Petch', sans-serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 9999px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 130ms;
+  --duration-panel: 200ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="honkai-valkyrie"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #080C14;
+    --bg-subtle: #0E1522;
+    --bg-surface: #121C2B;
+    --bg-elevated: #19263A;
+    --text-primary: #E6F2FF;
+    --text-secondary: #8FB4D9;
+    --text-muted: #7099C2;
+    --border-subtle: #1E3147;
+    --border-default: #2D4868;
+    --border-strong: #00E5FF;
+    --accent-primary: #00E5FF;
+    --accent-hover: #33EBFF;
+    --accent-tint: oklch(84.4% 0.146 209.3 / 0.14);
+    --text-on-accent: #080C14;
+    --accent-secondary: #FFB020;
+    --status-success: #34D399;
+    --status-warning: #FBBF24;
+    --status-danger: #F87171;
+    --status-info: #38BDF8;
+    --chart-1: #00E5FF;
+    --chart-2: #FFB020;
+    --chart-3: #34D399;
+    --chart-4: #F87171;
+    --chart-5: #A78BFA;
+    --chart-6: #38BDF8;
+    --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.65);
+  }
+}
+
+/* Explicit Dark Mode */
+:root[data-theme="honkai-valkyrie"].dark,
+:root[data-theme="honkai-valkyrie"][data-mode="dark"],
+[data-theme="honkai-valkyrie"].dark,
+[data-theme="honkai-valkyrie"][data-mode="dark"] {
+  --bg-canvas: #080C14;
+  --bg-subtle: #0E1522;
+  --bg-surface: #121C2B;
+  --bg-elevated: #19263A;
+  --text-primary: #E6F2FF;
+  --text-secondary: #8FB4D9;
+  --text-muted: #7099C2;
+  --border-subtle: #1E3147;
+  --border-default: #2D4868;
+  --border-strong: #00E5FF;
+  --accent-primary: #00E5FF;
+  --accent-hover: #33EBFF;
+  --accent-tint: oklch(84.4% 0.146 209.3 / 0.14);
+  --text-on-accent: #080C14;
+  --accent-secondary: #FFB020;
+  --status-success: #34D399;
+  --status-warning: #FBBF24;
+  --status-danger: #F87171;
+  --status-info: #38BDF8;
+  --chart-1: #00E5FF;
+  --chart-2: #FFB020;
+  --chart-3: #34D399;
+  --chart-4: #F87171;
+  --chart-5: #A78BFA;
+  --chart-6: #38BDF8;
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.65);
+}

@@ -1,0 +1,127 @@
+/* Theme 06: Android Material 3 (ui-theme-android-material)
+   Lineage: Google Material Design 3 (Material You) — Native Expressive Design System */
+
+:root[data-theme="android-material"],
+[data-theme="android-material"] {
+  /* 1. M3 Tonal Surface Ladders */
+  --bg-canvas: #F8F9FA;
+  --bg-subtle: #EDF0F3;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #E9EEF6;
+
+  /* 2. M3 Neutral Ink Hierarchy */
+  --text-primary: #1F1F1F;
+  --text-secondary: #444746;
+  --text-muted: #5E6266;
+
+  /* 3. M3 Outline Borders */
+  --border-subtle: #E0E3E7;
+  --border-default: #C4C7C5;
+  --border-strong: #747775;
+
+  /* 4. M3 Cobalt Sapphire Dynamic Accent */
+  --accent-primary: #0056D2;
+  --accent-hover: #0043A6;
+  --accent-tint: rgba(0, 86, 210, 0.08);
+  --text-on-accent: #FFFFFF;
+  --accent-secondary: #00639B;
+
+  --status-success: #0F5223;
+  --status-warning: #7A4400;
+  --status-danger: #B3261E;
+  --status-info: #005885;
+
+  /* 5. 6-Color M3 Data Visualization Scale */
+  --chart-1: #0056D2;
+  --chart-2: #00639B;
+  --chart-3: #0F5223;
+  --chart-4: #7A4400;
+  --chart-5: #5E6266;
+  --chart-6: #9C27B0;
+
+  /* 6. M3 Tonal Elevation */
+  --shadow-surface: 0 1px 3px rgba(31, 31, 31, 0.08), 0 1px 2px rgba(31, 31, 31, 0.04);
+  --shadow-elevated: 0 6px 16px -2px rgba(31, 31, 31, 0.12), 0 2px 4px rgba(31, 31, 31, 0.06);
+
+  /* 7. Typography, Radii & Expressive Motion */
+  --font-display: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-panel: 250ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="android-material"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #111315;
+    --bg-subtle: #191C1E;
+    --bg-surface: #1F2326;
+    --bg-elevated: #282B30;
+    --text-primary: #E2E2E6;
+    --text-secondary: #C4C7C5;
+    --text-muted: #8E918F;
+    --border-subtle: #2D3135;
+    --border-default: #444746;
+    --border-strong: #8E918F;
+    --accent-primary: #7CACF8;
+    --accent-hover: #9EC2FF;
+    --accent-tint: rgba(124, 172, 248, 0.12);
+    --text-on-accent: #001D4A;
+    --accent-secondary: #7FCFFF;
+    --status-success: #46C373;
+    --status-warning: #F59E0B;
+    --status-danger: #F28B82;
+    --status-info: #70B5F9;
+    --chart-1: #7CACF8;
+    --chart-2: #7FCFFF;
+    --chart-3: #46C373;
+    --chart-4: #F59E0B;
+    --chart-5: #C4C7C5;
+    --chart-6: #CE93D8;
+    --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.40);
+    --shadow-elevated: 0 8px 24px -4px rgba(0, 0, 0, 0.50);
+  }
+}
+
+/* Explicit Dark Mode */
+:root[data-theme="android-material"].dark,
+:root[data-theme="android-material"][data-mode="dark"],
+[data-theme="android-material"].dark,
+[data-theme="android-material"][data-mode="dark"] {
+  --bg-canvas: #111315;
+  --bg-subtle: #191C1E;
+  --bg-surface: #1F2326;
+  --bg-elevated: #282B30;
+  --text-primary: #E2E2E6;
+  --text-secondary: #C4C7C5;
+  --text-muted: #8E918F;
+  --border-subtle: #2D3135;
+  --border-default: #444746;
+  --border-strong: #8E918F;
+  --accent-primary: #7CACF8;
+  --accent-hover: #9EC2FF;
+  --accent-tint: rgba(124, 172, 248, 0.12);
+  --text-on-accent: #001D4A;
+  --accent-secondary: #7FCFFF;
+  --status-success: #46C373;
+  --status-warning: #F59E0B;
+  --status-danger: #F28B82;
+  --status-info: #70B5F9;
+  --chart-1: #7CACF8;
+  --chart-2: #7FCFFF;
+  --chart-3: #46C373;
+  --chart-4: #F59E0B;
+  --chart-5: #C4C7C5;
+  --chart-6: #CE93D8;
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.40);
+  --shadow-elevated: 0 8px 24px -4px rgba(0, 0, 0, 0.50);
+}

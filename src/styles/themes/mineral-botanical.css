@@ -1,0 +1,131 @@
+/* Theme 04: Limestone & Moss (ui-theme-mineral-botanical)
+   Lineage: Aesop Spaces / Muji Materiality / Raw Unglazed Stoneware */
+
+:root:not([data-theme]),
+:root[data-theme="mineral-botanical"],
+[data-theme="mineral-botanical"] {
+  /* 1. Raw Travertine Limestone Ladders */
+  --bg-canvas: #F1F0EA;
+  --bg-subtle: #E6E5DC;
+  --bg-surface: #F9F8F4;
+  --bg-elevated: #FFFFFF;
+
+  /* 2. Verified AAA/AA Botanical Ink Hierarchy */
+  --text-primary: #19201C;
+  --text-secondary: #424D46;
+  --text-muted: #606E65;
+
+  /* 3. Mineral Stoneware Borders */
+  --border-subtle: #DCDCD2;
+  --border-default: #C3C5B8;
+  --border-strong: #828A80;
+
+  /* 4. Deep Cypress Moss & Kiln Terracotta Clay */
+  --accent-primary: #21543D;
+  --accent-hover: #173D2C;
+  --accent-tint: oklch(40.4% 0.068 161.5 / 0.09);
+  --text-on-accent: #F9F8F4;
+  --accent-secondary: #9E472A;
+
+  --status-success: #216644;
+  --status-warning: #8F580A;
+  --status-danger: #A62E2E;
+  --status-info: #25586B;
+
+  /* 5. 6-Color Botanical & Mineral Data Scale */
+  --chart-1: #21543D;
+  --chart-2: #9E472A;
+  --chart-3: #25586B;
+  --chart-4: #8F580A;
+  --chart-5: #5D536B;
+  --chart-6: #606E65;
+
+  /* 6. Diffusion Shadows */
+  --shadow-surface: 0 4px 16px -4px rgba(25, 32, 28, 0.05);
+  --shadow-elevated: 0 12px 32px -8px rgba(25, 32, 28, 0.12), 0 2px 6px rgba(25, 32, 28, 0.04);
+
+  /* 7. Typography, Radii & Ceramic Motion */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 220ms;
+  --duration-panel: 320ms;
+}
+
+/* System Dark Preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]):not([data-mode="light"]):not(.light),
+  :root[data-theme="mineral-botanical"]:not([data-mode="light"]):not(.light) {
+    --bg-canvas: #111613;
+    --bg-subtle: #161D19;
+    --bg-surface: #1B231E;
+    --bg-elevated: #242E28;
+    --text-primary: #EAECE7;
+    --text-secondary: #B0B8B1;
+    --text-muted: #828D84;
+    --border-subtle: #26302A;
+    --border-default: #35423A;
+    --border-strong: #53665A;
+    --accent-primary: #68B68E;
+    --accent-hover: #82C7A3;
+    --accent-tint: oklch(71.5% 0.098 160.2 / 0.14);
+    --text-on-accent: #111613;
+    --accent-secondary: #E08263;
+    --status-success: #68B68E;
+    --status-warning: #E3A646;
+    --status-danger: #E87474;
+    --status-info: #6EB5C9;
+    --chart-1: #68B68E;
+    --chart-2: #E08263;
+    --chart-3: #6EB5C9;
+    --chart-4: #E3A646;
+    --chart-5: #B3A5C7;
+    --chart-6: #95A399;
+    --shadow-surface: inset 0 1px 0 rgba(234, 236, 231, 0.04);
+    --shadow-elevated: 0 16px 36px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(234, 236, 231, 0.05);
+  }
+}
+
+/* Explicit Persisted Dark Mode */
+:root[data-theme="mineral-botanical"].dark,
+:root[data-theme="mineral-botanical"][data-mode="dark"],
+:root:not([data-theme]).dark,
+:root:not([data-theme])[data-mode="dark"],
+[data-theme="mineral-botanical"].dark,
+[data-theme="mineral-botanical"][data-mode="dark"] {
+  --bg-canvas: #111613;
+  --bg-subtle: #161D19;
+  --bg-surface: #1B231E;
+  --bg-elevated: #242E28;
+  --text-primary: #EAECE7;
+  --text-secondary: #B0B8B1;
+  --text-muted: #828D84;
+  --border-subtle: #26302A;
+  --border-default: #35423A;
+  --border-strong: #53665A;
+  --accent-primary: #68B68E;
+  --accent-hover: #82C7A3;
+  --accent-tint: oklch(71.5% 0.098 160.2 / 0.14);
+  --text-on-accent: #111613;
+  --accent-secondary: #E08263;
+  --status-success: #68B68E;
+  --status-warning: #E3A646;
+  --status-danger: #E87474;
+  --status-info: #6EB5C9;
+  --chart-1: #68B68E;
+  --chart-2: #E08263;
+  --chart-3: #6EB5C9;
+  --chart-4: #E3A646;
+  --chart-5: #B3A5C7;
+  --chart-6: #95A399;
+  --shadow-surface: inset 0 1px 0 rgba(234, 236, 231, 0.04);
+  --shadow-elevated: 0 16px 36px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(234, 236, 231, 0.05);
+}

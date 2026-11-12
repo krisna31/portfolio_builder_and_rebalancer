@@ -20,9 +20,18 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <script>
       try {
+        var theme = localStorage.getItem('quantporto-theme-id') || 'mineral-botanical';
         var mode = localStorage.getItem('color-scheme');
+        var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var activeMode = (mode === 'light' || mode === 'dark') ? mode : (sysDark ? 'dark' : 'light');
+
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-mode', activeMode);
+        document.documentElement.classList.toggle('dark', activeMode === 'dark');
+
         if (mode === 'light' || mode === 'dark' || mode === 'light dark') {
-          document.querySelector('meta[name="color-scheme"]').content = mode;
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.content = mode;
         }
       } catch (e) {}
     </script>

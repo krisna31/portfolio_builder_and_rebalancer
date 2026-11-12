@@ -1049,8 +1049,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="NilaiPortfolio"
                       name="Nilai Portfolio (Compounding)"
-                      stroke="#21543D"
-                      fill="#21543D"
+                      stroke="var(--accent-primary)"
+                      fill="var(--accent-primary)"
                       fillOpacity={0.2}
                     />
                     {annualInflationPercent > 0 && (
@@ -1134,8 +1134,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                           ? `P50: Ekspektasi Riil (Inflasi ${annualInflationPercent}%)`
                           : 'P50: Ekspektasi Median (Realistis)'
                       }
-                      stroke="#21543D"
-                      fill="#21543D"
+                      stroke="var(--accent-primary)"
+                      fill="var(--accent-primary)"
                       fillOpacity={0.25}
                       strokeWidth={2}
                     />
@@ -2056,7 +2056,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Kuartalan3M"
                 name="Rebalance 3 Bulan (Kuartalan)"
-                stroke="#21543D"
+                stroke="var(--accent-primary)"
                 strokeWidth={2.5}
                 dot={false}
               />
