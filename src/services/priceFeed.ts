@@ -5,6 +5,54 @@ export interface LivePriceUpdateResult {
   usdIdrRate: number;
   updatedAt: string;
   sourceSummary: string;
+  warnings?: string[];
+}
+
+export interface PriceValidationResult {
+  accepted: boolean;
+  reason?: string;
+}
+
+/**
+ * Sanity-checks a price fetched over the network (especially via third-party CORS proxies)
+ * against a trusted reference (weekly snapshot or last known price).
+ */
+export function validateFetchedPrice(
+  fetchedPrice: number,
+  referencePrice: number | undefined,
+  options?: {
+    maxDeviationRatio?: number;
+    minMultiplier?: number;
+    maxMultiplier?: number;
+  }
+): PriceValidationResult {
+  if (typeof fetchedPrice !== 'number' || !Number.isFinite(fetchedPrice) || fetchedPrice <= 0) {
+    return { accepted: false, reason: 'Harga tidak valid (<= 0 atau NaN).' };
+  }
+  if (typeof referencePrice !== 'number' || !Number.isFinite(referencePrice) || referencePrice <= 0) {
+    return { accepted: true };
+  }
+
+  if (options?.maxDeviationRatio !== undefined) {
+    const deviation = Math.abs(fetchedPrice - referencePrice) / referencePrice;
+    if (deviation > options.maxDeviationRatio) {
+      return {
+        accepted: false,
+        reason: `Deviasi ${(deviation * 100).toFixed(1)}% melampaui batas ${(options.maxDeviationRatio * 100).toFixed(0)}% dari referensi (${referencePrice}).`,
+      };
+    }
+  }
+
+  const minMult = options?.minMultiplier ?? 0.2;
+  const maxMult = options?.maxMultiplier ?? 5.0;
+  if (fetchedPrice < referencePrice * minMult || fetchedPrice > referencePrice * maxMult) {
+    return {
+      accepted: false,
+      reason: `Harga ${fetchedPrice} di luar rentang wajar [${(referencePrice * minMult).toFixed(2)}, ${(referencePrice * maxMult).toFixed(2)}].`,
+    };
+  }
+
+  return { accepted: true };
 }
 
 export interface MarketDataSnapshot {
@@ -477,6 +525,10 @@ export async function fetchSingleYahooPrice(symbol: string): Promise<number | nu
       if (!result) continue;
 
       const meta = result.meta;
+      const metaSym = typeof meta?.symbol === 'string' ? meta.symbol.trim().toUpperCase() : null;
+      if (metaSym && metaSym !== cleanSym) {
+        continue;
+      }
       const closes =
         result.indicators?.quote?.[0]?.close?.filter(
           (v: number | null) => typeof v === 'number' && v > 0
@@ -488,7 +540,7 @@ export async function fetchSingleYahooPrice(symbol: string): Promise<number | nu
         meta.chartPreviousClose ??
         lastClose;
 
-      if (typeof price === 'number' && price > 0) {
+      if (typeof price === 'number' && Number.isFinite(price) && price > 0) {
         return Number(price.toFixed(2));
       }
     } catch {
@@ -511,7 +563,10 @@ export async function fetchLiveMarketPrices(
   currentUsdIdr: number = 18000
 ): Promise<LivePriceUpdateResult> {
   const pricesByAssetId: Record<string, number> = {};
+  const snapshotPrices: Record<string, number> = {};
+  const warnings: string[] = [];
   let usdIdrRate = currentUsdIdr;
+  let hasFreshSnapshot = false;
   const sources: string[] = [];
 
   // Base initialization from current defaultPrice
@@ -528,6 +583,8 @@ export async function fetchLiveMarketPrices(
     });
     if (res.ok) {
       const snapshot: MarketDataSnapshot = await res.json();
+      const snapTs = snapshot.updatedAt ? Date.parse(snapshot.updatedAt) : NaN;
+      hasFreshSnapshot = Number.isFinite(snapTs) && Date.now() - snapTs <= 30 * 86_400_000;
       if (snapshot.usdIdrRate && snapshot.usdIdrRate > 10000) {
         usdIdrRate = snapshot.usdIdrRate;
       }
@@ -536,6 +593,7 @@ export async function fetchLiveMarketPrices(
           if (data.price && data.price > 0) {
             pricesByAssetId[id] = data.price;
             pricesByAssetId[`${id}.JK`] = data.price;
+            snapshotPrices[id] = data.price;
           }
         }
         sources.push('Snapshot 5Y');
@@ -544,6 +602,25 @@ export async function fetchLiveMarketPrices(
   } catch {
     // Fallback to defaults silently if offline
   }
+
+  const acceptPriceOrWarn = (asset: AssetDefinition, candidate: number, sourceLabel: string): boolean => {
+    const snapRef = snapshotPrices[asset.id];
+    const ref = snapRef ?? (asset.defaultPrice > 0 ? asset.defaultPrice : undefined);
+    const check = validateFetchedPrice(candidate, ref, {
+      maxDeviationRatio: snapRef && hasFreshSnapshot
+        ? asset.category === 'crypto'
+          ? 0.6
+          : 0.4
+        : undefined,
+      minMultiplier: 0.2,
+      maxMultiplier: 5.0,
+    });
+    if (!check.accepted) {
+      warnings.push(`${asset.id} (${sourceLabel}): ${check.reason}`);
+      return false;
+    }
+    return true;
+  };
 
   // 2. Fetch live Crypto & USD/IDR exchange rate from CoinGecko Public API
   const cgAssets = assets.filter((a) => a.coingeckoId);
@@ -559,23 +636,37 @@ export async function fetchLiveMarketPrices(
       });
       if (cgRes.ok) {
         const cgData = await cgRes.json();
-        if (cgData.tether?.idr && cgData.tether?.usd) {
-          usdIdrRate = Math.round(cgData.tether.idr / cgData.tether.usd);
-        } else if (cgData.bitcoin?.idr && cgData.bitcoin?.usd) {
-          usdIdrRate = Math.round(cgData.bitcoin.idr / cgData.bitcoin.usd);
+        const candidateFx =
+          cgData.tether?.idr && cgData.tether?.usd
+            ? Math.round(cgData.tether.idr / cgData.tether.usd)
+            : cgData.bitcoin?.idr && cgData.bitcoin?.usd
+              ? Math.round(cgData.bitcoin.idr / cgData.bitcoin.usd)
+              : null;
+        if (candidateFx !== null) {
+          const fxCheck = validateFetchedPrice(candidateFx, usdIdrRate, {
+            maxDeviationRatio: 0.25,
+          });
+          if (fxCheck.accepted) {
+            usdIdrRate = candidateFx;
+          } else {
+            warnings.push(`USD/IDR (CoinGecko): ${fxCheck.reason}`);
+          }
         }
 
         for (const asset of cgAssets) {
           const entry = cgData[asset.coingeckoId!];
           if (entry) {
+            let candidate: number | null = null;
             if (asset.id === 'GLD' && entry.usd) {
-              pricesByAssetId[asset.id] = Number((entry.usd * 0.0925).toFixed(2));
+              candidate = Number((entry.usd * 0.0925).toFixed(2));
             } else if (asset.currency === 'USD' && entry.usd) {
-              pricesByAssetId[asset.id] = Number(entry.usd);
-              pricesByAssetId[asset.symbol] = Number(entry.usd);
+              candidate = Number(entry.usd);
             } else if (asset.currency === 'IDR' && entry.idr) {
-              pricesByAssetId[asset.id] = Number(entry.idr);
-              pricesByAssetId[asset.symbol] = Number(entry.idr);
+              candidate = Number(entry.idr);
+            }
+            if (candidate !== null && acceptPriceOrWarn(asset, candidate, 'CoinGecko')) {
+              pricesByAssetId[asset.id] = candidate;
+              pricesByAssetId[asset.symbol] = candidate;
             }
           }
         }
@@ -596,7 +687,7 @@ export async function fetchLiveMarketPrices(
     const sym = resolveAssetYahooTicker(asset);
     if (!sym) return null;
     const price = await fetchSingleYahooPrice(sym);
-    if (typeof price === 'number' && price > 0) {
+    if (typeof price === 'number' && price > 0 && acceptPriceOrWarn(asset, price, `Yahoo ${sym}`)) {
       pricesByAssetId[asset.id] = price;
       pricesByAssetId[asset.symbol] = price;
       if (asset.yahooSymbol) pricesByAssetId[asset.yahooSymbol] = price;
@@ -631,6 +722,7 @@ export async function fetchLiveMarketPrices(
       second: '2-digit',
     }),
     sourceSummary: sources.length > 0 ? sources.join(' + ') : 'Bundled Baseline Data',
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 

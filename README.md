@@ -10,22 +10,23 @@ A client-side Single-Page Application (`React 19 + TypeScript + Vite + Tailwind 
 
 ### 1. Portfolio Builder & Quant Solver Lab
 - **15 Optimal Portfolios (+10 Dominated Presets)**:
-  - Exact CAGR (%), Max Drawdown (%), Risk Tier classification (*Super High Risk*, *High Risk*, *Medium Risk*, *Low Risk*), and capital weights across the 8 core benchmark instruments (`RDPU`, `RDPT`, `BBCA`, `GLD`, `SPY`, `QQQ`, `BTC`, `ETH`).
+  - Video preset allocations, Risk Tier classification (*Super High Risk*, *High Risk*, *Medium Risk*, *Low Risk*), and capital weights across the 8 core benchmark instruments (`RDPU`, `RDPT`, `BBCA`, `GLD`, `SPY`, `QQQ`, `BTC`, `ETH`).
   - Toggle "+10 Porto Tereliminasi" to examine why benchmark strategies (e.g. *All-In S&P 500*, *All-In QQQ*) are Pareto-dominated by risk budgeting approaches.
-- **Dynamic Client-Side Quant Solvers**:
-  - **Risk Parity (Equal Risk Contribution)**: Balances portfolio volatility equally across any selected subset of assets.
-  - **Risk Budgeting (Conviction Tilt)**: Select conviction assets (`BTC`, `ETH`, `QQQ`, `SPY`, `GLD`, `BBCA`) with an interactive risk budget slider (20% – 95%) mapping capital weight to risk share.
-  - Dual solver engines: Video-calibrated heuristic solver and exact Covariance Matrix Solver (Spinu Cyclical Coordinate Descent).
+- **Dynamic Client-Side Quant Solvers & Metrics Engines**:
+  - **Risk Parity (Equal Risk Contribution)**: Balances marginal risk contribution equally across any selected subset of assets.
+  - **Risk Budgeting (Conviction Tilt)**: Select conviction assets (`BTC`, `ETH`, `QQQ`, `SPY`, `GLD`, `BBCA`) with an interactive risk budget slider (5% – 99%) allocating target risk share.
+  - **Covariance Solver (Default)** & **5Y IDR Backtest**: Uses Spinu Cyclical Coordinate Descent on a positive-definite covariance matrix built from measured 5-year weekly IDR return history (`src/data/market-history.json`), paired with monthly-rebalanced portfolio backtesting (re-centered to each asset's editable CAGR assumption).
+  - **Video Replica Mode (Opt-in)**: Optional comparison mode preserving the video's original table figures and legacy heuristic curves.
 - **Custom Asset Universe & Synthetic Builder**:
   - Expanded Indonesian banking tickers (`BMRI`, `BBRI`, `BBNI`, `NISP`), US ETFs (`SCHD`, `SMH`), and crypto (`SOL`).
   - Live Yahoo Finance 5Y ticker lookup + synthetic asset modeling.
 - **Correlation Matrix & Smart Recommender**:
-  - Interactive cross-asset correlation matrix highlighting optimal hedging pairs.
+  - Interactive cross-asset correlation matrix using measured 5Y weekly IDR correlations (with category priors clearly labeled when an asset lacks 1Y history), highlighting optimal hedging pairs.
   - Questionnaire-driven portfolio recommendation modal matching investor risk profile and time horizon.
 
 ### 2. Portfolio Rebalancer & Stress-Tester
 - **Flexible Asset Tracking**:
-  - Input holdings via **Nominal Value (`Rp`)** or **Units / IDX Lots × Price** with automated `USD/IDR` conversion.
+  - Input holdings via **Nominal Value (`Rp`)** or **Units / IDX Lots × Price** with automated `USD/IDR` conversion and sanity checks against the weekly market snapshot for proxy-fetched prices.
   - Unstructured text and CSV import (`HoldingsTextImportModal`) for quick sync from brokerage notes.
 - **Rebalancing Modes**:
   - **Sell + Buy (Full Rebalance)**: Trims overweight assets to buy underweight ones and deploys fresh cash.
@@ -43,9 +44,9 @@ A client-side Single-Page Application (`React 19 + TypeScript + Vite + Tailwind 
 - Interactive compounding trajectory simulator projecting time to reach Rp10 Billion (or custom targets).
 - Configurable monthly contributions, annual income step-up percentages, target milestone chips, and withdrawal scenarios.
 
-### 4. Privacy & Client-Side Security
-- **Local-Only Storage**: All financial holdings and portfolios remain in the client browser (`localStorage`).
-- **Access Protection**: SHA-256 hashed password lockscreen with optional WebAuthn / biometric authentication and configurable auto-lock timeout.
+### 4. Local-Only Storage & UI Privacy Curtain
+- **Local-Only Storage**: All financial holdings and portfolios remain in the client browser (`localStorage`), with no backend server.
+- **UI Lock Screen (Privacy Curtain)**: PBKDF2-SHA256 / SHA-256 password lockscreen (`VITE_APP_PASSWORD_HASH` + optional `VITE_APP_PASSWORD_SALT`) with optional WebAuthn / biometric prompt and auto-lock timeout. **Note:** This is a client-side privacy curtain against casual shoulder-surfing, not at-rest encryption — `localStorage` data is unencrypted and the password hash is bundled into the client build.
 
 ---
 
@@ -55,7 +56,7 @@ A client-side Single-Page Application (`React 19 + TypeScript + Vite + Tailwind 
 - **Styling**: Tailwind CSS v4 (`@tailwindcss/vite`), `clsx`, `tailwind-merge`
 - **Charts & UI**: Recharts, Lucide React, Driver.js (interactive onboarding tour)
 - **Exports**: HTML2Canvas, HTML2Canvas-Pro
-- **Testing**: Vitest (260+ unit tests across quant math, auth, and rebalancing logic)
+- **Testing**: Vitest (unit tests across quant math, backtest, price sanity checks, auth, and rebalancing logic)
 
 ---
 
@@ -74,7 +75,7 @@ cd portfolio_builder_and_rebalancer
 
 # 2. Configure environment variables
 cp .env.example .env
-# Set VITE_APP_PASSWORD_HASH in .env (default in .env.example is SHA-256 of 'quantporto2026')
+# Set VITE_APP_PASSWORD_HASH (and optional VITE_APP_PASSWORD_SALT) in .env (default in .env.example is SHA-256 of 'quantporto2026')
 
 # 3. Install dependencies
 npm install
@@ -97,5 +98,5 @@ npm run preview
 
 ## GitHub Actions & Automation
 
-- `.github/workflows/deploy.yml`: Automated CI/CD pipeline deploying static production builds to **GitHub Pages** upon pushing to `master`.
-- `.github/workflows/update-market-data.yml`: Scheduled weekly workflow executing `scripts/fetch_market_data.py` to refresh 5-year benchmark price history in `public/data/market-data.json`.
+- `.github/workflows/deploy-pages.yml`: Automated CI/CD pipeline deploying static production builds to **GitHub Pages** upon pushing to `master`.
+- `.github/workflows/update-market-data.yml`: Scheduled weekly workflow executing `scripts/fetch_market_data.py` to refresh 5-year benchmark metrics (`public/data/market-data.json`) and aligned weekly IDR return history (`src/data/market-history.json`).

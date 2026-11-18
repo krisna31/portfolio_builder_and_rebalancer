@@ -39,8 +39,8 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
     });
   });
 
-  it('solves Risk Parity across the 7 core assets matching the video weights (38/14/12/16/13/3/3)', () => {
-    const weights = solveRiskBudgetingWeights(core7Assets, 'risk-parity');
+  it('solves Risk Parity across the 7 core assets matching the video weights (38/14/12/16/13/3/3) in Video Replica mode', () => {
+    const weights = solveRiskBudgetingWeights(core7Assets, 'risk-parity', undefined, 70, 'calibrated-video');
     expect(weights.RDPT).toBeGreaterThanOrEqual(37);
     expect(weights.RDPT).toBeLessThanOrEqual(39);
     expect(weights.BBCA).toBe(14);
@@ -51,15 +51,15 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
     expect(weights.ETH).toBe(3);
   });
 
-  it('solves Risk Budgeting BTC 90% and ETH 70% matching video proportions', () => {
-    const btc90 = solveRiskBudgetingWeights(core7Assets, 'risk-budgeting', 'BTC', 90);
+  it('solves Risk Budgeting BTC 90% and ETH 70% matching video proportions in Video Replica mode', () => {
+    const btc90 = solveRiskBudgetingWeights(core7Assets, 'risk-budgeting', 'BTC', 90, 'calibrated-video');
     // In video: RDPT ~32%, BTC ~18%, ETH ~2-3%
     expect(btc90.BTC).toBeGreaterThanOrEqual(16);
     expect(btc90.BTC).toBeLessThanOrEqual(20);
     expect(btc90.RDPT).toBeGreaterThanOrEqual(30);
     expect(btc90.RDPT).toBeLessThanOrEqual(34);
 
-    const eth70 = solveRiskBudgetingWeights(core7Assets, 'risk-budgeting', 'ETH', 70);
+    const eth70 = solveRiskBudgetingWeights(core7Assets, 'risk-budgeting', 'ETH', 70, 'calibrated-video');
     // In video: RDPT 35%, ETH 10%
     expect(eth70.ETH).toBeGreaterThanOrEqual(9);
     expect(eth70.ETH).toBeLessThanOrEqual(12);
@@ -77,7 +77,7 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
     expect(metrics.dominatingPresets.length).toBeGreaterThan(0);
   });
 
-  it('recomputes all 15 table presets dynamically when swapping BBCA -> PTBA', () => {
+  it('recomputes all 15 table presets dynamically when swapping BBCA -> PTBA (Video Replica vs Euler Covariance)', () => {
     const slotMap = {
       RDPU: 'RDPU',
       RDPT: 'RDPT',
@@ -88,16 +88,28 @@ describe('Risk Parity & Risk Budgeting Quant Engine', () => {
       BTC: 'BTC',
       ETH: 'ETH',
     };
-    const dynamic = buildDynamicPresetsForSlotMap(
+    const dynamicVideo = buildDynamicPresetsForSlotMap(
+      VIDEO_PORTFOLIO_PRESETS,
+      slotMap,
+      CORE_AND_EXPANDED_ASSETS,
+      0,
+      false,
+      { model: 'video-replica', solverMode: 'calibrated-video' }
+    );
+    const rp7Video = dynamicVideo.find((p) => p.id === 'opt-9-rp-all-7')!;
+    expect(rp7Video.name).toContain('PTBA');
+    expect(rp7Video.weights.PTBA).toBeGreaterThanOrEqual(10);
+    expect(rp7Video.weights.PTBA).toBeLessThanOrEqual(13);
+
+    const dynamicHist = buildDynamicPresetsForSlotMap(
       VIDEO_PORTFOLIO_PRESETS,
       slotMap,
       CORE_AND_EXPANDED_ASSETS
     );
-    const rp7 = dynamic.find((p) => p.id === 'opt-9-rp-all-7')!;
-    expect(rp7.name).toContain('PTBA');
-    // Since PTBA has higher riskScale (3.6) than BBCA (2.714), its optimal Risk Parity weight is slightly lower (~11% vs 14%)
-    expect(rp7.weights.PTBA).toBeGreaterThanOrEqual(10);
-    expect(rp7.weights.PTBA).toBeLessThanOrEqual(13);
+    const rp7Hist = dynamicHist.find((p) => p.id === 'opt-9-rp-all-7')!;
+    expect(rp7Hist.name).toContain('PTBA');
+    expect(rp7Hist.weights.PTBA).toBeGreaterThan(5);
+    expect(rp7Hist.weights.PTBA).toBeLessThan(15);
   });
 });
 

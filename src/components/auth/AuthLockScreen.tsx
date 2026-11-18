@@ -353,6 +353,9 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                   {!isVerifying && <ArrowRight className="w-3.5 h-3.5" />}
                 </button>
               </form>
+              <p className="text-[10px] ui-text-muted text-center leading-snug pt-0.5">
+                Kunci layar lokal (privacy curtain). Data di penyimpanan browser tidak terenkripsi.
+              </p>
             </div>
           )}
         </div>

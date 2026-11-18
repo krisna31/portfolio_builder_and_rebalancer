@@ -6,6 +6,25 @@ import {
   SolvedPortfolio,
 } from './types';
 import { CORE_AND_EXPANDED_ASSETS, VIDEO_PORTFOLIO_PRESETS } from '../../data/presets';
+import {
+  BUNDLED_MARKET_HISTORY,
+  backtestRebalancedPortfolio,
+  ensurePositiveDefinite,
+  historicalCorrelation,
+  historicalVolatilityPct,
+  type MarketHistory,
+} from './historicalModel';
+
+/**
+ * Which metrics engine to use:
+ * - 'historical' (default): covariance + rebalanced backtest on real weekly IDR price history.
+ * - 'video-replica': the legacy heuristics curve-fit to reproduce the numbers shown in the video.
+ *   Kept only so users can compare against the video; its custom-portfolio numbers are not reliable.
+ */
+export type MetricsModel = 'historical' | 'video-replica';
+
+/** Fallback risk-free rate (%) when no RDPU (money-market) asset is present. */
+export const DEFAULT_RISK_FREE_RATE_PCT = 3.76;
 
 /**
  * Pairwise Correlation Matrix across asset categories (calibrated to 5Y historical behavior)
@@ -97,9 +116,10 @@ const SPECIFIC_ASSET_CORRELATIONS: Record<string, number> = {
 };
 
 /**
- * Returns the pairwise correlation coefficient r in [-1.0, 1.0] between any two assets.
+ * Category-based prior correlation (hand-calibrated, not measured). Used only when an asset pair
+ * lacks at least a year of overlapping price history, and by the "Video Replica" model.
  */
-export function getAssetPairwiseCorrelation(
+export function getCategoryPriorCorrelation(
   assetA: AssetDefinition,
   assetB: AssetDefinition
 ): number {
@@ -127,6 +147,37 @@ export function getAssetPairwiseCorrelation(
   }
 
   return catCorr;
+}
+
+/**
+ * Returns the pairwise correlation coefficient r in [-1.0, 1.0] between any two assets:
+ * measured from weekly IDR return history when both assets share >= 1 year of data,
+ * otherwise the category prior.
+ */
+export function getAssetPairwiseCorrelation(
+  assetA: AssetDefinition,
+  assetB: AssetDefinition,
+  history: MarketHistory = BUNDLED_MARKET_HISTORY
+): number {
+  if (assetA.id === assetB.id) return 1.0;
+  return historicalCorrelation(assetA.id, assetB.id, history) ?? getCategoryPriorCorrelation(assetA, assetB);
+}
+
+/** Whether a pair's correlation is measured from history (true) or taken from the category prior. */
+export function isCorrelationMeasured(
+  assetA: AssetDefinition,
+  assetB: AssetDefinition,
+  history: MarketHistory = BUNDLED_MARKET_HISTORY
+): boolean {
+  return assetA.id === assetB.id || historicalCorrelation(assetA.id, assetB.id, history) !== null;
+}
+
+/** Volatility (%) used by the historical model: measured when available, else the asset assumption. */
+export function getModelVolatilityPct(
+  asset: AssetDefinition,
+  history: MarketHistory = BUNDLED_MARKET_HISTORY
+): number {
+  return historicalVolatilityPct(asset.id, history) ?? asset.volatility;
 }
 
 /**
@@ -190,44 +241,64 @@ export function classifyRiskTier(maxDrawdown: number): RiskTier {
 }
 
 /**
- * Builds an N x N covariance matrix from the active assets using their calibrated riskScales / volatilities
- * and pairwise correlation coefficients.
+ * Builds an annualized N x N covariance matrix (decimal units).
+ * - 'historical' (default): measured volatility and correlation from weekly IDR history where
+ *   available (category prior / asset assumption otherwise), repaired to be positive-definite.
+ * - 'category-prior': the legacy hand-calibrated matrix from `asset.volatility` and category
+ *   correlations, used only by the video-replica model.
  */
-export function buildCovarianceMatrix(assets: AssetDefinition[]): number[][] {
+export function buildCovarianceMatrix(
+  assets: AssetDefinition[],
+  source: 'historical' | 'category-prior' = 'historical',
+  history: MarketHistory = BUNDLED_MARKET_HISTORY
+): number[][] {
   const n = assets.length;
-  const cov: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
-
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      const volI = assets[i].volatility / 100;
-      const volJ = assets[j].volatility / 100;
-      if (i === j) {
-        cov[i][j] = volI * volI;
-      } else {
-        const corr = getAssetPairwiseCorrelation(assets[i], assets[j]);
-        cov[i][j] = corr * volI * volJ;
-      }
-    }
+  const vols = assets.map((a) =>
+    (source === 'historical' ? getModelVolatilityPct(a, history) : a.volatility) / 100
+  );
+  let corr: number[][] = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (_, j) => {
+      if (i === j) return 1;
+      return source === 'historical'
+        ? getAssetPairwiseCorrelation(assets[i], assets[j], history)
+        : getCategoryPriorCorrelation(assets[i], assets[j]);
+    })
+  );
+  if (source === 'historical') {
+    corr = ensurePositiveDefinite(corr);
   }
-  return cov;
+  return corr.map((row, i) => row.map((c, j) => c * vols[i] * vols[j]));
+}
+
+/** Euler risk contributions (%) w_i (Σw)_i / (wᵀΣw), summing to 100. */
+export function computeEulerRiskContributions(
+  weightFractions: number[],
+  cov: number[][]
+): number[] {
+  const marginal = weightFractions.map((_, i) =>
+    weightFractions.reduce((acc, wj, j) => acc + cov[i][j] * wj, 0)
+  );
+  const total = weightFractions.reduce((acc, wi, i) => acc + wi * marginal[i], 0);
+  return weightFractions.map((wi, i) => (total > 0 ? ((wi * marginal[i]) / total) * 100 : 0));
 }
 
 /**
  * Solves for portfolio weights given a target Risk Budget distribution across selected assets.
  *
  * Why two solver modes?
- * 1. `calibrated-video` (default): Uses the exact inverse-risk scaling and nonlinear conviction curve
- *    reverse-engineered from Sander & Leon's Python output in the video (reproducing the 15 presets
- *    such as 38/14/12/16/13/3/3 for Risk Parity and 32/12/10/14/11/18/2 for BTC 90% Risk Budgeting).
- * 2. `euler-covariance`: Uses cyclical coordinate descent on the full covariance matrix (Spinu 2013)
- *    so that Marginal Risk Contribution w_i * (Sigma * w)_i / (w^T * Sigma * w) = b_i.
+ * 1. `euler-covariance` (default): Uses cyclical coordinate descent on the covariance matrix built from
+ *    measured history (Spinu 2013) so that w_i * (Sigma * w)_i / (w^T * Sigma * w) = b_i.
+ *    This is genuine Equal Risk Contribution / Risk Budgeting.
+ * 2. `calibrated-video`: Inverse-risk weighting with a curve-fitted conviction exponent that
+ *    reproduces the video's preset weights (38/14/12/16/13/3/3 etc.). It is NOT equal risk
+ *    contribution; kept as a labeled "Video Replica" for comparison.
  */
 export function solveRiskBudgetingWeights(
   activeAssets: AssetDefinition[],
   method: 'all-in' | 'risk-parity' | 'risk-budgeting',
   convictionAssetId?: string,
   convictionRiskPercent: number = 70,
-  solverMode: 'calibrated-video' | 'euler-covariance' = 'calibrated-video',
+  solverMode: 'calibrated-video' | 'euler-covariance' = 'euler-covariance',
   lockedAssetIds?: string[] | Set<string>,
   currentWeights?: Record<string, number>
 ): Record<string, number> {
@@ -295,7 +366,8 @@ export function solveRiskBudgetingWeights(
     const sumInit = w.reduce((acc, v) => acc + v, 0) || 1;
     w = w.map((v) => v / sumInit);
 
-    for (let iter = 0; iter < 250; iter++) {
+    for (let iter = 0; iter < 1000; iter++) {
+      let maxDelta = 0;
       for (let i = 0; i < k; i++) {
         let covTerm = 0;
         for (let j = 0; j < k; j++) {
@@ -304,8 +376,11 @@ export function solveRiskBudgetingWeights(
         const varI = Math.max(1e-8, cov[i][i]);
         // Solve quadratic: varI * w_i^2 + covTerm * w_i - b_i = 0
         const discriminant = covTerm * covTerm + 4 * varI * riskBudgets[i];
-        w[i] = (-covTerm + Math.sqrt(Math.max(0, discriminant))) / (2 * varI);
+        const next = (-covTerm + Math.sqrt(Math.max(0, discriminant))) / (2 * varI);
+        maxDelta = Math.max(maxDelta, Math.abs(next - w[i]) / Math.max(1e-12, Math.abs(next)));
+        w[i] = next;
       }
+      if (maxDelta < 1e-10) break;
     }
 
     const totalW = w.reduce((acc, v) => acc + v, 0);
@@ -549,13 +624,16 @@ export function findStrictDominatingPresets(
 }
 
 /**
- * Evaluates any portfolio weight allocation (whether Preset, Solver-generated, or Custom Sliders)
- * and computes:
- * - Portfolio CAGR (%) (including rebalancing diversification bonus & optional Makmur +3% RDPT promo alpha)
- * - Portfolio Max Drawdown (%)
- * - Annualized Volatility (%) & Sharpe Ratio
- * - Percentage Risk Contribution per asset (showing how 18% BTC = ~90% of portfolio risk!)
- * - Strict Mathematical Pareto Dominance check against all available presets
+ * Evaluates a portfolio weight allocation and computes CAGR, Max Drawdown, Volatility,
+ * Sharpe Ratio, per-asset Risk Contributions, and Pareto Dominance.
+ *
+ * - `model === 'historical'` (default):
+ *   Uses measured weekly IDR covariance for Euler risk contributions and volatility,
+ *   and monthly-rebalanced 5Y IDR backtesting (with re-centered asset CAGR assumptions)
+ *   for CAGR and Max Drawdown. Falls back to covariance-based parametric estimates (with
+ *   no fabricated rebalancing bonus) only if a volatile asset lacks >= 2 years of history.
+ * - `model === 'video-replica'`:
+ *   Uses the legacy curve-fit heuristics tuned to reproduce the video's preset table.
  */
 export function evaluatePortfolioMetrics(
   weights: Record<string, number>,
@@ -565,9 +643,13 @@ export function evaluatePortfolioMetrics(
     rdptAlphaPromoBonusPercent?: number; // e.g., +3% Makmur promo mentioned at 05:04
     exactPresetMatch?: PortfolioPreset | null;
     hasCustomAssetAssumptions?: boolean;
+    model?: MetricsModel;
+    history?: MarketHistory;
   }
 ): SolvedPortfolio {
   const rdptBonus = options?.rdptAlphaPromoBonusPercent ?? 0;
+  const model: MetricsModel = options?.model ?? 'historical';
+  const history = options?.history ?? BUNDLED_MARKET_HISTORY;
 
   // Filter active assets
   const assetMap = new Map(allAssets.map((a) => [a.id, a]));
@@ -588,15 +670,129 @@ export function evaluatePortfolioMetrics(
       isParetoDominated: false,
       dominatingPresets: [],
       dominatingPresetItems: [],
+      metricsSource: model === 'video-replica' ? 'video-replica' : 'historical-backtest',
+      riskContributionModel: model === 'video-replica' ? 'video-calibrated' : 'euler-covariance',
     };
   }
 
   // Normalize weights fraction for mathematical accuracy even if manual sliders don't sum to 100
   const totalWeightPct = activeEntries.reduce((sum, [, w]) => sum + w, 0);
   const normFactor = totalWeightPct > 0 ? 100 / totalWeightPct : 1;
+  const riskFreeRatePct = assetMap.get('RDPU')?.cagr ?? DEFAULT_RISK_FREE_RATE_PCT;
 
-  // Calculate Risk Contributions using calibrated riskScale:
-  // RiskContribution_i ~ (w_i * riskScale_i)^1.65 so that 18% BTC in BTC 90% preset reflects ~90% risk contribution
+  // ============================================================================
+  // HISTORICAL MODEL (DEFAULT): Euler Covariance + Monthly-Rebalanced 5Y Backtest
+  // ============================================================================
+  if (model === 'historical') {
+    const activeAssetList: AssetDefinition[] = [];
+    const activeWeightFractions: number[] = [];
+
+    for (const [assetId, rawW] of activeEntries) {
+      activeAssetList.push(assetMap.get(assetId)!);
+      activeWeightFractions.push((rawW * normFactor) / 100);
+    }
+
+    const cov = buildCovarianceMatrix(activeAssetList, 'historical', history);
+    const eulerShares = computeEulerRiskContributions(activeWeightFractions, cov);
+
+    const riskContributions: Record<string, number> = {};
+    for (const assetId of Object.keys(weights)) {
+      riskContributions[assetId] = 0;
+    }
+    activeAssetList.forEach((asset, idx) => {
+      riskContributions[asset.id] = Number(eulerShares[idx].toFixed(1));
+    });
+
+    let covVariance = 0;
+    for (let i = 0; i < activeAssetList.length; i++) {
+      for (let j = 0; j < activeAssetList.length; j++) {
+        covVariance += activeWeightFractions[i] * activeWeightFractions[j] * cov[i][j];
+      }
+    }
+    const covVolPercent = Math.sqrt(Math.max(0, covVariance)) * 100;
+
+    const backtest = backtestRebalancedPortfolio(
+      activeAssetList.map((asset, idx) => ({
+        asset,
+        weight: activeWeightFractions[idx],
+        assumedCagrPct: asset.id === 'RDPT' ? asset.cagr + rdptBonus : asset.cagr,
+      })),
+      history
+    );
+
+    let finalCagr: number;
+    let finalMaxDD: number;
+    let finalVol: number;
+    let metricsSource: 'historical-backtest' | 'parametric';
+    let backtestWindow: SolvedPortfolio['backtestWindow'];
+
+    if (backtest) {
+      finalCagr = Number(backtest.cagrPct.toFixed(2));
+      finalMaxDD = Number(backtest.maxDrawdownPct.toFixed(2));
+      finalVol = Number(backtest.volatilityPct.toFixed(2));
+      metricsSource = 'historical-backtest';
+      backtestWindow = {
+        start: backtest.windowStart,
+        end: backtest.windowEnd,
+        weeks: backtest.windowWeeks,
+        modeledAssetIds: backtest.modeledAssetIds,
+      };
+    } else {
+      // Parametric covariance fallback when a volatile custom asset has < 2Y history:
+      // No fabricated rebalancing bonus and no arbitrary 0.78 drawdown discount.
+      let weightedCagr = 0;
+      let weightedMaxDDLinear = 0;
+      let weightedIndivVol = 0;
+      for (let i = 0; i < activeAssetList.length; i++) {
+        const asset = activeAssetList[i];
+        const w = activeWeightFractions[i];
+        const effCagr = asset.id === 'RDPT' ? asset.cagr + rdptBonus : asset.cagr;
+        weightedCagr += w * effCagr;
+        weightedMaxDDLinear += w * asset.maxDrawdown;
+        weightedIndivVol += w * getModelVolatilityPct(asset, history);
+      }
+      const divRatio =
+        weightedIndivVol > 0 ? Math.min(1, covVolPercent / weightedIndivVol) : 1;
+
+      finalCagr = Number(weightedCagr.toFixed(2));
+      finalMaxDD = Number(Math.min(99.9, weightedMaxDDLinear * divRatio).toFixed(2));
+      finalVol = Number(covVolPercent.toFixed(2));
+      metricsSource = 'parametric';
+    }
+
+    const sharpeRatio = Number(
+      ((finalCagr - riskFreeRatePct) / Math.max(0.5, finalVol)).toFixed(2)
+    );
+
+    const dominatingPresetItems = findStrictDominatingPresets(
+      finalCagr,
+      finalMaxDD,
+      presets,
+      options?.exactPresetMatch?.id ?? null
+    );
+
+    return {
+      weights,
+      riskContributions,
+      cagr: finalCagr,
+      maxDrawdown: finalMaxDD,
+      volatility: finalVol,
+      sharpeRatio,
+      riskTier: classifyRiskTier(finalMaxDD),
+      isParetoDominated: dominatingPresetItems.length > 0,
+      dominatingPresets: dominatingPresetItems.map(
+        (d) => `${d.name} (CAGR ${d.cagr}%, Max DD -${d.maxDrawdown}%)`
+      ),
+      dominatingPresetItems,
+      metricsSource,
+      backtestWindow,
+      riskContributionModel: 'euler-covariance',
+    };
+  }
+
+  // ============================================================================
+  // VIDEO REPLICA MODEL (OPT-IN): Curve-fit heuristics matching Leon Hartono video
+  // ============================================================================
   const rawRiskContrib: Record<string, number> = {};
   let totalRawRisk = 0;
 
@@ -617,8 +813,8 @@ export function evaluatePortfolioMetrics(
       totalRawRisk > 0 ? Number(((r / totalRawRisk) * 100).toFixed(1)) : 0;
   }
 
-  // Check if this matches a baseline video preset so we preserve its exact calibrated rebalancing bonus
-  // and apply exact mathematical deltas (∑ w_i * Δr_i) when RDPT promo or custom asset assumptions are active!
+  // Check if this matches a baseline video preset so we preserve its calibrated rebalancing bonus
+  // and apply deltas (∑ w_i * Δr_i) when RDPT promo or custom asset assumptions are active!
   const matchedBaseVideoPreset = options?.exactPresetMatch
     ? VIDEO_PORTFOLIO_PRESETS.find((p) => p.id === options.exactPresetMatch!.id) ??
       options.exactPresetMatch
@@ -650,7 +846,7 @@ export function evaluatePortfolioMetrics(
       Math.max(0, matchedBaseVideoPreset.maxDrawdown * ddScale).toFixed(2)
     );
     const vol = Math.max(0.45, finalMaxDD * 0.85);
-    const sharpe = Number(((finalCagr - 3.76) / Math.max(0.8, vol)).toFixed(2));
+    const sharpe = Number(((finalCagr - DEFAULT_RISK_FREE_RATE_PCT) / Math.max(0.8, vol)).toFixed(2));
 
     const dominatingPresetItems = findStrictDominatingPresets(
       finalCagr,
@@ -672,11 +868,12 @@ export function evaluatePortfolioMetrics(
         (d) => `${d.name} (CAGR ${d.cagr}%, Max DD -${d.maxDrawdown}%)`
       ),
       dominatingPresetItems,
+      metricsSource: 'video-replica',
+      riskContributionModel: 'video-calibrated',
     };
   }
 
-  // General Quantitative Calculation for Custom / Tweaked Portfolios:
-  // 1. Weighted average base CAGR + Shannon's Demon / Rebalancing Volatility Harvesting Bonus
+  // Legacy Video-Replica Heuristic Calculation for Custom / Tweaked Portfolios:
   let weightedCagr = 0;
   let weightedMaxDDLinear = 0;
   const activeAssetList: AssetDefinition[] = [];
@@ -693,8 +890,7 @@ export function evaluatePortfolioMetrics(
     activeWeightFractions.push(w);
   }
 
-  // 2. Portfolio Volatility from Covariance Matrix
-  const cov = buildCovarianceMatrix(activeAssetList);
+  const cov = buildCovarianceMatrix(activeAssetList, 'category-prior');
   let portVariance = 0;
   let weightedIndivVol = 0;
   for (let i = 0; i < activeAssetList.length; i++) {
@@ -708,12 +904,9 @@ export function evaluatePortfolioMetrics(
   const portVolDecimal = Math.sqrt(Math.max(0, portVariance));
   const portVolPercent = portVolDecimal * 100;
 
-  // Diversification ratio (< 1 means multi-asset correlation reduces risk & boosts rebalanced geometric return)
   const divRatio =
     weightedIndivVol > 0 ? Math.min(1, portVolDecimal / weightedIndivVol) : 1;
 
-  // Rebalancing bonus (Shannon's Demon): mixing uncorrelated high-vol crypto/stocks with bonds
-  // harvests volatility during rebalancing (calibrated to match the 15 video presets within ~0.3%!)
   const cryptoWeight =
     activeEntries
       .filter(([id]) => assetMap.get(id)?.category === 'crypto')
@@ -733,7 +926,6 @@ export function evaluatePortfolioMetrics(
 
   const finalCagr = Number((weightedCagr + rebalancingBonus).toFixed(2));
 
-  // Max Drawdown scales with diversification ratio relative to linear weighted drawdown
   const drawdownCompression =
     activeEntries.length > 1 ? Math.pow(divRatio, 1.35) * 0.78 : 1.0;
   const finalMaxDD = Number(
@@ -741,10 +933,9 @@ export function evaluatePortfolioMetrics(
   );
 
   const sharpeRatio = Number(
-    ((finalCagr - 3.76) / Math.max(0.8, portVolPercent)).toFixed(2)
+    ((finalCagr - DEFAULT_RISK_FREE_RATE_PCT) / Math.max(0.8, portVolPercent)).toFixed(2)
   );
 
-  // Strict Mathematical Pareto Dominance Check against all presets
   const dominatingPresetItems = findStrictDominatingPresets(
     finalCagr,
     finalMaxDD,
@@ -765,28 +956,35 @@ export function evaluatePortfolioMetrics(
       (d) => `${d.name} (CAGR ${d.cagr}%, Max DD -${d.maxDrawdown}%)`
     ),
     dominatingPresetItems,
+    metricsSource: 'video-replica',
+    riskContributionModel: 'video-calibrated',
   };
 }
 
 /**
- * Re-computes all 25 Portfolio Presets when one or more of the 8 Core Benchmark slots
- * (`RDPU`, `RDPT`, `BBCA`, `GLD`, `SPY`, `QQQ`, `BTC`, `ETH`) is substituted with another asset
- * (for example, replacing `BBCA` with `PTBA` or `AADI`, or `QQQ` with `SMH`).
- *
- * - If no slot is substituted (all 8 match the original video benchmarks), returns the exact video presets unchanged.
- * - If a slot is substituted (e.g. `BBCA -> PTBA`), re-solves the weights for every Risk Parity and Risk Budgeting row
- *   using `solveRiskBudgetingWeights` so the user immediately sees how the optimal weights, CAGR, and Max Drawdown adjust!
+ * Re-computes all 25 Portfolio Presets when benchmark slots, assumptions, or metrics model change.
  */
 export function buildDynamicPresetsForSlotMap(
   basePresets: PortfolioPreset[],
   slotMap: Record<string, string>, // e.g., { RDPU: 'RDPU', RDPT: 'RDPT', BBCA: 'PTBA', ... }
   allAssets: AssetDefinition[],
   rdptBonusPercent: number = 0,
-  hasCustomAssetAssumptions: boolean = false
+  hasCustomAssetAssumptions: boolean = false,
+  options?: {
+    model?: MetricsModel;
+    solverMode?: 'calibrated-video' | 'euler-covariance';
+    history?: MarketHistory;
+  }
 ): PortfolioPreset[] {
+  const model: MetricsModel = options?.model ?? 'historical';
+  const solverMode =
+    options?.solverMode ?? (model === 'video-replica' ? 'calibrated-video' : 'euler-covariance');
+  const history = options?.history ?? BUNDLED_MARKET_HISTORY;
+
   const core8 = ['RDPU', 'RDPT', 'BBCA', 'GLD', 'SPY', 'QQQ', 'BTC', 'ETH'];
   const areSlotsUnchanged = core8.every((slot) => (slotMap[slot] ?? slot) === slot);
   const isUnchanged =
+    model === 'video-replica' &&
     areSlotsUnchanged &&
     rdptBonusPercent === 0 &&
     !hasCustomAssetAssumptions;
@@ -798,8 +996,7 @@ export function buildDynamicPresetsForSlotMap(
   const assetMap = new Map(allAssets.map((a) => [a.id, a]));
 
   return basePresets.map((preset) => {
-    // If slots are unchanged (only RDPT promo or asset return assumptions were modified),
-    // preserve the preset's exact weights and apply mathematical deltas via exactPresetMatch
+    // If slots are unchanged, preserve the preset's weights and evaluate metrics under the active model
     if (areSlotsUnchanged) {
       const metrics = evaluatePortfolioMetrics(
         preset.weights,
@@ -809,6 +1006,8 @@ export function buildDynamicPresetsForSlotMap(
           rdptAlphaPromoBonusPercent: rdptBonusPercent,
           exactPresetMatch: preset,
           hasCustomAssetAssumptions,
+          model,
+          history,
         }
       );
       return {
@@ -856,7 +1055,7 @@ export function buildDynamicPresetsForSlotMap(
             preset.method,
             mappedConvictionId,
             preset.convictionRiskPercent ?? 70,
-            'calibrated-video'
+            solverMode
           );
 
     // Build full weights dictionary keyed by the actual mapped asset IDs
@@ -884,6 +1083,8 @@ export function buildDynamicPresetsForSlotMap(
       rdptAlphaPromoBonusPercent: rdptBonusPercent,
       exactPresetMatch: null,
       hasCustomAssetAssumptions,
+      model,
+      history,
     });
 
     return {

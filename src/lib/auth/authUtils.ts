@@ -1,10 +1,12 @@
 /**
- * QuantPorto Authentication & Cryptographic Utilities
+ * QuantPorto Local UI Lock Screen Utilities
  *
- * Implements client-side SHA-256 and PBKDF2-SHA256 key stretching,
- * constant-time string comparison (timing attack mitigation),
- * tab-level session state via sessionStorage, and persistent brute-force
- * lockout rate limiting across tabs via localStorage.
+ * Implements client-side PBKDF2-SHA256 / SHA-256 password verification,
+ * tab-level session state via sessionStorage, and UI lockout counters in localStorage.
+ *
+ * Note: This is a local privacy curtain (shoulder-surfer lock), not cryptographic
+ * access control or at-rest encryption — the expected hash is embedded in the client
+ * bundle and portfolio data in localStorage is stored unencrypted.
  */
 
 export const AUTH_SESSION_KEY = 'quantporto_auth_session';

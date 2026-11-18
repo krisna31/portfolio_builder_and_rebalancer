@@ -115,6 +115,14 @@ export interface SolvedPortfolio {
   isParetoDominated: boolean;
   dominatingPresets: string[];
   dominatingPresetItems?: DominatingPresetInfo[];
+  metricsSource?: 'historical-backtest' | 'parametric' | 'video-replica';
+  backtestWindow?: {
+    start: string;
+    end: string;
+    weeks: number;
+    modeledAssetIds: string[];
+  };
+  riskContributionModel?: 'euler-covariance' | 'video-calibrated';
 }
 
 export interface SubAssetSplit {
@@ -318,6 +326,7 @@ export interface QuantPortoBackupPayload {
       convictionAssetId?: string;
       convictionRiskPercent?: number;
       solverMode?: 'calibrated-video' | 'euler-covariance';
+      metricsModel?: 'historical' | 'video-replica';
       selectedUniverseIds?: string[];
       pinnedPresetIds?: string[];
       customTableRows?: PortfolioPreset[];

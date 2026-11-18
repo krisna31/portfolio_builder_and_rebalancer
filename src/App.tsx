@@ -20,6 +20,7 @@ import { Check, X } from 'lucide-react';
 import {
   buildDynamicPresetsForSlotMap,
   evaluatePortfolioMetrics,
+  MetricsModel,
   normalizeWeightsTo100,
   solveRiskBudgetingWeights,
 } from './lib/quant/riskParitySolver';
@@ -117,6 +118,7 @@ interface PersistedAppState {
   convictionAssetId?: string;
   convictionRiskPercent?: number;
   solverMode?: 'calibrated-video' | 'euler-covariance';
+  metricsModel?: MetricsModel;
   selectedUniverseIds?: string[];
   pinnedPresetIds?: string[];
   lockedAssetIds?: string[];
@@ -342,7 +344,10 @@ export function App() {
   );
   const [solverMode, setSolverMode] = useState<
     'calibrated-video' | 'euler-covariance'
-  >(() => initialSaved?.solverMode ?? 'calibrated-video');
+  >(() => initialSaved?.solverMode ?? 'euler-covariance');
+  const [metricsModel, setMetricsModel] = useState<MetricsModel>(
+    () => initialSaved?.metricsModel ?? 'historical'
+  );
   const [activeWeights, setActiveWeights] = useState<Record<string, number>>(() => {
     if (initialSaved?.activeWeights) {
       const matchedPreset = initialSaved.activePresetId
@@ -726,6 +731,12 @@ export function App() {
             setSolverMode(hashParsed.solverMode);
           }
           if (
+            hashParsed?.metricsModel === 'historical' ||
+            hashParsed?.metricsModel === 'video-replica'
+          ) {
+            setMetricsModel(hashParsed.metricsModel);
+          }
+          if (
             Array.isArray(hashParsed?.selectedUniverseIds) &&
             hashParsed.selectedUniverseIds.length > 0
           ) {
@@ -860,6 +871,7 @@ export function App() {
           convictionAssetId,
           convictionRiskPercent,
           solverMode,
+          metricsModel,
           selectedUniverseIds,
           holdings,
           initialCapitalIdr,
@@ -902,6 +914,7 @@ export function App() {
     convictionAssetId,
     convictionRiskPercent,
     solverMode,
+    metricsModel,
     selectedUniverseIds,
     holdings,
     initialCapitalIdr,
@@ -1114,7 +1127,7 @@ export function App() {
     });
   };
 
-  // Dynamically recompute the 25 presets whenever slotMap, RDPT promo, or custom asset return assumptions change
+  // Dynamically recompute the 25 presets whenever slotMap, RDPT promo, asset assumptions, or metricsModel change
   const dynamicPresets = useMemo(
     () =>
       buildDynamicPresetsForSlotMap(
@@ -1122,9 +1135,10 @@ export function App() {
         slotMap,
         allAssets,
         rdptPromoActive ? 3.0 : 0,
-        hasCustomAssetAssumptions
+        hasCustomAssetAssumptions,
+        { model: metricsModel, solverMode }
       ),
-    [slotMap, allAssets, rdptPromoActive, hasCustomAssetAssumptions]
+    [slotMap, allAssets, rdptPromoActive, hasCustomAssetAssumptions, metricsModel, solverMode]
   );
 
   // Re-run Quant Solver automatically when user changes Risk Parity / Risk Budgeting parameters
@@ -1162,13 +1176,14 @@ export function App() {
     allAssets,
   ]);
 
-  // Decision 4: Dynamically evaluate metrics for custom table rows whenever return assumptions or promo changes
+  // Decision 4: Dynamically evaluate metrics for custom table rows whenever return assumptions, promo, or model changes
   const effectiveCustomTableRows = useMemo(() => {
     return customTableRows.map((row) => {
       const metrics = evaluatePortfolioMetrics(row.weights, allAssets, dynamicPresets, {
         rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
         exactPresetMatch: null,
         hasCustomAssetAssumptions,
+        model: metricsModel,
       });
       return {
         ...row,
@@ -1177,7 +1192,7 @@ export function App() {
         riskTier: metrics.riskTier,
       };
     });
-  }, [customTableRows, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions]);
+  }, [customTableRows, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions, metricsModel]);
 
   // Decision 4: Dynamically evaluate saved portfolio snapshots
   const effectiveSavedPortfolios = useMemo(() => {
@@ -1186,6 +1201,7 @@ export function App() {
         rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
         exactPresetMatch: null,
         hasCustomAssetAssumptions,
+        model: metricsModel,
       });
       return {
         ...snap,
@@ -1193,7 +1209,7 @@ export function App() {
         maxDrawdown: metrics.maxDrawdown,
       };
     });
-  }, [savedPortfolios, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions]);
+  }, [savedPortfolios, allAssets, dynamicPresets, rdptPromoActive, hasCustomAssetAssumptions, metricsModel]);
 
   // Evaluate portfolio CAGR, Max Drawdown, Risk Contributions, and Pareto Dominance
   const exactPresetMatch = useMemo(() => {
@@ -1215,6 +1231,7 @@ export function App() {
           rdptAlphaPromoBonusPercent: rdptPromoActive ? 3.0 : 0,
           exactPresetMatch,
           hasCustomAssetAssumptions,
+          model: metricsModel,
         }
       ),
     [
@@ -1225,6 +1242,7 @@ export function App() {
       rdptPromoActive,
       exactPresetMatch,
       hasCustomAssetAssumptions,
+      metricsModel,
     ]
   );
 
@@ -1313,7 +1331,9 @@ export function App() {
       VIDEO_PORTFOLIO_PRESETS,
       nextMap,
       allAssets,
-      rdptPromoActive ? 3.0 : 0
+      rdptPromoActive ? 3.0 : 0,
+      hasCustomAssetAssumptions,
+      { model: metricsModel, solverMode }
     );
     const activeRow =
       nextPresets.find((p) => p.id === activePresetId) ?? nextPresets[0];
@@ -1502,6 +1522,13 @@ export function App() {
           return livePrice ? { ...a, defaultPrice: livePrice } : a;
         })
       );
+
+      if (res.warnings && res.warnings.length > 0) {
+        setBackupToast({
+          message: 'Sebagian harga live ditolak oleh sanity check',
+          details: res.warnings.slice(0, 4),
+        });
+      }
     } catch (err) {
       console.error('Error syncing live market prices:', err);
     } finally {
@@ -2252,6 +2279,7 @@ export function App() {
           convictionAssetId,
           convictionRiskPercent,
           solverMode,
+          metricsModel,
           selectedUniverseIds,
           pinnedPresetIds,
           customTableRows,
@@ -2405,6 +2433,8 @@ export function App() {
       if (typeof d1.convictionRiskPercent === 'number')
         setConvictionRiskPercent(d1.convictionRiskPercent);
       if (d1.solverMode) setSolverMode(d1.solverMode);
+      if (d1.metricsModel === 'historical' || d1.metricsModel === 'video-replica')
+        setMetricsModel(d1.metricsModel);
       if (Array.isArray(d1.selectedUniverseIds))
         setSelectedUniverseIds(d1.selectedUniverseIds);
       if (Array.isArray(d1.pinnedPresetIds))
@@ -2671,6 +2701,7 @@ export function App() {
           convictionRiskPercent:
             d1.convictionRiskPercent ?? convictionRiskPercent,
           solverMode: d1.solverMode ?? solverMode,
+          metricsModel: d1.metricsModel ?? metricsModel,
           selectedUniverseIds: mergedSelectedUniverseIds,
           initialCapitalIdr: d3.initialCapitalIdr ?? initialCapitalIdr,
           targetGoalIdr: d3.targetGoalIdr ?? targetGoalIdr,
@@ -2775,6 +2806,7 @@ export function App() {
         convictionAssetId,
         convictionRiskPercent,
         solverMode,
+        metricsModel,
         selectedUniverseIds,
         slotMap,
         rdptPromo: rdptPromoActive,
@@ -2991,6 +3023,8 @@ export function App() {
             setConvictionRiskPercent={setConvictionRiskPercent}
             solverMode={solverMode}
             setSolverMode={setSolverMode}
+            metricsModel={metricsModel}
+            setMetricsModel={setMetricsModel}
             activeWeights={activeWeights}
             onManualWeightChange={handleManualWeightChange}
             onNormalizeManualWeights={handleNormalizeManualWeights}

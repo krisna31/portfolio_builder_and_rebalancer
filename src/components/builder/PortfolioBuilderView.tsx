@@ -9,7 +9,7 @@ import {
 import { formatIdr, getRiskTierBadge } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import { simulateWealthToGoal } from '../../lib/quant/wealthSimulator';
-import { findStrictDominatingPresets } from '../../lib/quant/riskParitySolver';
+import { findStrictDominatingPresets, MetricsModel } from '../../lib/quant/riskParitySolver';
 import { CORE_AND_EXPANDED_ASSETS } from '../../data/presets';
 import {
   lookupCustomYahooTicker,
@@ -91,6 +91,8 @@ interface PortfolioBuilderViewProps {
   setConvictionRiskPercent: (pct: number) => void;
   solverMode: 'calibrated-video' | 'euler-covariance';
   setSolverMode: (m: 'calibrated-video' | 'euler-covariance') => void;
+  metricsModel?: MetricsModel;
+  setMetricsModel?: (m: MetricsModel) => void;
   activeWeights: Record<string, number>;
   onManualWeightChange: (assetId: string, newWeight: number) => void;
   onNormalizeManualWeights: (strategy?: 'proportional' | 'equal') => void;
@@ -152,6 +154,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   setConvictionRiskPercent,
   solverMode,
   setSolverMode,
+  metricsModel = 'historical',
+  setMetricsModel,
   activeWeights,
   onManualWeightChange,
   onNormalizeManualWeights,
@@ -740,6 +744,30 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           ? `All-In (${convictionAssetId})`
                           : 'Custom Manual Bobot'}
                 </span>
+                <span
+                  title={
+                    solvedMetrics.metricsSource === 'historical-backtest' &&
+                    solvedMetrics.backtestWindow
+                      ? `Backtest mingguan IDR rebalanced bulanan (${solvedMetrics.backtestWindow.weeks} minggu: ${solvedMetrics.backtestWindow.start} s/d ${solvedMetrics.backtestWindow.end}) + kovarians Euler`
+                      : solvedMetrics.metricsSource === 'parametric'
+                        ? 'Estimasi parametrik berbasis matriks kovarians (sebagian aset belum memiliki histori 2 tahun)'
+                        : 'Mode Replika Video (heuristik kurva video, bukan backtest historis)'
+                  }
+                  className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                    solvedMetrics.metricsSource === 'video-replica'
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                      : solvedMetrics.metricsSource === 'parametric'
+                        ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                        : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  {solvedMetrics.metricsSource === 'historical-backtest' &&
+                  solvedMetrics.backtestWindow
+                    ? `Backtest ${solvedMetrics.backtestWindow.start.slice(0, 4)}–${solvedMetrics.backtestWindow.end.slice(0, 4)} (IDR)`
+                    : solvedMetrics.metricsSource === 'parametric'
+                      ? 'Estimasi Kovarians'
+                      : 'Replika Video (Heuristik)'}
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -838,11 +866,16 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   </span>
                   {Math.abs(rebalancingBonusDiff) >= 0.03 && (
                     <span
-                      title="Efek Rebalancing & Diversifikasi (Volatility Harvesting / kalibrasi empiris 5Y video Menit 08:25)"
+                      title={
+                        metricsModel === 'video-replica'
+                          ? 'Efek kalibrasi heuristik replika video'
+                          : 'Efek rebalancing bulanan nyata pada seri historis 5Y (IDR)'
+                      }
                       className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-semibold text-emerald-600 dark:text-emerald-400"
                     >
                       {rebalancingBonusDiff >= 0 ? '+' : ''}
-                      {rebalancingBonusDiff.toFixed(2)}% Rebalancing/Kalibrasi
+                      {rebalancingBonusDiff.toFixed(2)}%{' '}
+                      {metricsModel === 'video-replica' ? 'Kalibrasi Video' : 'Efek Rebalancing'}
                     </span>
                   )}
                   {hasCustomAssetAssumptions && (
@@ -1513,8 +1546,40 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 )}
               </div>
 
-              {/* Right: Display Mode & Sorting */}
+              {/* Right: Model, Display Mode & Sorting */}
               <div className="flex flex-wrap items-center gap-1.5">
+                {setMetricsModel && (
+                  <div
+                    className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs"
+                    title="Pilih mesin hitung CAGR & Max Drawdown: Backtest 5Y IDR (default) atau Replika Video"
+                  >
+                    <span className="ui-text-muted px-1 text-[10px] font-medium hidden sm:inline">
+                      Model:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMetricsModel('historical')}
+                      className={`rounded px-1.5 py-0.5 font-medium transition ${
+                        metricsModel === 'historical'
+                          ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
+                    >
+                      Backtest 5Y
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMetricsModel('video-replica')}
+                      className={`rounded px-1.5 py-0.5 font-medium transition ${
+                        metricsModel === 'video-replica'
+                          ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                          : 'ui-text-muted hover:ui-text-main'
+                      }`}
+                    >
+                      Replika Video
+                    </button>
+                  </div>
+                )}
                 {/* 3-Mode Cell Value Display */}
                 <div className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-xs">
                   <span className="ui-text-muted px-1 text-[10px] font-medium hidden sm:inline">
@@ -2306,20 +2371,26 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
           </div>
 
-          {/* Step B: Conviction Risk Budgeting Controls */}
-          {(allocationMethod === 'risk-budgeting' || allocationMethod === 'all-in') && (
+          {/* Step B: Solver Algorithm & Conviction Risk Budgeting Controls */}
+          {(allocationMethod === 'risk-parity' ||
+            allocationMethod === 'risk-budgeting' ||
+            allocationMethod === 'all-in') && (
             <div className="ui-subtle rounded-lg p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="ui-text-main text-xs font-semibold">
-                    2. Pilih Aset Conviction (Bias Bull Market — Menit 09:01):
+                    {allocationMethod === 'risk-parity'
+                      ? '2. Algoritma Risk Parity (Equal Risk Contribution):'
+                      : '2. Pilih Aset Conviction (Bias Bull Market — Menit 09:01):'}
                   </div>
                   <p className="ui-text-muted text-[11px]">
-                    Alokasikan persentase <strong>Risiko</strong> ke instrumen utama.
+                    {allocationMethod === 'risk-parity'
+                      ? 'Menyeimbangkan kontribusi risiko setiap instrumen secara merata.'
+                      : 'Alokasikan persentase Risiko ke instrumen utama.'}
                   </p>
                 </div>
 
-                {allocationMethod === 'risk-budgeting' && (
+                {(allocationMethod === 'risk-parity' || allocationMethod === 'risk-budgeting') && (
                   <select
                     value={solverMode}
                     onChange={(e) =>
@@ -2330,12 +2401,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     className="ui-card ui-text-main rounded px-2 py-1 text-xs"
                     aria-label="Quant Solver Algorithm"
                   >
-                    <option value="calibrated-video">Solver: Video Calibrated</option>
-                    <option value="euler-covariance">Solver: Exact Covariance</option>
+                    <option value="euler-covariance">Solver: Covariance Risk Parity (Default)</option>
+                    <option value="calibrated-video">Solver: Video Replica (Heuristik)</option>
                   </select>
                 )}
               </div>
 
+              {(allocationMethod === 'risk-budgeting' || allocationMethod === 'all-in') && (
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {allAssets
                   .filter((a) => selectedUniverseIds.includes(a.id))
@@ -2354,6 +2426,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     </button>
                   ))}
               </div>
+              )}
 
               {allocationMethod === 'risk-budgeting' && (
                 <div className="mt-3">

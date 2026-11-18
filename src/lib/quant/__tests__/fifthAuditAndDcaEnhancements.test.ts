@@ -4,7 +4,7 @@ import {
   roundToIdxTick,
   getIdxTickSize,
 } from '../rebalancerEngine';
-import { getAssetPairwiseCorrelation } from '../riskParitySolver';
+import { getAssetPairwiseCorrelation, getCategoryPriorCorrelation } from '../riskParitySolver';
 import { simulateWealthToGoal } from '../wealthSimulator';
 import { CORE_AND_EXPANDED_ASSETS } from '../../../data/presets';
 import { HoldingEntry, AssetDefinition, QuantPortoBackupPayload } from '../types';
@@ -116,7 +116,10 @@ describe('Fifth Audit Fixes and DCA Enhancements', () => {
       const corrForward = getAssetPairwiseCorrelation(gldAsset, btcAsset);
       const corrReverse = getAssetPairwiseCorrelation(btcAsset, gldAsset);
       expect(corrForward).toBe(corrReverse);
-      expect(corrForward).toBe(0.18);
+      expect(corrForward).toBeGreaterThan(-1);
+      expect(corrForward).toBeLessThan(1);
+      expect(getCategoryPriorCorrelation(gldAsset, btcAsset)).toBe(0.18);
+      expect(getCategoryPriorCorrelation(btcAsset, gldAsset)).toBe(0.18);
     });
 
     it('returns 1.0 when comparing an asset with itself', () => {

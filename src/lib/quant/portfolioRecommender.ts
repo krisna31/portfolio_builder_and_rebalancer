@@ -205,13 +205,13 @@ export function generatePortfolioRecommendations(
     }
   }
 
-  // 4. Solve Primary Tailored Weights
+  // 4. Solve Primary Tailored Weights using genuine Euler Covariance Risk Budgeting
   let primaryWeights = solveRiskBudgetingWeights(
     selectedAssets,
     method === 'risk-budgeting' ? 'risk-budgeting' : 'risk-parity',
     convictionAssetId,
     convictionRiskPercent,
-    'calibrated-video'
+    'euler-covariance'
   );
 
   // Special adjustment if user specifically selected 'passive-dividend' or 'konservatif'

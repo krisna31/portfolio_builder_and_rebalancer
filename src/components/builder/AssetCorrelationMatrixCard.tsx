@@ -3,6 +3,7 @@ import { AssetDefinition } from '../../lib/quant/types';
 import {
   calculatePortfolioDiversificationScore,
   getAssetPairwiseCorrelation,
+  isCorrelationMeasured,
 } from '../../lib/quant/riskParitySolver';
 import {
   ShieldCheck,
@@ -91,6 +92,11 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
   const selectedCorrelation = useMemo(() => {
     if (!assetA || !assetB) return 1.0;
     return getAssetPairwiseCorrelation(assetA, assetB);
+  }, [assetA, assetB]);
+
+  const isSelectedMeasured = useMemo(() => {
+    if (!assetA || !assetB) return false;
+    return isCorrelationMeasured(assetA, assetB);
   }, [assetA, assetB]);
 
   // Color helper based on correlation r (theme-safe for both light and dark modes)
@@ -465,10 +471,15 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
                   <span className="font-bold ui-text-main text-sm">Wawasan Pasangan Terpilih</span>
                   <div className="ui-text-muted text-[11px]">Dinamika hubungan makro &amp; risiko</div>
                 </div>
-                <div
-                  className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg border ${insight.badgeBg}`}
-                >
-                  r = {selectedCorrelation.toFixed(2)}
+                <div className="flex flex-col items-end gap-1">
+                  <div
+                    className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg border ${insight.badgeBg}`}
+                  >
+                    r = {selectedCorrelation.toFixed(2)}
+                  </div>
+                  <span className="text-[10px] font-medium ui-text-muted">
+                    {isSelectedMeasured ? 'Data Historis 5Y (IDR)' : 'Prior Kategori'}
+                  </span>
                 </div>
               </div>
 
