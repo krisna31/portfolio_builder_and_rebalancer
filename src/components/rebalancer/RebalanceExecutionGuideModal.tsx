@@ -28,6 +28,7 @@ export interface RebalanceExecutionGuideModalProps {
   onSetupInitialBuy: () => void;
   onOpenOrderSlip?: () => void;
   onOpenTextImport?: () => void;
+  isGuestMode?: boolean;
 }
 
 type GuideTab = 'initial-buy' | 'routine-rebalance' | 'crash-ladder';
@@ -42,6 +43,7 @@ export const RebalanceExecutionGuideModal: React.FC<
   onSetupInitialBuy,
   onOpenOrderSlip,
   onOpenTextImport,
+  isGuestMode = false,
 }) => {
   const [activeTab, setActiveTab] = useState<GuideTab>('initial-buy');
 
@@ -279,11 +281,29 @@ export const RebalanceExecutionGuideModal: React.FC<
                 {onOpenOrderSlip && (
                   <button
                     type="button"
-                    onClick={handleActionOpenOrderSlip}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 border ui-border ui-card hover:ui-subtle ui-text-main font-semibold text-xs py-2.5 px-4 rounded-xl transition"
+                    disabled={isGuestMode}
+                    onClick={isGuestMode ? undefined : handleActionOpenOrderSlip}
+                    title={
+                      isGuestMode
+                        ? 'Slip Order Broker khusus Mode Pemilik'
+                        : 'Buka Slip Order Broker'
+                    }
+                    className={`w-full sm:w-auto flex items-center justify-center gap-1.5 border ui-border ui-card font-semibold text-xs py-2.5 px-4 rounded-xl transition ${
+                      isGuestMode
+                        ? 'opacity-55 cursor-not-allowed ui-text-muted'
+                        : 'hover:ui-subtle ui-text-main'
+                    }`}
                   >
-                    <Building2 className="h-4 w-4 text-sky-500 dark:text-sky-400" />
-                    <span>Buka Slip Order Broker</span>
+                    {isGuestMode ? (
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-sky-500 dark:text-sky-400" />
+                    )}
+                    <span>
+                      {isGuestMode
+                        ? 'Slip Order Broker (Khusus Pemilik)'
+                        : 'Buka Slip Order Broker'}
+                    </span>
                   </button>
                 )}
               </div>

@@ -8,11 +8,11 @@ import {
 import { BrandLogo } from '../BrandLogo';
 import { stopInteractiveTour } from '../../services/tourGuide';
 import {
-  verifyPasswordHash,
+  AuthRole,
+  resolvePasswordRole,
   authenticateSession,
   recordFailedAttempt,
   getRemainingLockoutSeconds,
-  MAX_AUTH_ATTEMPTS,
 } from '../../lib/auth/authUtils';
 import {
   isWebAuthnSupported,
@@ -27,12 +27,16 @@ import {
 interface AuthLockScreenProps {
   expectedHash: string;
   configuredSalt?: string;
-  onAuthenticated: () => void;
+  guestExpectedHash?: string;
+  guestConfiguredSalt?: string;
+  onAuthenticated: (role: AuthRole) => void;
 }
 
 export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   expectedHash,
   configuredSalt,
+  guestExpectedHash,
+  guestConfiguredSalt,
   onAuthenticated,
 }) => {
   const [password, setPassword] = useState('');
@@ -119,7 +123,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     return () => clearInterval(timer);
   }, [lockoutSec]);
 
-  // Biometric Login Handler
+  // Biometric Login Handler (Owner-only hardware credential)
   const handleBiometricLogin = async () => {
     if (isVerifyingBiometric || lockoutSec > 0) return;
 
@@ -130,7 +134,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     try {
       const result = await authenticateWithBiometric();
       if (result.success) {
-        onAuthenticated();
+        onAuthenticated('owner');
       } else if (result.error) {
         setBiometricError(result.error);
       }
@@ -141,7 +145,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     }
   };
 
-  // Password Login Handler
+  // Password Login Handler (Auto-detects Owner first, then optional Guest)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || isVerifying || lockoutSec > 0) return;
@@ -151,15 +155,25 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     setBiometricError(null);
 
     try {
-      const isMatch = await verifyPasswordHash(password, expectedHash, configuredSalt);
+      const role = await resolvePasswordRole(password, {
+        ownerHash: expectedHash,
+        ownerSalt: configuredSalt,
+        guestHash: guestExpectedHash,
+        guestSalt: guestConfiguredSalt,
+      });
 
-      if (isMatch) {
-        authenticateSession();
+      if (role) {
+        authenticateSession(role);
 
-        if (isBiometricSupported && !isRegistered && !isBiometricPromptDismissed()) {
+        if (
+          role === 'owner' &&
+          isBiometricSupported &&
+          !isRegistered &&
+          !isBiometricPromptDismissed()
+        ) {
           setShowRegisterPrompt(true);
         } else {
-          onAuthenticated();
+          onAuthenticated(role);
         }
       } else {
         const attemptResult = recordFailedAttempt();
@@ -182,7 +196,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
     }
   };
 
-  // Registration after password login handler
+  // Registration after password login handler (Owner only)
   const handleRegisterBiometricNow = async () => {
     setIsRegisteringBiometric(true);
     setRegisterError(null);
@@ -191,7 +205,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
       const res = await registerBiometricCredential();
       if (res.success) {
         setIsRegistered(true);
-        onAuthenticated();
+        onAuthenticated('owner');
       } else if (res.error) {
         setRegisterError(res.error);
       }
@@ -205,7 +219,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   // User explicitly skips post-login biometric setup
   const handleSkipRegistration = () => {
     setBiometricPromptDismissed(true);
-    onAuthenticated();
+    onAuthenticated('owner');
   };
 
   return (

@@ -38,6 +38,7 @@ import {
   RefreshCw,
   ExternalLink,
   AlertTriangle,
+  Lock,
 } from 'lucide-react';
 
 export interface SmartDcaAdvisorPanelProps {
@@ -71,6 +72,7 @@ export interface SmartDcaAdvisorPanelProps {
     planOverride?: RebalanceSummaryResult
   ) => void;
   onSwitchToStandardRebalancer?: () => void;
+  isGuestMode?: boolean;
 }
 
 export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
@@ -99,6 +101,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   onOpenOrderSlip,
   onCommitRebalanceToHoldings,
   onSwitchToStandardRebalancer,
+  isGuestMode = false,
 }) => {
   // Monthly DCA budget state (synchronized with App persistence)
   const [localMonthlyBudgetIdr, setLocalMonthlyBudgetIdr] = useState<number>(
@@ -913,12 +916,33 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             {onOpenOrderSlip && (
               <button
                 type="button"
-                onClick={() => onOpenOrderSlip(smartDcaResult.asRebalanceSummary)}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition"
-                title="Buka slip eksekusi order broker dengan alokasi Smart DCA"
+                disabled={isGuestMode}
+                onClick={
+                  isGuestMode
+                    ? undefined
+                    : () => onOpenOrderSlip(smartDcaResult.asRebalanceSummary)
+                }
+                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                  isGuestMode
+                    ? 'ui-subtle ui-text-muted border ui-border opacity-60 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                }`}
+                title={
+                  isGuestMode
+                    ? 'Slip Order Broker khusus Mode Pemilik'
+                    : 'Buka slip eksekusi order broker dengan alokasi Smart DCA'
+                }
               >
-                <Building2 className="h-3.5 w-3.5" />
-                <span>Buka Slip Order Broker</span>
+                {isGuestMode ? (
+                  <Lock className="h-3.5 w-3.5 text-amber-500" />
+                ) : (
+                  <Building2 className="h-3.5 w-3.5" />
+                )}
+                <span>
+                  {isGuestMode
+                    ? 'Slip Order Broker (Khusus Pemilik)'
+                    : 'Buka Slip Order Broker'}
+                </span>
               </button>
             )}
 

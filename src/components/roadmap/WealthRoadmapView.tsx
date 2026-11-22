@@ -48,6 +48,7 @@ interface WealthRoadmapViewProps {
   setTargetGoalIdr: (v: number) => void;
   monthlySavingsIdr: number;
   setMonthlySavingsIdr: (v: number) => void;
+  isGuestMode?: boolean;
 }
 
 const ROADMAP_SETTINGS_STORAGE_KEY = 'quantporto_roadmap_settings_v1';
@@ -62,11 +63,20 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   setTargetGoalIdr,
   monthlySavingsIdr,
   setMonthlySavingsIdr,
+  isGuestMode = false,
 }) => {
-  // Bug 18: Hydrate local settings from localStorage to persist across tab unmounts
+  const settingsStorageKey = isGuestMode
+    ? 'quantporto_guest_roadmap_settings_v1'
+    : ROADMAP_SETTINGS_STORAGE_KEY;
+  const collapsedStorageKey = isGuestMode
+    ? 'quantporto_guest_roadmap_collapsed_v1'
+    : 'quantporto_roadmap_collapsed_v1';
+
+  // Bug 18: Hydrate local settings from appropriate storage to persist across tab unmounts
   const [initialRoadmapSettings] = useState(() => {
     try {
-      const raw = localStorage.getItem(ROADMAP_SETTINGS_STORAGE_KEY);
+      const storage = isGuestMode ? sessionStorage : localStorage;
+      const raw = storage.getItem(settingsStorageKey);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -108,7 +118,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
   // Collapsible cards state
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
     try {
-      const stored = localStorage.getItem('quantporto_roadmap_collapsed_v1');
+      const storage = isGuestMode ? sessionStorage : localStorage;
+      const stored = storage.getItem(collapsedStorageKey);
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
@@ -119,7 +130,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     setCollapsedSections((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
-        localStorage.setItem('quantporto_roadmap_collapsed_v1', JSON.stringify(next));
+        const storage = isGuestMode ? sessionStorage : localStorage;
+        storage.setItem(collapsedStorageKey, JSON.stringify(next));
       } catch {
         // Ignore
       }
@@ -158,7 +170,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         backtest: !allCollapsed,
       };
       try {
-        localStorage.setItem('quantporto_roadmap_collapsed_v1', JSON.stringify(next));
+        const storage = isGuestMode ? sessionStorage : localStorage;
+        storage.setItem(collapsedStorageKey, JSON.stringify(next));
       } catch {
         // Ignore
       }
@@ -166,11 +179,12 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
     });
   };
 
-  // Bug 18: Save settings whenever changed
+  // Bug 18: Save settings whenever changed (isolated to sessionStorage in Guest Mode)
   useEffect(() => {
     try {
-      localStorage.setItem(
-        ROADMAP_SETTINGS_STORAGE_KEY,
+      const storage = isGuestMode ? sessionStorage : localStorage;
+      storage.setItem(
+        settingsStorageKey,
         JSON.stringify({
           annualStepUpPct,
           annualInflationPercent,
@@ -187,6 +201,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       // Ignore storage errors
     }
   }, [
+    isGuestMode,
+    settingsStorageKey,
     annualStepUpPct,
     annualInflationPercent,
     monthlyLivingCostTargetIdr,

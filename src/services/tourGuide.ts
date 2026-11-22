@@ -1,5 +1,6 @@
 import { driver, DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { GUEST_STORAGE_KEYS, isGuestSession } from '../lib/auth/authUtils';
 
 export interface TourGuideOptions {
   onTabSwitch?: (tab: 'builder' | 'rebalancer' | 'roadmap') => void;
@@ -498,7 +499,11 @@ export function startInteractiveTour(options?: TourGuideOptions) {
     },
     onDestroyStarted: () => {
       try {
-        localStorage.setItem('quantporto_tour_seen_v2', 'true');
+        if (isGuestSession()) {
+          sessionStorage.setItem(GUEST_STORAGE_KEYS.TOUR_SEEN, 'true');
+        } else {
+          localStorage.setItem('quantporto_tour_seen_v2', 'true');
+        }
         if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent('quantporto:set-tools-menu', { detail: { open: false } })

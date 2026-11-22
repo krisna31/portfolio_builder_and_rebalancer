@@ -84,7 +84,14 @@ import {
 import { PortfolioRecommendationItem } from './lib/quant/portfolioRecommender';
 import { AuthLockScreen } from './components/auth/AuthLockScreen';
 import { MissingEnvScreen } from './components/auth/MissingEnvScreen';
-import { isSessionAuthenticated, revokeSession } from './lib/auth/authUtils';
+import {
+  AuthRole,
+  getSessionRole,
+  revokeSession,
+  clearGuestSandboxStorage,
+  GUEST_STORAGE_KEYS,
+} from './lib/auth/authUtils';
+import { getInitialThemeId, getInitialColorScheme } from './hooks/useThemeManager';
 import { useAutoLock } from './hooks/useAutoLock';
 
 const STORAGE_KEY = 'quantporto_state_v2';
@@ -108,6 +115,14 @@ const CONFIGURED_PASSWORD_HASH = (
 
 const CONFIGURED_PASSWORD_SALT = (
   (import.meta.env.VITE_APP_PASSWORD_SALT as string | undefined) || ''
+).trim();
+
+const CONFIGURED_GUEST_PASSWORD_HASH = (
+  (import.meta.env.VITE_APP_GUEST_PASSWORD_HASH as string | undefined) || ''
+).trim();
+
+const CONFIGURED_GUEST_PASSWORD_SALT = (
+  (import.meta.env.VITE_APP_GUEST_PASSWORD_SALT as string | undefined) || ''
 ).trim();
 
 interface PersistedAppState {
@@ -188,9 +203,11 @@ function sanitizePersistedAppState(data: unknown): PersistedAppState | null {
   return clean;
 }
 
-function getInitialSavedState(): PersistedAppState | null {
+function getInitialSavedState(isGuestMode: boolean): PersistedAppState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const storage = isGuestMode ? sessionStorage : localStorage;
+    const key = isGuestMode ? GUEST_STORAGE_KEYS.STATE : STORAGE_KEY;
+    const raw = storage.getItem(key);
     if (!raw) return null;
     return sanitizePersistedAppState(JSON.parse(raw));
   } catch {
@@ -199,26 +216,80 @@ function getInitialSavedState(): PersistedAppState | null {
 }
 
 export function App() {
-  const [initialSaved] = useState<PersistedAppState | null>(() => getInitialSavedState());
-
-  // Session Authentication State (Strict requirement: locked unless authenticated in current tab)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (!CONFIGURED_PASSWORD_HASH) return false;
-    return isSessionAuthenticated();
+  // Session Authentication Role ('owner' | 'guest' | null)
+  const [sessionRole, setSessionRole] = useState<AuthRole | null>(() => {
+    if (!CONFIGURED_PASSWORD_HASH) return null;
+    return getSessionRole();
   });
 
   const handleLockApp = () => {
+    const wasGuest = sessionRole === 'guest';
     stopInteractiveTour();
     revokeSession();
-    setIsAuthenticated(false);
+    if (wasGuest && typeof document !== 'undefined') {
+      // Restore Owner's saved theme attributes on the lock screen after exiting Guest Mode
+      const ownerTheme = getInitialThemeId();
+      const ownerScheme = getInitialColorScheme();
+      document.documentElement.setAttribute('data-theme', ownerTheme);
+      document.documentElement.setAttribute('data-mode', ownerScheme);
+      document.documentElement.classList.toggle('dark', ownerScheme === 'dark');
+    }
+    setSessionRole(null);
   };
 
-  // Inactivity auto-lock (15 minutes idle timeout)
+  // Inactivity auto-lock (15 minutes idle timeout for both Owner and Guest sessions)
   useAutoLock({
-    isEnabled: isAuthenticated && Boolean(CONFIGURED_PASSWORD_HASH),
+    isEnabled: Boolean(sessionRole) && Boolean(CONFIGURED_PASSWORD_HASH),
     timeoutMs: 15 * 60 * 1000,
     onLock: handleLockApp,
   });
+
+  // 1. Strict Security Policy: If VITE_APP_PASSWORD_HASH is missing from .env, block app completely
+  if (!CONFIGURED_PASSWORD_HASH) {
+    return <MissingEnvScreen />;
+  }
+
+  // 2. Tab Session Gate: If not authenticated in current browser tab session, show Lock Screen
+  if (!sessionRole) {
+    return (
+      <AuthLockScreen
+        expectedHash={CONFIGURED_PASSWORD_HASH}
+        configuredSalt={CONFIGURED_PASSWORD_SALT}
+        guestExpectedHash={CONFIGURED_GUEST_PASSWORD_HASH || undefined}
+        guestConfiguredSalt={CONFIGURED_GUEST_PASSWORD_SALT || undefined}
+        onAuthenticated={(role) => setSessionRole(role)}
+      />
+    );
+  }
+
+  return (
+    <AuthenticatedQuantPorto
+      key={sessionRole}
+      sessionRole={sessionRole}
+      onLockApp={handleLockApp}
+    />
+  );
+}
+
+interface AuthenticatedQuantPortoProps {
+  sessionRole: AuthRole;
+  onLockApp: () => void;
+}
+
+function AuthenticatedQuantPorto({
+  sessionRole,
+  onLockApp: handleLockApp,
+}: AuthenticatedQuantPortoProps) {
+  const isGuestMode = sessionRole === 'guest';
+  const isAuthenticated = true;
+  const activeStateStorageKey = isGuestMode ? GUEST_STORAGE_KEYS.STATE : STORAGE_KEY;
+  const activeRoadmapSettingsKey = isGuestMode
+    ? GUEST_STORAGE_KEYS.ROADMAP_SETTINGS
+    : 'quantporto_roadmap_settings_v1';
+
+  const [initialSaved] = useState<PersistedAppState | null>(() =>
+    getInitialSavedState(isGuestMode)
+  );
 
   const [activeTab, setActiveTab] = useState<'builder' | 'rebalancer' | 'roadmap'>(() => {
     if (initialSaved?.activeTab && ['builder', 'rebalancer', 'roadmap'].includes(initialSaved.activeTab)) {
@@ -410,10 +481,12 @@ export function App() {
   );
   const [monthlySavingsIdr, setMonthlySavingsIdr] = useState<number>(() => {
     if (initialSaved?.monthlySavingsIdr !== undefined) {
-      const migratedDca3M = localStorage.getItem('quantporto_dca_3m_default_v1');
-      if (!migratedDca3M && initialSaved.monthlySavingsIdr === 10_000_000) {
-        localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
-        return 3_000_000;
+      if (!isGuestMode) {
+        const migratedDca3M = localStorage.getItem('quantporto_dca_3m_default_v1');
+        if (!migratedDca3M && initialSaved.monthlySavingsIdr === 10_000_000) {
+          localStorage.setItem('quantporto_dca_3m_default_v1', 'true');
+          return 3_000_000;
+        }
       }
       return initialSaved.monthlySavingsIdr;
     }
@@ -424,10 +497,12 @@ export function App() {
   // Default USD/IDR assumption set to Rp 18,000 per user request
   const [usdIdrRate, setUsdIdrRate] = useState<number>(() => {
     if (initialSaved?.usdIdrRate) {
-      const migratedUsd18k = localStorage.getItem('quantporto_usd_18k_default_v1');
-      if (!migratedUsd18k && (initialSaved.usdIdrRate === 15600 || initialSaved.usdIdrRate === 15500)) {
-        localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
-        return 18000;
+      if (!isGuestMode) {
+        const migratedUsd18k = localStorage.getItem('quantporto_usd_18k_default_v1');
+        if (!migratedUsd18k && (initialSaved.usdIdrRate === 15600 || initialSaved.usdIdrRate === 15500)) {
+          localStorage.setItem('quantporto_usd_18k_default_v1', 'true');
+          return 18000;
+        }
       }
       return initialSaved.usdIdrRate;
     }
@@ -551,9 +626,10 @@ export function App() {
   const [isFetchingPrices, setIsFetchingPrices] = useState<boolean>(false);
   const [shareCopied, setShareCopied] = useState<boolean>(false);
 
-  // Saved Portfolios in LocalStorage
+  // Saved Portfolios in LocalStorage (Owner-only — never read in Guest Mode)
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolioSnapshot[]>(
     () => {
+      if (isGuestMode) return [];
       try {
         const raw = localStorage.getItem(SAVED_PORTFOLIOS_KEY);
         return raw ? JSON.parse(raw) : [];
@@ -596,14 +672,19 @@ export function App() {
 
   const handleConfirmResetAll = () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(SAVED_PORTFOLIOS_KEY);
-      localStorage.removeItem(TOUR_SEEN_KEY);
-      localStorage.removeItem('quantporto_dca_3m_default_v1');
-      localStorage.removeItem('quantporto_usd_18k_default_v1');
-      localStorage.removeItem('quantporto_asset_dividends');
-      localStorage.removeItem('quantporto_roadmap_settings_v1');
-      localStorage.removeItem('color-scheme');
+      if (isGuestMode) {
+        // Guest Mode: ONLY wipe ephemeral guest sandbox keys in sessionStorage; never touch Owner localStorage
+        clearGuestSandboxStorage();
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SAVED_PORTFOLIOS_KEY);
+        localStorage.removeItem(TOUR_SEEN_KEY);
+        localStorage.removeItem('quantporto_dca_3m_default_v1');
+        localStorage.removeItem('quantporto_usd_18k_default_v1');
+        localStorage.removeItem('quantporto_asset_dividends');
+        localStorage.removeItem('quantporto_roadmap_settings_v1');
+        localStorage.removeItem('color-scheme');
+      }
       setLockedAssetIds([]);
       setIsFixedBudgetMode(false);
       setFixedTotalBudgetIdr(0);
@@ -630,7 +711,9 @@ export function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
     try {
-      const tourSeen = localStorage.getItem(TOUR_SEEN_KEY) === 'true';
+      const tourSeen = isGuestMode
+        ? sessionStorage.getItem(GUEST_STORAGE_KEYS.TOUR_SEEN) === 'true'
+        : localStorage.getItem(TOUR_SEEN_KEY) === 'true';
       if (!tourSeen) {
         const timer = setTimeout(() => {
           handleStartTour();
@@ -640,7 +723,7 @@ export function App() {
     } catch {
       // Ignore storage errors
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isGuestMode]);
 
   // Global Keyboard Shortcuts: Press '?' for interactive guide, or Alt+1 / Alt+2 / Alt+3 to switch primary tabs
   useEffect(() => {
@@ -760,8 +843,9 @@ export function App() {
             setTargetGoalIdr(hashParsed.goal);
           if (hashParsed?.roadmap) {
             try {
-              localStorage.setItem(
-                'quantporto_roadmap_settings_v1',
+              const targetStorage = isGuestMode ? sessionStorage : localStorage;
+              targetStorage.setItem(
+                activeRoadmapSettingsKey,
                 JSON.stringify(hashParsed.roadmap)
               );
               setRoadmapSettingsVersion((v) => v + 1);
@@ -858,11 +942,12 @@ export function App() {
     }
   }, [isAuthenticated]);
 
-  // Persist active state to LocalStorage
+  // Persist active state (LocalStorage for Owner, ephemeral SessionStorage for Guest)
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
+      const targetStorage = isGuestMode ? sessionStorage : localStorage;
+      targetStorage.setItem(
+        activeStateStorageKey,
         JSON.stringify({
           activeTab,
           activeWeights,
@@ -2208,6 +2293,7 @@ export function App() {
 
   // Save / Load / Export / Share handlers
   const handleSaveCurrentPortfolio = (name: string) => {
+    if (isGuestMode) return;
     const snap: SavedPortfolioSnapshot = {
       id: `snap-${Date.now()}`,
       name,
@@ -2222,6 +2308,7 @@ export function App() {
   };
 
   const handleLoadSavedPortfolio = (snap: SavedPortfolioSnapshot) => {
+    if (isGuestMode) return;
     setActiveWeights({ ...snap.weights });
     setActivePresetId(null);
     setAllocationMethod('custom');
@@ -2244,6 +2331,7 @@ export function App() {
   };
 
   const handleDeleteSavedPortfolio = (id: string) => {
+    if (isGuestMode) return;
     const updated = savedPortfolios.filter((s) => s.id !== id);
     setSavedPortfolios(updated);
     localStorage.setItem(SAVED_PORTFOLIOS_KEY, JSON.stringify(updated));
@@ -2333,6 +2421,7 @@ export function App() {
   };
 
   const handleExportJson = () => {
+    if (isGuestMode) return;
     const payload = getBackupPayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json',
@@ -2346,6 +2435,7 @@ export function App() {
   };
 
   const handleQuickCopyConfig = async () => {
+    if (isGuestMode) return;
     try {
       const payload = getBackupPayload();
       const text = JSON.stringify(payload, null, 2);
@@ -2405,6 +2495,7 @@ export function App() {
     raw: any,
     mode: 'overwrite' | 'merge' = 'overwrite'
   ) => {
+    if (isGuestMode) return;
     try {
       const details: string[] = [];
 
@@ -2760,6 +2851,7 @@ export function App() {
   };
 
   const handleImportJson = (file: File) => {
+    if (isGuestMode) return;
     if (file.size > MAX_BACKUP_PAYLOAD_BYTES) {
       alert('Ukuran file backup melebihi batas keamanan maksimum 2 MB.');
       return;
@@ -2792,7 +2884,8 @@ export function App() {
       }));
     let roadmapSettings: any = null;
     try {
-      const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
+      const sourceStorage = isGuestMode ? sessionStorage : localStorage;
+      const raw = sourceStorage.getItem(activeRoadmapSettingsKey);
       if (raw) roadmapSettings = JSON.parse(raw);
     } catch {
       // Ignore
@@ -2928,22 +3021,6 @@ export function App() {
     document.title = titles[activeTab] || 'QuantPorto — Portfolio Builder & Rebalancer';
   }, [activeTab]);
 
-  // 1. Strict Security Policy: If VITE_APP_PASSWORD_HASH is missing from .env, block app completely
-  if (!CONFIGURED_PASSWORD_HASH) {
-    return <MissingEnvScreen />;
-  }
-
-  // 2. Tab Session Gate: If not authenticated in current browser tab session, show Lock Screen
-  if (!isAuthenticated) {
-    return (
-      <AuthLockScreen
-        expectedHash={CONFIGURED_PASSWORD_HASH}
-        configuredSalt={CONFIGURED_PASSWORD_SALT}
-        onAuthenticated={() => setIsAuthenticated(true)}
-      />
-    );
-  }
-
   return (
     <div className="ui-page min-h-screen">
       {/* Keyboard Accessibility Skip Link (WCAG 2.4.1 Bypass Blocks) */}
@@ -2975,14 +3052,23 @@ export function App() {
         onDeleteSavedPortfolio={handleDeleteSavedPortfolio}
         onOpenRecommender={() => setIsRecommenderOpen(true)}
         onStartInteractiveTour={handleStartTour}
+        onOpenFactsheet={() => {
+          if (isGuestMode) return;
+          setIsFactsheetOpen(true);
+        }}
         onOpenOrderSlip={() => {
+          if (isGuestMode) return;
           setIsOrderSlipOpen(true);
         }}
         onOpenResetConfirm={() => setIsResetConfirmOpen(true)}
-        onOpenDataTransfer={() => setIsDataTransferModalOpen(true)}
+        onOpenDataTransfer={() => {
+          if (isGuestMode) return;
+          setIsDataTransferModalOpen(true);
+        }}
         onQuickCopyConfig={handleQuickCopyConfig}
         quickCopyFeedback={quickCopyFeedback}
         onLockApp={handleLockApp}
+        isGuestMode={isGuestMode}
         activePortfolioName={
           exactPresetMatch
             ? exactPresetMatch.name
@@ -3048,7 +3134,11 @@ export function App() {
             onResetAssetMeta={handleResetAssetMeta}
             pinnedPresetIds={pinnedPresetIds}
             onTogglePinPreset={handleTogglePinPreset}
-            onOpenFactsheet={() => setIsFactsheetOpen(true)}
+            onOpenFactsheet={() => {
+              if (isGuestMode) return;
+              setIsFactsheetOpen(true);
+            }}
+            isGuestMode={isGuestMode}
           />
         )}
 
@@ -3111,6 +3201,7 @@ export function App() {
               onSetupInitialBuyFromMenu1={handleSetupInitialBuyFromMenu1}
               onScaleTotalHoldingsIdr={handleScaleTotalHoldingsIdr}
               onOpenOrderSlip={(planOverride) => {
+                if (isGuestMode) return;
                 setOrderSlipPlanOverride(planOverride ?? null);
                 setIsOrderSlipOpen(true);
               }}
@@ -3129,12 +3220,13 @@ export function App() {
               smartDcaLastRefreshSuccessAt={smartDcaLastRefreshSuccessAt}
               onUnifiedSync={handleRefreshLivePrices}
               isSyncingPrices={isFetchingPrices}
+              isGuestMode={isGuestMode}
             />
           )}
 
           {activeTab === 'roadmap' && (
             <WealthRoadmapView
-              key={`roadmap-${roadmapSettingsVersion}`}
+              key={`roadmap-${sessionRole}-${roadmapSettingsVersion}`}
               allAssets={allAssets}
               activeWeights={activeWeights}
               solvedMetrics={solvedMetrics}
@@ -3144,6 +3236,7 @@ export function App() {
               setTargetGoalIdr={setTargetGoalIdr}
               monthlySavingsIdr={monthlySavingsIdr}
               setMonthlySavingsIdr={setMonthlySavingsIdr}
+              isGuestMode={isGuestMode}
             />
           )}
         </React.Suspense>
@@ -3151,8 +3244,8 @@ export function App() {
 
       {/* Code-Split On-Demand Modals */}
       <React.Suspense fallback={null}>
-        {/* Institutional 1-Page Factsheet Modal (A4 Print / PNG Download) */}
-        {isFactsheetOpen && (() => {
+        {/* Institutional 1-Page Factsheet Modal (Owner-only — A4 Print / PNG Download) */}
+        {!isGuestMode && isFactsheetOpen && (() => {
           let roadmapSettings: any = null;
           try {
             const raw = localStorage.getItem('quantporto_roadmap_settings_v1');
@@ -3187,8 +3280,8 @@ export function App() {
           );
         })()}
 
-        {/* Multi-Platform Broker Order Slips Modal (Stockbit / Pluang / Reku / Makmur) */}
-        {isOrderSlipOpen && (
+        {/* Multi-Platform Broker Order Slips Modal (Owner-only — Stockbit / Pluang / Reku / Makmur) */}
+        {!isGuestMode && isOrderSlipOpen && (
           <BrokerOrderSlipModal
             isOpen={isOrderSlipOpen}
             onClose={() => {
@@ -3224,8 +3317,8 @@ export function App() {
           />
         )}
 
-        {/* Comprehensive Data Transfer Modal (Text & File) */}
-        {isDataTransferModalOpen && (
+        {/* Comprehensive Data Transfer Modal (Owner-only — Text & File) */}
+        {!isGuestMode && isDataTransferModalOpen && (
           <DataTransferModal
             isOpen={isDataTransferModalOpen}
             onClose={() => setIsDataTransferModalOpen(false)}
@@ -3241,6 +3334,7 @@ export function App() {
         isOpen={isResetConfirmOpen}
         onClose={() => setIsResetConfirmOpen(false)}
         onConfirmReset={handleConfirmResetAll}
+        isGuestMode={isGuestMode}
       />
 
       {/* Import Backup Feedback Notification Toast */}

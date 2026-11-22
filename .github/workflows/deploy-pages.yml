@@ -38,6 +38,8 @@ jobs:
         env:
           VITE_APP_PASSWORD_HASH: ${{ secrets.VITE_APP_PASSWORD_HASH }}
           VITE_APP_PASSWORD_SALT: ${{ secrets.VITE_APP_PASSWORD_SALT }}
+          VITE_APP_GUEST_PASSWORD_HASH: ${{ secrets.VITE_APP_GUEST_PASSWORD_HASH }}
+          VITE_APP_GUEST_PASSWORD_SALT: ${{ secrets.VITE_APP_GUEST_PASSWORD_SALT }}
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0

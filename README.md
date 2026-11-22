@@ -44,9 +44,13 @@ A client-side Single-Page Application (`React 19 + TypeScript + Vite + Tailwind 
 - Interactive compounding trajectory simulator projecting time to reach Rp10 Billion (or custom targets).
 - Configurable monthly contributions, annual income step-up percentages, target milestone chips, and withdrawal scenarios.
 
-### 4. Local-Only Storage & UI Privacy Curtain
+### 4. Local-Only Storage, UI Privacy Curtain & Guest Mode
 - **Local-Only Storage**: All financial holdings and portfolios remain in the client browser (`localStorage`), with no backend server.
-- **UI Lock Screen (Privacy Curtain)**: PBKDF2-SHA256 / SHA-256 password lockscreen (`VITE_APP_PASSWORD_HASH` + optional `VITE_APP_PASSWORD_SALT`) with optional WebAuthn / biometric prompt and auto-lock timeout. **Note:** This is a client-side privacy curtain against casual shoulder-surfing, not at-rest encryption — `localStorage` data is unencrypted and the password hash is bundled into the client build.
+- **UI Lock Screen (Privacy Curtain)**: PBKDF2-SHA256 / SHA-256 password lockscreen (`VITE_APP_PASSWORD_HASH` + optional `VITE_APP_PASSWORD_SALT`) with optional WebAuthn / biometric prompt and auto-lock timeout. **Note:** This is a client-side privacy curtain against casual shoulder-surfing, not at-rest encryption — `localStorage` data is unencrypted and password hashes are bundled into the client build.
+- **Optional Guest Mode (`VITE_APP_GUEST_PASSWORD_HASH`)**: Single-input auto-detection on the lockscreen (Owner checked first, then optional Guest). Guest sessions run in an isolated ephemeral `sessionStorage` sandbox (never reading, writing, or resetting Owner `localStorage` keys), wipe automatically on lock or tab close, hide biometric controls, and disable Owner-only utilities (Saved Bookmarks, JSON Backup/Transfer, Quick Copy Config, Broker Order Slips, and PDF/PNG Factsheet) with lock indicators while keeping all 3 analysis tabs, Share URLs, Holdings Text Import, and Live Price/Sentiment refresh interactive. Generate a self-contained PBKDF2 token via:
+  ```bash
+  node -e "const c=require('crypto'),s=c.randomBytes(16).toString('hex'),h=c.pbkdf2Sync(process.argv[1],s,100000,32,'sha256').toString('hex');console.log('pbkdf2:100000:'+s+':'+h)" "your-guest-password"
+  ```
 
 ---
 

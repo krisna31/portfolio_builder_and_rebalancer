@@ -129,6 +129,7 @@ interface PortfolioBuilderViewProps {
   pinnedPresetIds?: string[];
   onTogglePinPreset?: (presetId: string) => void;
   onOpenFactsheet?: () => void;
+  isGuestMode?: boolean;
 }
 
 export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
@@ -180,6 +181,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   pinnedPresetIds = [],
   onTogglePinPreset,
   onOpenFactsheet,
+  isGuestMode = false,
 }) => {
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [draftShortName, setDraftShortName] = useState('');
@@ -238,10 +240,14 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   >('both');
   const [comparePresetId, setComparePresetId] = useState<string>('opt-4-rb-btc-90');
 
-  // Collapsible cards state
+  // Collapsible cards state (isolated to sessionStorage in Guest Mode)
+  const collapsedStorageKey = isGuestMode
+    ? 'quantporto_guest_builder_collapsed_v1'
+    : 'quantporto_builder_collapsed_v1';
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
     try {
-      const stored = localStorage.getItem('quantporto_builder_collapsed_v1');
+      const storage = isGuestMode ? sessionStorage : localStorage;
+      const stored = storage.getItem(collapsedStorageKey);
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
@@ -252,7 +258,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
     setCollapsedSections((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
-        localStorage.setItem('quantporto_builder_collapsed_v1', JSON.stringify(next));
+        const storage = isGuestMode ? sessionStorage : localStorage;
+        storage.setItem(collapsedStorageKey, JSON.stringify(next));
       } catch {
         // Ignore
       }
@@ -285,7 +292,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
         comparator: !allCollapsed,
       };
       try {
-        localStorage.setItem('quantporto_builder_collapsed_v1', JSON.stringify(next));
+        const storage = isGuestMode ? sessionStorage : localStorage;
+        storage.setItem(collapsedStorageKey, JSON.stringify(next));
       } catch {
         // Ignore
       }

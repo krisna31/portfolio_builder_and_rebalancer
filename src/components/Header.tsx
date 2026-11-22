@@ -85,6 +85,7 @@ interface HeaderProps {
   onLockApp?: () => void;
   rebalanceBreachedCount?: number;
   rebalanceMaxDriftPercent?: number;
+  isGuestMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -120,6 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLockApp,
   rebalanceBreachedCount,
   rebalanceMaxDriftPercent,
+  isGuestMode = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -374,6 +376,29 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
+        {isGuestMode && (
+          <div className="border-b border-amber-500/25 bg-amber-500/10 px-3 py-1 sm:px-6">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center gap-1.5 min-w-0 text-amber-800 dark:text-amber-300">
+                <Lock className="h-3 w-3 shrink-0" />
+                <span className="font-semibold shrink-0">Mode Tamu</span>
+                <span className="opacity-60">•</span>
+                <span className="truncate opacity-90">
+                  Sesi sementara (perubahan tidak disimpan ke perangkat &amp; fitur pemilik dikunci)
+                </span>
+              </div>
+              {onLockApp && (
+                <button
+                  type="button"
+                  onClick={onLockApp}
+                  className="shrink-0 rounded-[var(--radius-xs)] border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-500/25 transition"
+                >
+                  Masuk Pemilik
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-2.5">
           <div className="flex items-center justify-between gap-2">
             {/* Minimalist Botanical Brand Title (Fraunces & DM Mono) */}
@@ -579,38 +604,64 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isExportMenuOpen && (
-                  <div className="ui-modal absolute right-0 z-50 mt-1.5 w-60 p-1.5 text-xs space-y-0.5">
+                  <div className="ui-modal absolute right-0 z-50 mt-1.5 w-64 p-1.5 text-xs space-y-0.5">
                     {onOpenFactsheet && (
                       <button
                         type="button"
+                        disabled={isGuestMode}
                         onClick={() => {
+                          if (isGuestMode) return;
                           setIsExportMenuOpen(false);
                           onOpenFactsheet();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        title={isGuestMode ? 'Factsheet PDF/PNG khusus Mode Pemilik' : 'Buka Factsheet A4'}
+                        className={`ui-subtle flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-main hover:opacity-80'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <FileSpreadsheet className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                          {isGuestMode ? (
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                          ) : (
+                            <FileSpreadsheet className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                          )}
                           <span>Factsheet</span>
                         </div>
-                        <span className="font-mono text-[10px] ui-text-muted">A4</span>
+                        <span className="font-mono text-[10px] ui-text-muted">
+                          {isGuestMode ? 'Pemilik' : 'A4'}
+                        </span>
                       </button>
                     )}
 
                     {onOpenOrderSlip && (
                       <button
                         type="button"
+                        disabled={isGuestMode}
                         onClick={() => {
+                          if (isGuestMode) return;
                           setIsExportMenuOpen(false);
                           onOpenOrderSlip();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        title={isGuestMode ? 'Slip Broker khusus Mode Pemilik' : 'Buka Slip Order Broker'}
+                        className={`ui-subtle flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-main hover:opacity-80'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Building2 className="h-3.5 w-3.5 text-[var(--status-info)]" />
+                          {isGuestMode ? (
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                          ) : (
+                            <Building2 className="h-3.5 w-3.5 text-[var(--status-info)]" />
+                          )}
                           <span>Slip Broker</span>
                         </div>
-                        <span className="font-mono text-[10px] ui-text-muted">App</span>
+                        <span className="font-mono text-[10px] ui-text-muted">
+                          {isGuestMode ? 'Pemilik' : 'App'}
+                        </span>
                       </button>
                     )}
 
@@ -636,54 +687,106 @@ export const Header: React.FC<HeaderProps> = ({
                     {onOpenDataTransfer && (
                       <button
                         type="button"
+                        disabled={isGuestMode}
                         onClick={() => {
+                          if (isGuestMode) return;
                           setIsExportMenuOpen(false);
                           onOpenDataTransfer();
                         }}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                        title={isGuestMode ? 'Transfer & Backup Data khusus Mode Pemilik' : 'Buka Transfer Data JSON'}
+                        className={`ui-subtle flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-main hover:opacity-80'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Database className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                          {isGuestMode ? (
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                          ) : (
+                            <Database className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                          )}
                           <span>Transfer Data</span>
                         </div>
-                        <span className="font-mono text-[10px] ui-text-muted">JSON</span>
+                        <span className="font-mono text-[10px] ui-text-muted">
+                          {isGuestMode ? 'Pemilik' : 'JSON'}
+                        </span>
                       </button>
                     )}
 
                     {onQuickCopyConfig && (
                       <button
                         type="button"
-                        onClick={onQuickCopyConfig}
-                        className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
-                        title="Salin konfigurasi sebagai teks JSON"
+                        disabled={isGuestMode}
+                        onClick={isGuestMode ? undefined : onQuickCopyConfig}
+                        className={`ui-subtle flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-main hover:opacity-80'
+                        }`}
+                        title={
+                          isGuestMode
+                            ? 'Salin Config khusus Mode Pemilik'
+                            : 'Salin konfigurasi sebagai teks JSON'
+                        }
                       >
                         <div className="flex items-center gap-2">
-                          {quickCopyFeedback ? (
+                          {isGuestMode ? (
+                            <Lock className="h-3.5 w-3.5 text-amber-500" />
+                          ) : quickCopyFeedback ? (
                             <Check className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
                           ) : (
                             <Copy className="h-3.5 w-3.5" />
                           )}
-                          <span>{quickCopyFeedback ? 'Tersalin' : 'Salin Config'}</span>
+                          <span>
+                            {isGuestMode
+                              ? 'Salin Config'
+                              : quickCopyFeedback
+                                ? 'Tersalin'
+                                : 'Salin Config'}
+                          </span>
                         </div>
-                        <span className="font-mono text-[10px] ui-text-muted">Teks</span>
+                        <span className="font-mono text-[10px] ui-text-muted">
+                          {isGuestMode ? 'Pemilik' : 'Teks'}
+                        </span>
                       </button>
                     )}
 
                     <div className="grid grid-cols-2 gap-1 pt-1 border-t ui-border">
                       <button
                         type="button"
-                        onClick={onExportJson}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs hover:ui-text-main transition"
+                        disabled={isGuestMode}
+                        onClick={isGuestMode ? undefined : onExportJson}
+                        title={isGuestMode ? 'Export JSON khusus Mode Pemilik' : 'Export Backup JSON'}
+                        className={`ui-subtle flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-secondary hover:ui-text-main'
+                        }`}
                       >
-                        <Download className="h-3 w-3" />
+                        {isGuestMode ? (
+                          <Lock className="h-3 w-3 text-amber-500" />
+                        ) : (
+                          <Download className="h-3 w-3" />
+                        )}
                         <span>Export</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="ui-subtle ui-text-secondary flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs hover:ui-text-main transition"
+                        disabled={isGuestMode}
+                        onClick={isGuestMode ? undefined : () => fileInputRef.current?.click()}
+                        title={isGuestMode ? 'Import JSON khusus Mode Pemilik' : 'Import Backup JSON'}
+                        className={`ui-subtle flex items-center justify-center gap-1.5 rounded-[var(--radius-xs)] py-1.5 text-xs transition ${
+                          isGuestMode
+                            ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                            : 'ui-text-secondary hover:ui-text-main'
+                        }`}
                       >
-                        <Upload className="h-3 w-3" />
+                        {isGuestMode ? (
+                          <Lock className="h-3 w-3 text-amber-500" />
+                        ) : (
+                          <Upload className="h-3 w-3" />
+                        )}
                         <span>Import</span>
                       </button>
                     </div>
@@ -775,8 +878,8 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
 
-                    {/* Biometrik / Sidik Jari */}
-                    {isBiometricSupported && (
+                    {/* Biometrik / Sidik Jari (Owner-only — hidden in Guest Mode) */}
+                    {!isGuestMode && isBiometricSupported && (
                       <div className="ui-subtle rounded-[var(--radius-xs)] px-2.5 py-1.5 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Fingerprint className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
@@ -811,18 +914,33 @@ export const Header: React.FC<HeaderProps> = ({
                     {/* Saved Portfolios */}
                     <button
                       type="button"
+                      disabled={isGuestMode}
                       onClick={() => {
+                        if (isGuestMode) return;
                         setIsToolsMenuOpen(false);
                         dialogRef.current?.showModal();
                       }}
-                      className="ui-subtle ui-text-main flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition hover:opacity-80"
+                      title={
+                        isGuestMode
+                          ? 'Portofolio Tersimpan khusus Mode Pemilik'
+                          : 'Buka daftar portofolio tersimpan'
+                      }
+                      className={`ui-subtle flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs transition ${
+                        isGuestMode
+                          ? 'ui-text-muted opacity-55 cursor-not-allowed'
+                          : 'ui-text-main hover:opacity-80'
+                      }`}
                     >
                       <div className="flex items-center gap-2">
-                        <BookmarkCheck className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                        {isGuestMode ? (
+                          <Lock className="h-3.5 w-3.5 text-amber-500" />
+                        ) : (
+                          <BookmarkCheck className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
+                        )}
                         <span>Portofolio Tersimpan</span>
                       </div>
                       <span className="rounded bg-black/10 dark:bg-white/10 px-1.5 py-0.2 font-mono text-[10px] font-bold">
-                        {savedPortfolios.length}
+                        {isGuestMode ? 'Pemilik' : savedPortfolios.length}
                       </span>
                     </button>
 
@@ -836,13 +954,19 @@ export const Header: React.FC<HeaderProps> = ({
                             onOpenResetConfirm();
                           }}
                           className="flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs font-medium text-[#9E472A] dark:text-[#E08263] hover:bg-[#9E472A]/10 transition"
-                          title="Reset konfigurasi ke setelan awal"
+                          title={
+                            isGuestMode
+                              ? 'Reset simulasi sementara sesi tamu ke awal'
+                              : 'Reset konfigurasi ke setelan awal'
+                          }
                         >
                           <div className="flex items-center gap-2">
                             <RotateCcw className="h-3.5 w-3.5" />
-                            <span>Reset Setelan</span>
+                            <span>{isGuestMode ? 'Reset Sesi Tamu' : 'Reset Setelan'}</span>
                           </div>
-                          <span className="font-mono text-[9px] uppercase tracking-wider">Awal</span>
+                          <span className="font-mono text-[9px] uppercase tracking-wider">
+                            {isGuestMode ? 'Tamu' : 'Awal'}
+                          </span>
                         </button>
                       </div>
                     )}
@@ -886,8 +1010,12 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={onLockApp}
-                    title="Kunci Layar (Keluar dari Sesi)"
-                    aria-label="Kunci Layar"
+                    title={
+                      isGuestMode
+                        ? 'Keluar Mode Tamu / Masuk Pemilik'
+                        : 'Kunci Layar (Keluar dari Sesi)'
+                    }
+                    aria-label={isGuestMode ? 'Keluar Mode Tamu' : 'Kunci Layar'}
                     className="flex h-7 w-7 items-center justify-center rounded transition hover:bg-amber-500/15 text-amber-500/80 hover:text-amber-500"
                   >
                     <Lock className="h-3.5 w-3.5" />
@@ -950,34 +1078,56 @@ export const Header: React.FC<HeaderProps> = ({
                 {onOpenFactsheet && (
                   <button
                     type="button"
+                    disabled={isGuestMode}
                     onClick={() => {
+                      if (isGuestMode) return;
                       setIsMobileMenuOpen(false);
                       onOpenFactsheet();
                     }}
-                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                    title={isGuestMode ? 'Factsheet khusus Mode Pemilik' : 'Buka Factsheet A4'}
+                    className={`ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                      isGuestMode ? 'ui-text-muted opacity-55 cursor-not-allowed' : 'ui-text-main'
+                    }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      {isGuestMode ? (
+                        <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      ) : (
+                        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      )}
                       <span>Factsheet</span>
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">A4</span>
+                    <span className="text-[10px] font-mono ui-text-muted font-bold">
+                      {isGuestMode ? 'Pemilik' : 'A4'}
+                    </span>
                   </button>
                 )}
 
                 {onOpenOrderSlip && (
                   <button
                     type="button"
+                    disabled={isGuestMode}
                     onClick={() => {
+                      if (isGuestMode) return;
                       setIsMobileMenuOpen(false);
                       onOpenOrderSlip();
                     }}
-                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                    title={isGuestMode ? 'Slip Broker khusus Mode Pemilik' : 'Buka Slip Order Broker'}
+                    className={`ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                      isGuestMode ? 'ui-text-muted opacity-55 cursor-not-allowed' : 'ui-text-main'
+                    }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                      {isGuestMode ? (
+                        <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      ) : (
+                        <Building2 className="h-3.5 w-3.5 text-sky-500" />
+                      )}
                       <span>Slip Broker</span>
                     </div>
-                    <span className="text-[10px] font-mono text-sky-500 font-bold">App</span>
+                    <span className="text-[10px] font-mono ui-text-muted font-bold">
+                      {isGuestMode ? 'Pemilik' : 'App'}
+                    </span>
                   </button>
                 )}
 
@@ -1000,17 +1150,28 @@ export const Header: React.FC<HeaderProps> = ({
                 {onOpenDataTransfer && (
                   <button
                     type="button"
+                    disabled={isGuestMode}
                     onClick={() => {
+                      if (isGuestMode) return;
                       setIsMobileMenuOpen(false);
                       onOpenDataTransfer();
                     }}
-                    className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                    title={isGuestMode ? 'Transfer Data khusus Mode Pemilik' : 'Buka Transfer Data JSON'}
+                    className={`ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                      isGuestMode ? 'ui-text-muted opacity-55 cursor-not-allowed' : 'ui-text-main'
+                    }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <Database className="h-3.5 w-3.5 text-emerald-500" />
+                      {isGuestMode ? (
+                        <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      ) : (
+                        <Database className="h-3.5 w-3.5 text-emerald-500" />
+                      )}
                       <span>Transfer Data</span>
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">JSON</span>
+                    <span className="text-[10px] font-mono ui-text-muted font-bold">
+                      {isGuestMode ? 'Pemilik' : 'JSON'}
+                    </span>
                   </button>
                 )}
 
@@ -1066,23 +1227,32 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Saved Portfolios Mobile */}
                 <button
                   type="button"
+                  disabled={isGuestMode}
                   onClick={() => {
+                    if (isGuestMode) return;
                     setIsMobileMenuOpen(false);
                     dialogRef.current?.showModal();
                   }}
-                  className="ui-subtle ui-text-main flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium"
+                  title={isGuestMode ? 'Portofolio Tersimpan khusus Mode Pemilik' : 'Buka daftar tersimpan'}
+                  className={`ui-subtle flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                    isGuestMode ? 'ui-text-muted opacity-55 cursor-not-allowed' : 'ui-text-main'
+                  }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    {isGuestMode ? (
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                    ) : (
+                      <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                    )}
                     <span>Saved</span>
                   </div>
                   <span className="rounded bg-zinc-500/15 px-1.5 py-0.2 font-mono text-[10px] font-bold">
-                    {savedPortfolios.length}
+                    {isGuestMode ? 'Pemilik' : savedPortfolios.length}
                   </span>
                 </button>
 
-                {/* Biometrik Mobile */}
-                {isBiometricSupported && (
+                {/* Biometrik Mobile (Owner-only — hidden in Guest Mode) */}
+                {!isGuestMode && isBiometricSupported && (
                   <div className="col-span-2 ui-subtle rounded-lg border px-2.5 py-1.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
                       <Fingerprint className="h-3.5 w-3.5 text-emerald-500" />
@@ -1138,7 +1308,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    <span>Reset ke Setelan Awal</span>
+                    <span>{isGuestMode ? 'Reset Sesi Tamu' : 'Reset ke Setelan Awal'}</span>
                   </button>
                 )}
               </div>

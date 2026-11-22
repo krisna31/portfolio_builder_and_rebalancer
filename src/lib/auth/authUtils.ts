@@ -9,9 +9,23 @@
  * bundle and portfolio data in localStorage is stored unencrypted.
  */
 
+export type AuthRole = 'owner' | 'guest';
+
 export const AUTH_SESSION_KEY = 'quantporto_auth_session';
+export const AUTH_ROLE_KEY = 'quantporto_auth_role';
 export const AUTH_ATTEMPTS_KEY = 'quantporto_auth_attempts';
 export const AUTH_LOCKOUT_KEY = 'quantporto_auth_lockout_until';
+
+export const GUEST_STORAGE_KEYS = {
+  STATE: 'quantporto_guest_state_v2',
+  ROADMAP_SETTINGS: 'quantporto_guest_roadmap_settings_v1',
+  BUILDER_COLLAPSED: 'quantporto_guest_builder_collapsed_v1',
+  REBALANCER_COLLAPSED: 'quantporto_guest_rebalancer_collapsed_v1',
+  ROADMAP_COLLAPSED: 'quantporto_guest_roadmap_collapsed_v1',
+  TOUR_SEEN: 'quantporto_guest_tour_seen_v2',
+  THEME_ID: 'quantporto_guest_theme_id',
+  COLOR_SCHEME: 'quantporto_guest_color_scheme',
+} as const;
 
 export const MAX_AUTH_ATTEMPTS = 5;
 export const LOCKOUT_DURATION_MS = 30000; // 30 seconds
@@ -176,6 +190,46 @@ export async function verifyPasswordHash(
 }
 
 /**
+ * Resolves a submitted password against configured Owner and optional Guest hashes.
+ * Owner hash is always evaluated first so identical hashes never downgrade an owner.
+ */
+export async function resolvePasswordRole(
+  password: string,
+  config: {
+    ownerHash: string;
+    ownerSalt?: string;
+    guestHash?: string;
+    guestSalt?: string;
+  }
+): Promise<AuthRole | null> {
+  if (!password) return null;
+
+  if (config.ownerHash && config.ownerHash.trim().length > 0) {
+    const isOwner = await verifyPasswordHash(
+      password,
+      config.ownerHash,
+      config.ownerSalt
+    );
+    if (isOwner) return 'owner';
+  }
+
+  if (config.guestHash && config.guestHash.trim().length > 0) {
+    const effectiveGuestSalt =
+      config.guestSalt && config.guestSalt.trim().length > 0
+        ? config.guestSalt
+        : config.ownerSalt;
+    const isGuest = await verifyPasswordHash(
+      password,
+      config.guestHash,
+      effectiveGuestSalt
+    );
+    if (isGuest) return 'guest';
+  }
+
+  return null;
+}
+
+/**
  * Checks if the current browser tab session is authenticated.
  */
 export function isSessionAuthenticated(): boolean {
@@ -189,13 +243,51 @@ export function isSessionAuthenticated(): boolean {
 }
 
 /**
- * Sets the current tab session as authenticated and clears previous failure counters.
+ * Returns the authenticated role for the active browser tab ('owner' | 'guest'),
+ * or null if unauthenticated. Legacy sessions without AUTH_ROLE_KEY default to 'owner'.
  */
-export function authenticateSession(): void {
+export function getSessionRole(): AuthRole | null {
+  try {
+    const storage = getSessionStorage();
+    if (!storage) return null;
+    if (storage.getItem(AUTH_SESSION_KEY) !== 'authenticated') return null;
+    return storage.getItem(AUTH_ROLE_KEY) === 'guest' ? 'guest' : 'owner';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convenience helper to detect whether the active tab is running in Guest sandbox mode.
+ */
+export function isGuestSession(): boolean {
+  return getSessionRole() === 'guest';
+}
+
+/**
+ * Removes all ephemeral guest sandbox entries from sessionStorage without touching localStorage.
+ */
+export function clearGuestSandboxStorage(): void {
+  try {
+    const storage = getSessionStorage();
+    if (!storage) return;
+    for (const key of Object.values(GUEST_STORAGE_KEYS)) {
+      storage.removeItem(key);
+    }
+  } catch {
+    // Ignore storage quota or access errors
+  }
+}
+
+/**
+ * Sets the current tab session as authenticated for the given role and clears failure counters.
+ */
+export function authenticateSession(role: AuthRole = 'owner'): void {
   try {
     const storage = getSessionStorage();
     if (!storage) return;
     storage.setItem(AUTH_SESSION_KEY, 'authenticated');
+    storage.setItem(AUTH_ROLE_KEY, role);
     resetFailedAttempts();
   } catch {
     // Ignore storage quota or access errors
@@ -203,13 +295,15 @@ export function authenticateSession(): void {
 }
 
 /**
- * Revokes the current tab session, locking the application immediately.
+ * Revokes the current tab session, clears any guest sandbox data, and locks the app immediately.
  */
 export function revokeSession(): void {
   try {
     const storage = getSessionStorage();
     if (!storage) return;
     storage.removeItem(AUTH_SESSION_KEY);
+    storage.removeItem(AUTH_ROLE_KEY);
+    clearGuestSandboxStorage();
   } catch {
     // Ignore storage quota or access errors
   }

@@ -149,6 +149,7 @@ interface PortfolioRebalancerViewProps {
   smartDcaLastRefreshSuccessAt?: string;
   onUnifiedSync?: () => Promise<void>;
   isSyncingPrices?: boolean;
+  isGuestMode?: boolean;
 }
 
 export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = ({
@@ -208,6 +209,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   smartDcaLastRefreshSuccessAt,
   onUnifiedSync,
   isSyncingPrices,
+  isGuestMode = false,
 }) => {
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
@@ -284,10 +286,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     return () => document.removeEventListener('mousedown', handleClosePriceTool);
   }, [activePriceToolAssetId]);
 
-  // Collapsible cards state
+  // Collapsible cards state (isolated to sessionStorage in Guest Mode)
+  const collapsedStorageKey = isGuestMode
+    ? 'quantporto_guest_rebalancer_collapsed_v1'
+    : 'quantporto_rebalancer_collapsed_v1';
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
     try {
-      const stored = localStorage.getItem('quantporto_rebalancer_collapsed_v1');
+      const storage = isGuestMode ? sessionStorage : localStorage;
+      const stored = storage.getItem(collapsedStorageKey);
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
@@ -298,7 +304,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     setCollapsedSections((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       try {
-        localStorage.setItem('quantporto_rebalancer_collapsed_v1', JSON.stringify(next));
+        const storage = isGuestMode ? sessionStorage : localStorage;
+        storage.setItem(collapsedStorageKey, JSON.stringify(next));
       } catch {
         // Ignore
       }
@@ -953,6 +960,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           onOpenOrderSlip={onOpenOrderSlip}
           onCommitRebalanceToHoldings={onCommitRebalanceToHoldings}
           onSwitchToStandardRebalancer={() => setRebalancerSubMode('rebalance')}
+          isGuestMode={isGuestMode}
         />
       ) : (
         <>
@@ -2063,12 +2071,27 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <div className="inline-flex rounded-lg shadow-2xs">
                   <button
                     type="button"
-                    onClick={() => onOpenOrderSlip(rebalanceResult)}
-                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-xs font-semibold transition shadow-xs"
-                    title="Buka Slip Order Broker Interaktif (Stockbit / Pluang / Reku / Makmur)"
+                    disabled={isGuestMode}
+                    onClick={
+                      isGuestMode ? undefined : () => onOpenOrderSlip(rebalanceResult)
+                    }
+                    className={`inline-flex items-center gap-1.5 rounded-l-lg px-2.5 py-1 text-xs font-semibold transition ${
+                      isGuestMode
+                        ? 'ui-subtle ui-text-muted border border-r-0 ui-border opacity-60 cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                    }`}
+                    title={
+                      isGuestMode
+                        ? 'Slip Order Broker khusus Mode Pemilik'
+                        : 'Buka Slip Order Broker Interaktif (Stockbit / Pluang / Reku / Makmur)'
+                    }
                   >
-                    <Building2 className="h-3.5 w-3.5" />
-                    <span>Slip Broker</span>
+                    {isGuestMode ? (
+                      <Lock className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <Building2 className="h-3.5 w-3.5" />
+                    )}
+                    <span>{isGuestMode ? 'Slip Broker (Pemilik)' : 'Slip Broker'}</span>
                   </button>
                   <button
                     type="button"
@@ -3501,12 +3524,31 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               {onOpenOrderSlip && (
                 <button
                   type="button"
-                  onClick={() => onOpenOrderSlip(rebalanceResult)}
-                  className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-zinc-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
-                  title="Buka slip instruksi order yang dikelompokkan berdasarkan aplikasi broker"
+                  disabled={isGuestMode}
+                  onClick={
+                    isGuestMode ? undefined : () => onOpenOrderSlip(rebalanceResult)
+                  }
+                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                    isGuestMode
+                      ? 'ui-border ui-subtle ui-text-muted opacity-60 cursor-not-allowed'
+                      : 'border-emerald-500/40 bg-zinc-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                  }`}
+                  title={
+                    isGuestMode
+                      ? 'Slip Order Broker khusus Mode Pemilik'
+                      : 'Buka slip instruksi order yang dikelompokkan berdasarkan aplikasi broker'
+                  }
                 >
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span>Buka Slip Order Broker</span>
+                  {isGuestMode ? (
+                    <Lock className="h-3.5 w-3.5 text-amber-500" />
+                  ) : (
+                    <Building2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>
+                    {isGuestMode
+                      ? 'Slip Order Broker (Khusus Pemilik)'
+                      : 'Buka Slip Order Broker'}
+                  </span>
                 </button>
               )}
               <input
@@ -4113,6 +4155,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             onSetupInitialBuy={onSetupInitialBuyFromMenu1}
             onOpenOrderSlip={() => onOpenOrderSlip && onOpenOrderSlip(rebalanceResult)}
             onOpenTextImport={() => setIsHoldingsTextModalOpen(true)}
+            isGuestMode={isGuestMode}
           />
         )}
       </React.Suspense>

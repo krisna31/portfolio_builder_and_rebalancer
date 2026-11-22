@@ -6,12 +6,14 @@ export interface ResetConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirmReset: () => void;
+  isGuestMode?: boolean;
 }
 
 export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
   isOpen,
   onClose,
   onConfirmReset,
+  isGuestMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -53,10 +55,14 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
                   fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
                 }}
               >
-                Reset Semua ke Kondisi Awal?
+                {isGuestMode
+                  ? 'Reset Sesi Tamu ke Awal?'
+                  : 'Reset Semua ke Kondisi Awal?'}
               </h2>
               <p className="text-xs ui-text-muted">
-                Kembali ke setelan awal (seperti pertama kali membuka aplikasi)
+                {isGuestMode
+                  ? 'Mengembalikan simulasi sementara sesi tamu ke preset demo awal'
+                  : 'Kembali ke setelan awal (seperti pertama kali membuka aplikasi)'}
               </p>
             </div>
           </div>
@@ -74,7 +80,9 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
         {/* Body content */}
         <div className="p-5 space-y-4 text-xs">
           <p className="ui-text-secondary leading-relaxed">
-            Tindakan ini akan menghapus seluruh data kustom yang tersimpan di browser Anda dan mengembalikan konfigurasi QuantPorto ke awal:
+            {isGuestMode
+              ? 'Tindakan ini hanya mereset simulasi sementara pada tab Mode Tamu dan tidak menyentuh data permanen pemilik:'
+              : 'Tindakan ini akan menghapus seluruh data kustom yang tersimpan di browser Anda dan mengembalikan konfigurasi QuantPorto ke awal:'}
           </p>
 
           <div className="p-3 rounded-lg ui-subtle border ui-border space-y-2 ui-text-muted">
@@ -90,16 +98,18 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
                 <strong className="ui-text-main">Asumsi Keuangan:</strong> Modal awal Rp 100 Jt, Target Rp 1 Miliar, DCA Rp 3 Jt/bln, Kurs USD Rp 18.000.
               </span>
             </div>
+            {!isGuestMode && (
+              <div className="flex items-start gap-2">
+                <span className="text-rose-500 font-bold">•</span>
+                <span>
+                  <strong className="ui-text-main">Hapus Simpanan:</strong> Seluruh daftar portofolio tersimpan di perangkat ini akan dibersihkan.
+                </span>
+              </div>
+            )}
             <div className="flex items-start gap-2">
               <span className="text-rose-500 font-bold">•</span>
               <span>
-                <strong className="ui-text-main">Hapus Simpanan:</strong> Seluruh daftar portofolio tersimpan di perangkat ini akan dibersihkan.
-              </span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-rose-500 font-bold">•</span>
-              <span>
-                <strong className="ui-text-main">Hapus Riwayat:</strong> Jurnal transaksi rebalancing, slot aset swap kustom, dan baris tabel yang dipin akan di-reset.
+                <strong className="ui-text-main">Hapus Riwayat:</strong> Jurnal transaksi rebalancing, slot aset swap kustom, dan baris tabel yang dipin {isGuestMode ? 'pada sesi tamu ini ' : ''}akan di-reset.
               </span>
             </div>
           </div>
@@ -107,7 +117,9 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center gap-2 text-[11px]">
             <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
             <span>
-              Tindakan ini tidak dapat dibatalkan setelah dieksekusi.
+              {isGuestMode
+                ? 'Semua perubahan simulasi pada sesi tamu saat ini akan hilang.'
+                : 'Tindakan ini tidak dapat dibatalkan setelah dieksekusi.'}
             </span>
           </div>
         </div>
@@ -128,7 +140,7 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Ya, Reset Semua Data</span>
+            <span>{isGuestMode ? 'Ya, Reset Sesi Tamu' : 'Ya, Reset Semua Data'}</span>
           </button>
         </div>
       </div>

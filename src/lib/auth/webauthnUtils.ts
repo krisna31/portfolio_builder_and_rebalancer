@@ -588,8 +588,8 @@ export async function authenticateWithBiometric(): Promise<{
       }
     }
 
-    // Hardware cryptographic biometric verification succeeded!
-    authenticateSession();
+    // Hardware cryptographic biometric verification succeeded (Owner-only)!
+    authenticateSession('owner');
 
     return {
       success: true,

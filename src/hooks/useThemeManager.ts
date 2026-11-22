@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ThemeId, DEFAULT_THEME_ID, getThemeDefinition, THEME_REGISTRY } from '../types/theme';
 import { loadThemeFont } from '../lib/themeFontLoader';
+import { GUEST_STORAGE_KEYS, isGuestSession } from '../lib/auth/authUtils';
 
 const THEME_STORAGE_KEY = 'quantporto-theme-id';
 const COLOR_SCHEME_STORAGE_KEY = 'color-scheme';
@@ -8,12 +9,18 @@ const COLOR_SCHEME_STORAGE_KEY = 'color-scheme';
 export function getInitialThemeId(): ThemeId {
   if (typeof window === 'undefined') return DEFAULT_THEME_ID;
   try {
+    if (isGuestSession()) {
+      const guestSaved = sessionStorage.getItem(GUEST_STORAGE_KEYS.THEME_ID) as ThemeId | null;
+      if (guestSaved && guestSaved in THEME_REGISTRY) {
+        return guestSaved;
+      }
+    }
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeId | null;
     if (saved && saved in THEME_REGISTRY) {
       return saved;
     }
   } catch {
-    // Ignore localStorage access failures
+    // Ignore storage access failures
   }
   return DEFAULT_THEME_ID;
 }
@@ -21,6 +28,12 @@ export function getInitialThemeId(): ThemeId {
 export function getInitialColorScheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light';
   try {
+    if (isGuestSession()) {
+      const guestSaved = sessionStorage.getItem(GUEST_STORAGE_KEYS.COLOR_SCHEME);
+      if (guestSaved === 'light' || guestSaved === 'dark') {
+        return guestSaved;
+      }
+    }
     const saved = localStorage.getItem(COLOR_SCHEME_STORAGE_KEY);
     if (saved === 'light' || saved === 'dark') {
       return saved;
@@ -77,7 +90,11 @@ export function useThemeManager(): UseThemeManagerResult {
     (newThemeId: ThemeId) => {
       setThemeIdState(newThemeId);
       try {
-        localStorage.setItem(THEME_STORAGE_KEY, newThemeId);
+        if (isGuestSession()) {
+          sessionStorage.setItem(GUEST_STORAGE_KEYS.THEME_ID, newThemeId);
+        } else {
+          localStorage.setItem(THEME_STORAGE_KEY, newThemeId);
+        }
       } catch {
         // Ignore storage exceptions
       }
@@ -90,7 +107,11 @@ export function useThemeManager(): UseThemeManagerResult {
     (newScheme: 'light' | 'dark') => {
       setColorSchemeState(newScheme);
       try {
-        localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, newScheme);
+        if (isGuestSession()) {
+          sessionStorage.setItem(GUEST_STORAGE_KEYS.COLOR_SCHEME, newScheme);
+        } else {
+          localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, newScheme);
+        }
       } catch {
         // Ignore storage exceptions
       }
