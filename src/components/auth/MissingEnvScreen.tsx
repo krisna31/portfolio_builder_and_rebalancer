@@ -40,13 +40,7 @@ export const MissingEnvScreen: React.FC = () => {
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>Keamanan Akses Terproteksi</span>
           </div>
-          <h1
-            className="text-2xl sm:text-3xl font-normal tracking-tight ui-text-main mt-1"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-            }}
-          >
+          <h1 className="text-2xl sm:text-3xl font-normal tracking-tight ui-text-main mt-1 font-display">
             Konfigurasi Sandi Belum Ditemukan
           </h1>
           <p className="text-sm ui-text-secondary max-w-md">

@@ -18,6 +18,10 @@ import {
 } from '../../services/priceFeed';
 import { AssetCorrelationMatrixCard } from './AssetCorrelationMatrixCard';
 import {
+  THEME_CHART_VARIABLES,
+  THEME_COLOR_VARIABLES,
+} from '../../lib/quant/themeChartColors';
+import {
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -3163,7 +3167,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Bar
                     dataKey="riskContribution"
                     name="Kontribusi Risiko (%)"
-                    fill="#8F580A"
+                    fill={THEME_CHART_VARIABLES[3]}
                     radius={[4, 4, 0, 0]}
                     className="cursor-pointer"
                     onClick={(data) => {
@@ -3335,12 +3339,12 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Legend wrapperStyle={{ fontSize: '11px' }} />
                   <ReferenceLine
                     x={solvedMetrics.maxDrawdown}
-                    stroke="#25586B"
+                    stroke={THEME_CHART_VARIABLES[2]}
                     strokeDasharray="3 3"
                   />
                   <ReferenceLine
                     y={solvedMetrics.cagr}
-                    stroke="#25586B"
+                    stroke={THEME_CHART_VARIABLES[2]}
                     strokeDasharray="3 3"
                   />
                   <Scatter
@@ -3358,7 +3362,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     <Scatter
                       name="10 Dominated"
                       data={scatterDominatedData}
-                      fill="#9E472A"
+                      fill={THEME_COLOR_VARIABLES.statusDanger}
                       className="cursor-pointer"
                       onClick={(pt) => {
                         if (pt?.preset) {
@@ -3370,10 +3374,10 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                   <Scatter
                     name="Active Portfolio"
                     data={activePointData}
-                    fill="#25586B"
+                    fill={THEME_CHART_VARIABLES[2]}
                   >
                     {activePointData.map((_, idx) => (
-                      <Cell key={idx} fill="#25586B" />
+                      <Cell key={idx} fill={THEME_CHART_VARIABLES[2]} />
                     ))}
                   </Scatter>
                 </ScatterChart>

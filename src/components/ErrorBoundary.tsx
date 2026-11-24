@@ -62,17 +62,11 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen ui-page flex items-center justify-center p-4">
           <div className="w-full max-w-lg ui-card rounded-[var(--radius-lg)] p-6 sm:p-8 shadow-surface space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[#9E472A]/15 text-[#9E472A] dark:text-[#E08263] border border-[#9E472A]/30 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--status-danger)]/15 text-[var(--status-danger)] border border-[var(--status-danger)]/30 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h1
-                  className="text-lg sm:text-xl font-normal tracking-tight ui-text-main"
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                  }}
-                >
+                <h1 className="text-lg sm:text-xl font-normal tracking-tight ui-text-main font-display">
                   Terjadi Kendala Tampilan
                 </h1>
                 <p className="text-xs ui-text-muted mt-0.5">

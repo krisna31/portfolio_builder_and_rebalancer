@@ -201,13 +201,7 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
           <Layers className="mt-1 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div className="flex flex-col">
             <div className="flex flex-wrap items-center gap-2">
-              <h3
-                className="ui-text-main text-base sm:text-lg font-normal tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
-              >
+              <h3 className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display">
                 Matriks Korelasi &amp; Efisiensi Diversifikasi
               </h3>
               <span className="rounded-md ui-subtle px-2 py-0.5 font-mono text-[10px] font-semibold ui-text-secondary">

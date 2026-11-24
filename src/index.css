@@ -87,6 +87,13 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Multi-theme bridge for legacy emerald-* utilities across all 8 archetypes */
+  --color-emerald-300: var(--accent-hover);
+  --color-emerald-400: var(--accent-primary);
+  --color-emerald-500: var(--accent-primary);
+  --color-emerald-600: var(--accent-primary);
+  --color-emerald-700: var(--accent-hover);
+
   --font-sans: var(--font-sans);
   --font-display: var(--font-display);
   --font-mono: var(--font-mono);
@@ -118,6 +125,7 @@
   h2,
   .font-display {
     font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings, normal);
     letter-spacing: -0.022em;
     line-height: 1.15;
     color: var(--text-primary);
@@ -253,6 +261,20 @@ select option {
 
 .ui-text-muted {
   color: var(--text-muted);
+}
+
+/* Contrast-safe theme bridge for legacy primary CTA emerald button classes */
+.bg-emerald-600,
+.bg-emerald-500 {
+  background-color: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+.hover\:bg-emerald-500:hover,
+.hover\:bg-emerald-600:hover,
+.hover\:bg-emerald-700:hover {
+  background-color: var(--accent-hover);
+  color: var(--text-on-accent);
 }
 
 /* Custom Driver.js Spotlight & Popover Theme */

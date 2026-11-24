@@ -164,11 +164,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
             <div>
               <h2
                 id="holdings-import-modal-title"
-                className="ui-text-main text-base sm:text-lg font-normal tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display"
               >
                 Import / Export Saldo Holding (Teks &amp; Excel)
               </h2>

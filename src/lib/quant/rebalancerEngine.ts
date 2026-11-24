@@ -2,12 +2,14 @@ import {
   AssetDefinition,
   CrashLadderStep,
   HoldingEntry,
+  RebalanceHistoryEntry,
   RebalanceItemResult,
   RebalanceMode,
   RebalanceSummaryResult,
   ValuationSentimentConfig,
 } from './types';
 import { calculateTacticalWeights } from './tacticalValuationEngine';
+import { formatIdr } from '../formatters';
 
 /**
  * Calculates exact portfolio rebalancing instructions (Buy / Sell / Hold), supporting:
@@ -899,4 +901,387 @@ export function computeUpdatedAverageCostBasis(params: {
   const newAvg = weightedSum / totalUnits;
   return Number(newAvg.toFixed(precision));
 }
+
+export interface BuildRebalanceCommitParams {
+  allAssets: AssetDefinition[];
+  holdings: Record<string, HoldingEntry>;
+  plan: RebalanceSummaryResult;
+  activeWeights: Record<string, number>;
+  rebalanceHistory: RebalanceHistoryEntry[];
+  inputMode: 'nominal' | 'units';
+  usdIdrRate: number;
+  rebalanceMode: RebalanceMode;
+  cashInjectionIdr: number;
+  isFixedBudgetMode: boolean;
+  fixedTotalBudgetIdr: number;
+  customNote?: string;
+  isTopUpConfirmed?: boolean;
+  hasManualTableEdits?: boolean;
+  hasPlanOverride?: boolean;
+  baselineHoldings?: Record<string, HoldingEntry>;
+  now?: Date;
+}
+
+export interface BuildRebalanceCommitResult {
+  newEntry: RebalanceHistoryEntry;
+  nextHoldings: Record<string, HoldingEntry>;
+  leftoverCash: number;
+}
+
+function getHoldingValueIdr(
+  asset: AssetDefinition,
+  h: HoldingEntry | undefined,
+  inputMode: 'nominal' | 'units',
+  usdIdrRate: number
+): number {
+  if (!h) return 0;
+  const isNominal =
+    h.isNominalOnly ?? (asset.category === 'bonds' || asset.category === 'money-market');
+  if (inputMode === 'nominal' || isNominal) {
+    return Math.max(0, h.currentValueIdr ?? 0);
+  }
+  const unitPriceNative = h.currentPrice > 0 ? h.currentPrice : asset.defaultPrice;
+  const unitPriceIdr = asset.currency === 'USD' ? unitPriceNative * usdIdrRate : unitPriceNative;
+  return Math.max(0, (h.units ?? 0) * unitPriceIdr);
+}
+
+/**
+ * Computes the next holdings state, leftover cash, and journal entry for either:
+ * 1) Direct manual table edits (comparing against prior history snapshot or baseline)
+ * 2) Standard plan execution (applying BUY/SELL trades and updating cost basis)
+ */
+export function buildRebalanceCommitResult(
+  params: BuildRebalanceCommitParams
+): BuildRebalanceCommitResult {
+  const {
+    allAssets,
+    holdings,
+    plan,
+    activeWeights,
+    rebalanceHistory,
+    inputMode,
+    usdIdrRate,
+    rebalanceMode,
+    cashInjectionIdr,
+    isFixedBudgetMode,
+    fixedTotalBudgetIdr,
+    customNote,
+    isTopUpConfirmed,
+    hasManualTableEdits,
+    hasPlanOverride = false,
+    baselineHoldings,
+    now,
+  } = params;
+
+  const rawDeficit = plan.unallocatedCashRemainderIdr ?? 0;
+  const hasDeficit = rawDeficit < -100;
+  const topUpAmount = hasDeficit ? Math.abs(rawDeficit) : 0;
+
+  const currentFilledTableIdr = allAssets.reduce(
+    (sum, a) => sum + getHoldingValueIdr(a, holdings[a.id], inputMode, usdIdrRate),
+    0
+  );
+
+  const prevCommittedValueIdr =
+    rebalanceHistory.length > 0 ? (rebalanceHistory[0].totalValueAfterIdr ?? 0) : 0;
+
+  const hasActiveShock = allAssets.some(
+    (a) => Math.abs(holdings[a.id]?.shockPercent ?? 0) > 0.001
+  );
+
+  const isDirectTableInput =
+    typeof hasManualTableEdits === 'boolean'
+      ? Boolean(
+          (hasManualTableEdits || isFixedBudgetMode) &&
+            !hasPlanOverride &&
+            !hasActiveShock &&
+            currentFilledTableIdr > 0 &&
+            Math.abs(currentFilledTableIdr - prevCommittedValueIdr) > 100
+        )
+      : Boolean(
+          !hasPlanOverride &&
+            !hasActiveShock &&
+            currentFilledTableIdr > 0 &&
+            Math.abs(currentFilledTableIdr - prevCommittedValueIdr) > 100
+        );
+
+  let holdingsBefore: Record<string, HoldingEntry>;
+  let cashInjectionBefore = cashInjectionIdr;
+  let totalValueBeforeIdr = 0;
+  let trueTotalValueAfterIdr = 0;
+  let effectiveCashInjected = 0;
+  let leftoverCash = 0;
+  let unspentCashRemainderIdr = 0;
+  let totalBuyIdr = 0;
+  let totalSellIdr = 0;
+  const tradesSummary: string[] = [];
+  const nextHoldings: Record<string, HoldingEntry> = JSON.parse(JSON.stringify(holdings));
+
+  if (isDirectTableInput) {
+    if (rebalanceHistory.length > 0 && rebalanceHistory[0].holdingsAfter) {
+      holdingsBefore = JSON.parse(JSON.stringify(rebalanceHistory[0].holdingsAfter));
+    } else if (baselineHoldings) {
+      holdingsBefore = JSON.parse(JSON.stringify(baselineHoldings));
+    } else {
+      holdingsBefore = {};
+      for (const a of allAssets) {
+        const existing = holdings[a.id];
+        const isNominal =
+          existing?.isNominalOnly ??
+          a.isNominalOnly ??
+          (a.category === 'bonds' || a.category === 'money-market');
+        holdingsBefore[a.id] = {
+          assetId: a.id,
+          currentValueIdr: 0,
+          units: 0,
+          currentPrice: isNominal ? 1 : (existing?.currentPrice ?? a.defaultPrice),
+          shockPercent: 0,
+          isNominalOnly: isNominal,
+          notes: existing?.notes,
+          subSplits: existing?.subSplits,
+        };
+      }
+    }
+
+    const baselineTotalIdr =
+      rebalanceHistory.length > 0
+        ? prevCommittedValueIdr
+        : Math.round(
+            allAssets.reduce(
+              (sum, a) =>
+                sum + getHoldingValueIdr(a, holdingsBefore[a.id], inputMode, usdIdrRate),
+              0
+            )
+          );
+
+    totalValueBeforeIdr = baselineTotalIdr;
+    cashInjectionBefore = isFixedBudgetMode
+      ? Math.max(0, fixedTotalBudgetIdr - baselineTotalIdr)
+      : cashInjectionIdr;
+
+    trueTotalValueAfterIdr = Math.round(currentFilledTableIdr);
+    effectiveCashInjected = Math.max(0, trueTotalValueAfterIdr - baselineTotalIdr);
+
+    const plannedCashBudget = isFixedBudgetMode
+      ? Math.max(0, fixedTotalBudgetIdr - baselineTotalIdr)
+      : cashInjectionIdr || 0;
+
+    unspentCashRemainderIdr = Math.max(0, plannedCashBudget - effectiveCashInjected);
+    leftoverCash = unspentCashRemainderIdr;
+
+    for (const asset of allAssets) {
+      const prevHold = nextHoldings[asset.id];
+      if (!prevHold) continue;
+      const prevVal = getHoldingValueIdr(
+        asset,
+        holdingsBefore[asset.id],
+        inputMode,
+        usdIdrRate
+      );
+      const currentVal = getHoldingValueIdr(asset, prevHold, inputMode, usdIdrRate);
+
+      const diff = Math.round(currentVal - prevVal);
+      if (diff >= 1000) {
+        totalBuyIdr += diff;
+        tradesSummary.push(`BUY ${asset.shortName || asset.symbol} ${formatIdr(diff, true)}`);
+      } else if (diff <= -1000) {
+        totalSellIdr += Math.abs(diff);
+        tradesSummary.push(
+          `SELL ${asset.shortName || asset.symbol} ${formatIdr(Math.abs(diff), true)}`
+        );
+      }
+
+      nextHoldings[asset.id] = {
+        ...prevHold,
+        shockPercent: 0,
+      };
+    }
+  } else {
+    holdingsBefore = JSON.parse(JSON.stringify(holdings));
+    cashInjectionBefore = cashInjectionIdr;
+    totalValueBeforeIdr = plan.postShockTotalIdr;
+
+    const actualCommittedHoldingsValueIdr = plan.items.reduce(
+      (sum, item) =>
+        sum + Math.max(0, Math.round((item.postShockValueIdr ?? 0) + item.tradeAmountIdr)),
+      0
+    );
+    leftoverCash = hasDeficit ? 0 : Math.max(0, rawDeficit);
+    unspentCashRemainderIdr = leftoverCash;
+    effectiveCashInjected = (plan.cashInjectionIdr ?? 0) + (isTopUpConfirmed ? topUpAmount : 0);
+    trueTotalValueAfterIdr = actualCommittedHoldingsValueIdr + leftoverCash;
+    totalBuyIdr = plan.totalBuyIdr;
+    totalSellIdr = plan.totalSellIdr;
+    for (const i of plan.items) {
+      if (i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000) {
+        tradesSummary.push(`${i.action} ${i.symbol} ${formatIdr(Math.abs(i.tradeAmountIdr), true)}`);
+      }
+    }
+
+    for (const item of plan.items) {
+      const asset = allAssets.find((a) => a.id === item.assetId);
+      if (!asset) continue;
+      const prevHold = nextHoldings[item.assetId];
+      const isNominal =
+        item.isNominalOnly ??
+        prevHold?.isNominalOnly ??
+        (asset.category === 'bonds' || asset.category === 'money-market');
+      const isIdxStock =
+        asset.category === 'idx-equity' && asset.lotSize === 100 && !isNominal;
+      const rawPostShockPrice =
+        (prevHold?.currentPrice ?? asset.defaultPrice) *
+        Math.max(0, 1 + (prevHold?.shockPercent ?? 0) / 100);
+      const postShockUnitPriceNative = isNominal
+        ? 1
+        : isIdxStock
+          ? roundToIdxTick(rawPostShockPrice, 'nearest')
+          : rawPostShockPrice;
+      const unitPriceIdr = isNominal
+        ? 1
+        : asset.currency === 'USD'
+          ? postShockUnitPriceNative * usdIdrRate
+          : postShockUnitPriceNative;
+
+      const postShockVal = item.postShockValueIdr ?? (item as any).postShockValIdr ?? 0;
+      const executedValIdr = Math.max(0, Math.round(postShockVal + item.tradeAmountIdr));
+      const newUnits = isNominal
+        ? executedValIdr
+        : Number(
+            (executedValIdr / Math.max(1e-6, unitPriceIdr)).toFixed(
+              asset.category === 'crypto' ? 8 : 4
+            )
+          );
+
+      const boughtUnits =
+        item.action === 'BUY' && item.tradeAmountIdr > 0
+          ? item.tradeUnits > 0
+            ? item.tradeUnits
+            : item.tradeAmountIdr / Math.max(1e-6, unitPriceIdr)
+          : 0;
+      const buyPrice =
+        postShockUnitPriceNative > 0 ? postShockUnitPriceNative : asset.defaultPrice || 1;
+
+      const newAvgBuyPrice = computeUpdatedAverageCostBasis({
+        prevUnits: prevHold?.units ?? 0,
+        prevAvgBuyPrice: prevHold?.avgBuyPrice,
+        prevCurrentPrice: prevHold?.currentPrice ?? asset.defaultPrice ?? 1,
+        boughtUnits,
+        buyPrice,
+        newTotalUnits: newUnits,
+        isNominal,
+        category: asset.category,
+      });
+
+      nextHoldings[item.assetId] = {
+        ...prevHold,
+        assetId: item.assetId,
+        currentValueIdr: executedValIdr,
+        units: newUnits,
+        currentPrice: isNominal
+          ? 1
+          : Number(postShockUnitPriceNative.toFixed(asset.category === 'crypto' ? 8 : 4)),
+        avgBuyPrice: newAvgBuyPrice,
+        shockPercent: 0,
+        isNominalOnly: isNominal,
+        subSplits: prevHold?.subSplits,
+        notes: prevHold?.notes,
+      };
+    }
+  }
+
+  const baseNote =
+    customNote ||
+    `Rebalance ${
+      rebalanceMode === 'sell-and-buy'
+        ? 'Sell + Buy (Jual Rata)'
+        : rebalanceMode === 'selective-profit-trim'
+          ? 'Jual Untung Saja (Selective Trim)'
+          : rebalanceMode === 'trim-defensive-first'
+            ? 'Prioritas RDPT Dulu'
+            : 'Buy-Only DCA'
+    }`;
+  const deficitSuffix =
+    hasDeficit && isTopUpConfirmed ? ` (+Top-Up Defisit ${formatIdr(topUpAmount, true)})` : '';
+
+  const weightsAfter: Record<string, number> = {};
+  const holdingsAfterTotalIdr = allAssets.reduce(
+    (sum, a) => sum + getHoldingValueIdr(a, nextHoldings[a.id], inputMode, usdIdrRate),
+    0
+  );
+  if (holdingsAfterTotalIdr > 0) {
+    for (const asset of allAssets) {
+      const h = nextHoldings[asset.id];
+      if (!h) continue;
+      const val = getHoldingValueIdr(asset, h, inputMode, usdIdrRate);
+      weightsAfter[asset.id] = Number(((val / holdingsAfterTotalIdr) * 100).toFixed(2));
+    }
+  }
+
+  const commitDate = now ?? new Date();
+  const newEntry: RebalanceHistoryEntry = {
+    id: `reb-${commitDate.getTime()}`,
+    timestamp: commitDate.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }),
+    note: `${baseNote}${deficitSuffix}`,
+    totalValueBeforeIdr,
+    cashInjectedIdr: effectiveCashInjected,
+    totalValueAfterIdr: trueTotalValueAfterIdr,
+    totalBuyIdr,
+    totalSellIdr,
+    tradesSummary,
+    weightsAfter: Object.keys(weightsAfter).length > 0 ? weightsAfter : { ...activeWeights },
+    holdingsBefore,
+    holdingsAfter: JSON.parse(JSON.stringify(nextHoldings)),
+    cashInjectionBeforeIdr: cashInjectionBefore,
+    unspentCashRemainderIdr,
+  };
+
+  return {
+    newEntry,
+    nextHoldings,
+    leftoverCash,
+  };
+}
+
+/**
+ * Restores portfolio holdings and cash injection to the exact snapshot stored before a rebalance entry.
+ */
+export function applyRebalanceUndo(params: {
+  id: string;
+  rebalanceHistory: RebalanceHistoryEntry[];
+  currentHoldings: Record<string, HoldingEntry>;
+  currentCashInjectionIdr: number;
+}): {
+  found: boolean;
+  nextHoldings: Record<string, HoldingEntry>;
+  nextCashInjectionIdr: number;
+  nextHistory: RebalanceHistoryEntry[];
+} {
+  const { id, rebalanceHistory, currentHoldings, currentCashInjectionIdr } = params;
+  const entry = rebalanceHistory.find((item) => item.id === id);
+  if (!entry) {
+    return {
+      found: false,
+      nextHoldings: currentHoldings,
+      nextCashInjectionIdr: currentCashInjectionIdr,
+      nextHistory: rebalanceHistory,
+    };
+  }
+
+  return {
+    found: true,
+    nextHoldings: entry.holdingsBefore
+      ? JSON.parse(JSON.stringify(entry.holdingsBefore))
+      : currentHoldings,
+    nextCashInjectionIdr:
+      typeof entry.cashInjectionBeforeIdr === 'number'
+        ? entry.cashInjectionBeforeIdr
+        : currentCashInjectionIdr,
+    nextHistory: rebalanceHistory.filter((item) => item.id !== id),
+  };
+}
+
 

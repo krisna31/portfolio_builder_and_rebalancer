@@ -357,11 +357,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             <div>
               <h2
                 id="broker-slip-modal-title"
-                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2 font-display"
               >
                 <span>Multi-Platform Broker Order Slips</span>
                 <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border">

@@ -157,11 +157,7 @@ export const DataTransferModal: React.FC<DataTransferModalProps> = ({
             <div>
               <h2
                 id="data-transfer-modal-title"
-                className="ui-text-main text-base sm:text-lg font-normal tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display"
               >
                 Transfer &amp; Backup Data Portofolio
               </h2>

@@ -8,6 +8,10 @@ import {
 } from '../../lib/quant/wealthSimulator';
 import { formatIdr } from '../../lib/formatters';
 import {
+  THEME_CHART_VARIABLES,
+  THEME_COLOR_VARIABLES,
+} from '../../lib/quant/themeChartColors';
+import {
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -1053,11 +1057,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <ReferenceLine
                       y={targetGoalIdr / 1_000_000}
-                      stroke="#8F580A"
+                      stroke={THEME_CHART_VARIABLES[3]}
                       strokeDasharray="4 4"
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
-                        fill: '#8F580A',
+                        fill: THEME_CHART_VARIABLES[3],
                         fontSize: 11,
                       }}
                     />
@@ -1074,8 +1078,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         type="monotone"
                         dataKey="DayaBeliRiil"
                         name={`Daya Beli Riil (Inflasi ${annualInflationPercent}%)`}
-                        stroke="#25586B"
-                        fill="#25586B"
+                        stroke={THEME_CHART_VARIABLES[2]}
+                        fill={THEME_CHART_VARIABLES[2]}
                         strokeDasharray="4 4"
                         fillOpacity={0.08}
                       />
@@ -1084,16 +1088,16 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="WorstCaseCrash"
                       name={`Saat Market Crash (-${solvedMetrics.maxDrawdown}%)`}
-                      stroke="#9E472A"
-                      fill="#9E472A"
+                      stroke={THEME_COLOR_VARIABLES.statusDanger}
+                      fill={THEME_COLOR_VARIABLES.statusDanger}
                       fillOpacity={0.12}
                     />
                     <Area
                       type="monotone"
                       dataKey="ModalTabungan"
                       name="Akumulasi Modal Tabungan"
-                      stroke="#606E65"
-                      fill="#606E65"
+                      stroke={THEME_CHART_VARIABLES[5]}
+                      fill={THEME_CHART_VARIABLES[5]}
                       fillOpacity={0.12}
                     />
                   </AreaChart>
@@ -1126,11 +1130,11 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     <Legend wrapperStyle={{ fontSize: '11px' }} />
                     <ReferenceLine
                       y={targetGoalIdr / 1_000_000}
-                      stroke="#8F580A"
+                      stroke={THEME_CHART_VARIABLES[3]}
                       strokeDasharray="4 4"
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
-                        fill: '#8F580A',
+                        fill: THEME_CHART_VARIABLES[3],
                         fontSize: 11,
                       }}
                     />
@@ -1138,8 +1142,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="P90Bull"
                       name={isRealMonteCarlo ? 'P90: Optimis (Daya Beli Riil)' : 'P90: Skenario Optimis (Bull 10%)'}
-                      stroke="#3D8B66"
-                      fill="#3D8B66"
+                      stroke={THEME_COLOR_VARIABLES.statusSuccess}
+                      fill={THEME_COLOR_VARIABLES.statusSuccess}
                       fillOpacity={0.16}
                     />
                     <Area
@@ -1159,16 +1163,16 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       type="monotone"
                       dataKey="P10Bear"
                       name={isRealMonteCarlo ? 'P10: Ujian Krisis (Daya Beli Riil)' : 'P10: Ujian Krisis (Bear 10%)'}
-                      stroke="#9E472A"
-                      fill="#9E472A"
+                      stroke={THEME_COLOR_VARIABLES.statusDanger}
+                      fill={THEME_COLOR_VARIABLES.statusDanger}
                       fillOpacity={0.14}
                     />
                     <Area
                       type="monotone"
                       dataKey="ModalPokok"
                       name={isRealMonteCarlo ? 'Modal Pokok Disimpan (Riil)' : 'Modal Pokok Disimpan'}
-                      stroke="#606E65"
-                      fill="#606E65"
+                      stroke={THEME_CHART_VARIABLES[5]}
+                      fill={THEME_CHART_VARIABLES[5]}
                       fillOpacity={0.10}
                       strokeDasharray="3 3"
                     />
@@ -2080,7 +2084,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Bulanan"
                 name="Rebalance Bulanan"
-                stroke="#25586B"
+                stroke={THEME_CHART_VARIABLES[2]}
                 strokeWidth={1.8}
                 dot={false}
               />
@@ -2088,7 +2092,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="Tahunan1Y"
                 name="Rebalance Tahunan"
-                stroke="#8F580A"
+                stroke={THEME_CHART_VARIABLES[3]}
                 strokeWidth={1.8}
                 dot={false}
               />
@@ -2096,7 +2100,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 type="monotone"
                 dataKey="BuyAndHold"
                 name="Buy & Hold (Tanpa Rebalance)"
-                stroke="#9E472A"
+                stroke={THEME_COLOR_VARIABLES.statusDanger}
                 strokeDasharray="4 4"
                 strokeWidth={1.8}
                 dot={false}

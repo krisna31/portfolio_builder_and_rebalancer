@@ -49,11 +49,7 @@ export const ResetConfirmationModal: React.FC<ResetConfirmationModalProps> = ({
             <div>
               <h2
                 id="reset-modal-title"
-                className="text-base font-normal tracking-tight ui-text-main"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="text-base font-normal tracking-tight ui-text-main font-display"
               >
                 {isGuestMode
                   ? 'Reset Sesi Tamu ke Awal?'

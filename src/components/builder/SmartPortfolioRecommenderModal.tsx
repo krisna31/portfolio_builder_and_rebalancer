@@ -193,11 +193,7 @@ export const SmartPortfolioRecommenderModal: React.FC<
             <div>
               <h2
                 id={titleId}
-                className="ui-text-main text-base sm:text-lg font-normal tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display"
               >
                 Tanya Quant: Asisten Penentu Portfolio Ideal Anda
               </h2>

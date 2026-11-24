@@ -25,9 +25,9 @@ import {
   solveRiskBudgetingWeights,
 } from './lib/quant/riskParitySolver';
 import {
+  applyRebalanceUndo,
+  buildRebalanceCommitResult,
   calculateRebalancePlan,
-  computeUpdatedAverageCostBasis,
-  roundToIdxTick,
 } from './lib/quant/rebalancerEngine';
 import { fetchLiveMarketPrices } from './services/priceFeed';
 import { fetchLiveCryptoFearAndGreed } from './lib/quant/tacticalValuationEngine';
@@ -587,6 +587,8 @@ function AuthenticatedQuantPorto({
     }
     return init;
   });
+  const [hasManualTableEdits, setHasManualTableEdits] = useState<boolean>(false);
+  const manualEditBaselineRef = useRef<Record<string, HoldingEntry> | null>(null);
 
   // Auto-Subtract Effect for Fixed Total Budget Mode (Staged Initial Buying)
   useEffect(() => {
@@ -684,6 +686,7 @@ function AuthenticatedQuantPorto({
         localStorage.removeItem('quantporto_asset_dividends');
         localStorage.removeItem('quantporto_roadmap_settings_v1');
         localStorage.removeItem('color-scheme');
+        localStorage.removeItem('quantporto-theme-id');
       }
       setLockedAssetIds([]);
       setIsFixedBudgetMode(false);
@@ -1678,6 +1681,12 @@ function AuthenticatedQuantPorto({
     ) {
       setIsHoldingsSyncedWithMenu1(false);
     }
+    if (patch.currentValueIdr !== undefined || patch.units !== undefined) {
+      if (!hasManualTableEdits && !manualEditBaselineRef.current) {
+        manualEditBaselineRef.current = JSON.parse(JSON.stringify(holdings));
+      }
+      setHasManualTableEdits(true);
+    }
     setHoldings((prev) => {
       const asset = allAssets.find((a) => a.id === assetId);
       const isCatNominal = asset?.category === 'bonds' || asset?.category === 'money-market';
@@ -1787,6 +1796,8 @@ function AuthenticatedQuantPorto({
     setInitialCapitalIdr(capitalIdr);
     setCashInjectionIdr(0);
     setIsHoldingsSyncedWithMenu1(true);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
@@ -1821,6 +1832,8 @@ function AuthenticatedQuantPorto({
   // Handler: Clear all holdings to Rp 0 so user can type their real current holdings manually
   const handleClearHoldingsForManualInput = () => {
     setIsHoldingsSyncedWithMenu1(false);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setCashInjectionIdr(0);
     setHoldings((prev) => {
       const next = { ...prev };
@@ -1847,6 +1860,8 @@ function AuthenticatedQuantPorto({
   // Handler: Initial Buy Mode — Set existing holdings to Rp 0 and put Menu 1's Initial Capital into Cash Injection (Buy-Only)
   const handleSetupInitialBuyFromMenu1 = () => {
     setIsHoldingsSyncedWithMenu1(false);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setRebalanceMode('buy-only-dca');
     setIsFixedBudgetMode(true);
     setFixedTotalBudgetIdr(initialCapitalIdr);
@@ -1879,6 +1894,8 @@ function AuthenticatedQuantPorto({
     distributeBy: 'current' | 'target'
   ) => {
     setIsHoldingsSyncedWithMenu1(false);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setHoldings((prev) => {
       const next = { ...prev };
       const currentSum = allAssets.reduce(
@@ -1919,6 +1936,8 @@ function AuthenticatedQuantPorto({
   // Handler: Load Video Rp 1 Billion Rebalance Example (14:58)
   const handleLoadVideo1BExample = () => {
     setIsHoldingsSyncedWithMenu1(false);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     const btc90 = VIDEO_PORTFOLIO_PRESETS.find(
       (p) => p.id === 'opt-4-rb-btc-90'
     )!;
@@ -1998,6 +2017,8 @@ function AuthenticatedQuantPorto({
       | 'covid-2020'
       | 'crypto-tech-winter-2022'
   ) => {
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setHoldings((prev) => {
       const next = { ...prev };
       for (const a of allAssets) {
@@ -2054,222 +2075,35 @@ function AuthenticatedQuantPorto({
     planOverride?: RebalanceSummaryResult,
     isTopUpConfirmed?: boolean
   ) => {
-    // Decision 1 & Bug 4: Preserve leftover unallocated cash remainder, handle overbudget deficit
-    // Use planOverride if user adjusted lots manually via Feature 4 steppers
     const plan = planOverride ?? rebalanceResult;
-    const rawDeficit = plan.unallocatedCashRemainderIdr ?? 0;
-    const hasDeficit = rawDeficit < -100;
-    const topUpAmount = hasDeficit ? Math.abs(rawDeficit) : 0;
+    const hasPlanOverride =
+      Boolean(planOverride && planOverride !== rebalanceResult) ||
+      Boolean(orderSlipPlanOverride);
 
-    // Snapshot pre-commit state for 1-click Undo restoration
-    const holdingsBefore: Record<string, HoldingEntry> = JSON.parse(JSON.stringify(holdings));
-    const cashInjectionBefore = cashInjectionIdr;
-
-    // Measure actual filled value currently in the table ("Aset Terisi Saat Ini:")
-    const currentFilledTableIdr = allAssets.reduce((sum, a) => {
-      const h = holdings[a.id];
-      if (!h) return sum;
-      const isNominal =
-        h.isNominalOnly ?? (a.category === 'bonds' || a.category === 'money-market');
-      const unitPriceNative = h.currentPrice > 0 ? h.currentPrice : a.defaultPrice;
-      const unitPriceIdr = a.currency === 'USD' ? unitPriceNative * usdIdrRate : unitPriceNative;
-      const val = inputMode === 'nominal' ? Math.max(0, h.currentValueIdr) : Math.max(0, h.units * unitPriceIdr);
-      return sum + val;
-    }, 0);
-
-    const prevCommittedValueIdr = rebalanceHistory.length > 0
-      ? (rebalanceHistory[0].totalValueAfterIdr ?? 0)
-      : 0;
-
-    const isDirectTableInput = currentFilledTableIdr > 0;
-
-    let trueTotalValueAfterIdr = 0;
-    let effectiveCashInjected = 0;
-    let leftoverCash = 0;
-    let unspentCashRemainderIdr = 0;
-    let totalBuyIdr = 0;
-    let totalSellIdr = 0;
-    const tradesSummary: string[] = [];
-    const nextHoldings: Record<string, HoldingEntry> = { ...holdings };
-
-    if (isDirectTableInput) {
-      // User filled holdings directly in the table (e.g. 2 Jt from 0, or added 2 Jt to previous 10 Jt)
-      trueTotalValueAfterIdr = Math.round(currentFilledTableIdr);
-      effectiveCashInjected = Math.max(0, trueTotalValueAfterIdr - prevCommittedValueIdr);
-
-      const plannedCashBudget = isFixedBudgetMode
-        ? Math.max(0, fixedTotalBudgetIdr - prevCommittedValueIdr)
-        : (cashInjectionIdr || 0);
-
-      unspentCashRemainderIdr = Math.max(0, plannedCashBudget - effectiveCashInjected);
-      leftoverCash = unspentCashRemainderIdr;
-
-      // Preserve holdings exactly as user input in the table, reset shocks to 0%
-      for (const asset of allAssets) {
-        const prevHold = nextHoldings[asset.id];
-        if (!prevHold) continue;
-        const beforeHold = holdingsBefore[asset.id];
-        const prevVal = beforeHold
-          ? (inputMode === 'nominal'
-              ? beforeHold.currentValueIdr
-              : beforeHold.units * (beforeHold.currentPrice > 0 ? beforeHold.currentPrice : asset.defaultPrice) * (asset.currency === 'USD' ? usdIdrRate : 1))
-          : 0;
-        const currentVal = inputMode === 'nominal'
-          ? prevHold.currentValueIdr
-          : prevHold.units * (prevHold.currentPrice > 0 ? prevHold.currentPrice : asset.defaultPrice) * (asset.currency === 'USD' ? usdIdrRate : 1);
-
-        const diff = Math.round(currentVal - prevVal);
-        if (diff >= 1000) {
-          totalBuyIdr += diff;
-          tradesSummary.push(`BUY ${asset.shortName || asset.symbol} ${formatIdr(diff, true)}`);
-        } else if (diff <= -1000) {
-          totalSellIdr += Math.abs(diff);
-          tradesSummary.push(`SELL ${asset.shortName || asset.symbol} ${formatIdr(Math.abs(diff), true)}`);
-        }
-
-        nextHoldings[asset.id] = {
-          ...prevHold,
-          shockPercent: 0,
-        };
-      }
-    } else {
-      // Fallback: Table was empty (0), so apply the plan's trade recommendations
-      const actualCommittedHoldingsValueIdr = plan.items.reduce(
-        (sum, item) => sum + Math.max(0, Math.round((item.postShockValueIdr ?? 0) + item.tradeAmountIdr)),
-        0
-      );
-      leftoverCash = hasDeficit ? 0 : Math.max(0, rawDeficit);
-      effectiveCashInjected = (plan.cashInjectionIdr ?? 0) + (isTopUpConfirmed ? topUpAmount : 0);
-      trueTotalValueAfterIdr = actualCommittedHoldingsValueIdr + leftoverCash;
-      totalBuyIdr = plan.totalBuyIdr;
-      totalSellIdr = plan.totalSellIdr;
-      for (const i of plan.items) {
-        if (i.action !== 'HOLD' && Math.abs(i.tradeAmountIdr) >= 1000) {
-          tradesSummary.push(`${i.action} ${i.symbol} ${formatIdr(Math.abs(i.tradeAmountIdr), true)}`);
-        }
-      }
-
-      for (const item of plan.items) {
-        const asset = allAssets.find((a) => a.id === item.assetId);
-        if (!asset) continue;
-        const prevHold = nextHoldings[item.assetId];
-        const isNominal =
-          item.isNominalOnly ??
-          prevHold?.isNominalOnly ??
-          (asset.category === 'bonds' || asset.category === 'money-market');
-        const isIdxStock =
-          asset.category === 'idx-equity' &&
-          asset.lotSize === 100 &&
-          !isNominal;
-        const rawPostShockPrice =
-          (prevHold?.currentPrice ?? asset.defaultPrice) *
-          Math.max(0, 1 + (prevHold?.shockPercent ?? 0) / 100);
-        const postShockUnitPriceNative = isNominal
-          ? 1
-          : isIdxStock
-            ? roundToIdxTick(rawPostShockPrice, 'nearest')
-            : rawPostShockPrice;
-        const unitPriceIdr = isNominal
-          ? 1
-          : asset.currency === 'USD'
-            ? postShockUnitPriceNative * usdIdrRate
-            : postShockUnitPriceNative;
-
-        const postShockVal = item.postShockValueIdr ?? (item as any).postShockValIdr ?? 0;
-        const executedValIdr = Math.max(0, Math.round(postShockVal + item.tradeAmountIdr));
-        const newUnits = isNominal
-          ? executedValIdr
-          : Number((executedValIdr / Math.max(1e-6, unitPriceIdr)).toFixed(asset.category === 'crypto' ? 8 : 4));
-
-        const boughtUnits =
-          item.action === 'BUY' && item.tradeAmountIdr > 0
-            ? (item.tradeUnits > 0 ? item.tradeUnits : (item.tradeAmountIdr / Math.max(1e-6, unitPriceIdr)))
-            : 0;
-        const buyPrice = postShockUnitPriceNative > 0 ? postShockUnitPriceNative : (asset.defaultPrice || 1);
-
-        const newAvgBuyPrice = computeUpdatedAverageCostBasis({
-          prevUnits: prevHold?.units ?? 0,
-          prevAvgBuyPrice: prevHold?.avgBuyPrice,
-          prevCurrentPrice: prevHold?.currentPrice ?? asset.defaultPrice ?? 1,
-          boughtUnits,
-          buyPrice,
-          newTotalUnits: newUnits,
-          isNominal,
-          category: asset.category,
-        });
-
-        nextHoldings[item.assetId] = {
-          ...prevHold,
-          assetId: item.assetId,
-          currentValueIdr: executedValIdr,
-          units: newUnits,
-          currentPrice: isNominal
-            ? 1
-            : Number(postShockUnitPriceNative.toFixed(asset.category === 'crypto' ? 8 : 4)),
-          avgBuyPrice: newAvgBuyPrice,
-          shockPercent: 0,
-          isNominalOnly: isNominal,
-          subSplits: prevHold?.subSplits,
-          notes: prevHold?.notes,
-        };
-      }
-    }
-
-    const baseNote =
-      customNote ||
-      `Rebalance ${
-        rebalanceMode === 'sell-and-buy'
-          ? 'Sell + Buy (Jual Rata)'
-          : rebalanceMode === 'selective-profit-trim'
-            ? 'Jual Untung Saja (Selective Trim)'
-            : rebalanceMode === 'trim-defensive-first'
-              ? 'Prioritas RDPT Dulu'
-              : 'Buy-Only DCA'
-      }`;
-    const deficitSuffix =
-      hasDeficit && isTopUpConfirmed
-        ? ` (+Top-Up Defisit ${formatIdr(topUpAmount, true)})`
-        : '';
-
-    // Calculate actual weights after commit
-    const weightsAfter: Record<string, number> = {};
-    if (trueTotalValueAfterIdr > 0) {
-      for (const asset of allAssets) {
-        const h = nextHoldings[asset.id];
-        if (!h) continue;
-        const isNominal =
-          h.isNominalOnly ?? (asset.category === 'bonds' || asset.category === 'money-market');
-        const unitPriceNative = h.currentPrice > 0 ? h.currentPrice : asset.defaultPrice;
-        const unitPriceIdr = asset.currency === 'USD' ? unitPriceNative * usdIdrRate : unitPriceNative;
-        const val = inputMode === 'nominal' ? Math.max(0, h.currentValueIdr) : Math.max(0, h.units * unitPriceIdr);
-        weightsAfter[asset.id] = Number(((val / trueTotalValueAfterIdr) * 100).toFixed(2));
-      }
-    }
-
-    const newEntry: RebalanceHistoryEntry = {
-      id: `reb-${Date.now()}`,
-      timestamp: new Date().toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-      note: `${baseNote}${deficitSuffix}`,
-      totalValueBeforeIdr: prevCommittedValueIdr,
-      cashInjectedIdr: effectiveCashInjected,
-      totalValueAfterIdr: trueTotalValueAfterIdr,
-      totalBuyIdr,
-      totalSellIdr,
-      tradesSummary,
-      weightsAfter: Object.keys(weightsAfter).length > 0 ? weightsAfter : { ...activeWeights },
-      holdingsBefore,
-      holdingsAfter: JSON.parse(JSON.stringify(nextHoldings)),
-      cashInjectionBeforeIdr: cashInjectionBefore,
-      unspentCashRemainderIdr,
-    };
+    const { newEntry, nextHoldings, leftoverCash } = buildRebalanceCommitResult({
+      allAssets,
+      holdings,
+      plan,
+      activeWeights,
+      rebalanceHistory,
+      inputMode,
+      usdIdrRate,
+      rebalanceMode,
+      cashInjectionIdr,
+      isFixedBudgetMode,
+      fixedTotalBudgetIdr,
+      customNote,
+      isTopUpConfirmed,
+      hasManualTableEdits,
+      hasPlanOverride,
+      baselineHoldings: manualEditBaselineRef.current ?? undefined,
+    });
 
     setRebalanceHistory((prev) => [newEntry, ...prev]);
     setHoldings(nextHoldings);
     setCashInjectionIdr(leftoverCash);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
     setIsHoldingsSyncedWithMenu1(false);
     setOrderSlipPlanOverride(null);
   };
@@ -2279,16 +2113,19 @@ function AuthenticatedQuantPorto({
   };
 
   const handleUndoRebalanceHistoryEntry = (id: string) => {
-    const entry = rebalanceHistory.find((item) => item.id === id);
-    if (!entry) return;
+    const result = applyRebalanceUndo({
+      id,
+      rebalanceHistory,
+      currentHoldings: holdings,
+      currentCashInjectionIdr: cashInjectionIdr,
+    });
+    if (!result.found) return;
 
-    if (entry.holdingsBefore) {
-      setHoldings(JSON.parse(JSON.stringify(entry.holdingsBefore)));
-    }
-    if (typeof entry.cashInjectionBeforeIdr === 'number') {
-      setCashInjectionIdr(entry.cashInjectionBeforeIdr);
-    }
-    setRebalanceHistory((prev) => prev.filter((item) => item.id !== id));
+    setHoldings(result.nextHoldings);
+    setCashInjectionIdr(result.nextCashInjectionIdr);
+    setRebalanceHistory(result.nextHistory);
+    setHasManualTableEdits(false);
+    manualEditBaselineRef.current = null;
   };
 
   // Save / Load / Export / Share handlers
@@ -2459,6 +2296,10 @@ function AuthenticatedQuantPorto({
   ) => {
     // Lock manual holdings so Menu 1 changes don't overwrite user's imported holdings!
     setIsHoldingsSyncedWithMenu1(false);
+    if (!hasManualTableEdits && !manualEditBaselineRef.current) {
+      manualEditBaselineRef.current = JSON.parse(JSON.stringify(holdings));
+    }
+    setHasManualTableEdits(true);
     const updatedCount = items.filter((i) => i.isRecognized && i.isValid).length;
     setHoldings((prev) => {
       const next = strategy === 'replace' ? {} : { ...prev };

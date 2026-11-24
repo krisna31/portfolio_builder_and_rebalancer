@@ -46,6 +46,7 @@
 
   /* 7. Typography, Radii & Ceramic Motion */
   --font-display: 'Fraunces', Georgia, serif;
+  --font-display-settings: "opsz" 48, "SOFT" 10, "WONK" 0;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
 

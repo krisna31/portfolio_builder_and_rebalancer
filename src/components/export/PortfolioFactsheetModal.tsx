@@ -292,11 +292,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <div>
               <h2
                 id="factsheet-modal-title"
-                className="text-base sm:text-lg font-normal ui-text-main tracking-tight"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="text-base sm:text-lg font-normal ui-text-main tracking-tight font-display"
               >
                 Institutional 1-Page Factsheet
               </h2>

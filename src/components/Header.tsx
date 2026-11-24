@@ -407,10 +407,8 @@ export const Header: React.FC<HeaderProps> = ({
               <div>
                 <div className="flex items-baseline gap-1.5">
                   <h1
-                    className="ui-text-main text-base sm:text-lg leading-none"
+                    className="ui-text-main text-base sm:text-lg leading-none font-display"
                     style={{
-                      fontFamily: 'var(--font-display)',
-                      fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
                       fontWeight: 400,
                     }}
                   >
@@ -421,7 +419,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
                 <p className="ui-text-muted hidden text-[11px] sm:block mt-0.5 font-medium">
-                  Risk Parity &amp; Botanical Rebalancing
+                  Risk Parity &amp; Dynamic Rebalancing
                 </p>
               </div>
             </div>
@@ -953,7 +951,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setIsToolsMenuOpen(false);
                             onOpenResetConfirm();
                           }}
-                          className="flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs font-medium text-[#9E472A] dark:text-[#E08263] hover:bg-[#9E472A]/10 transition"
+                          className="flex w-full items-center justify-between rounded-[var(--radius-xs)] px-2.5 py-1.5 text-xs font-medium text-[var(--status-danger)] hover:bg-[var(--status-danger)]/10 transition"
                           title={
                             isGuestMode
                               ? 'Reset simulasi sementara sesi tamu ke awal'

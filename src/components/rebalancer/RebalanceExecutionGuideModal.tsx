@@ -92,11 +92,7 @@ export const RebalanceExecutionGuideModal: React.FC<
             <div>
               <h2
                 id="guide-modal-title"
-                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-                }}
+                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2 font-display"
               >
                 <span>Buku Panduan &amp; SOP Eksekusi Rebalancer</span>
               </h2>

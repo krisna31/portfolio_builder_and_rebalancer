@@ -27,6 +27,8 @@ describe('themeChartColors utility', () => {
 
   it('exports semantic color variables for design tokens', () => {
     expect(THEME_COLOR_VARIABLES.accentPrimary).toBe('var(--accent-primary)');
+    expect(THEME_COLOR_VARIABLES.accentSecondary).toBe('var(--accent-secondary)');
+    expect(THEME_COLOR_VARIABLES.ink).toBe('var(--text-primary)');
     expect(THEME_COLOR_VARIABLES.canvas).toBe('var(--bg-canvas)');
     expect(THEME_COLOR_VARIABLES.surface).toBe('var(--bg-surface)');
     expect(THEME_COLOR_VARIABLES.statusSuccess).toBe('var(--status-success)');

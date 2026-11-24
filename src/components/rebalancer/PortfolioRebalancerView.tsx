@@ -28,6 +28,7 @@ const RebalanceExecutionGuideModal = React.lazy(() =>
   }))
 );
 import { SmartDcaAdvisorPanel } from './SmartDcaAdvisorPanel';
+import { THEME_CHART_VARIABLES } from '../../lib/quant/themeChartColors';
 import { SmartDcaAllocationMode } from '../../lib/quant/smartDcaEngine';
 import { ParsedHoldingItem } from '../../lib/quant/textDataParser';
 import { FormattedNumberInput } from '../FormattedNumberInput';
@@ -3633,7 +3634,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   <Bar
                     dataKey="Current"
                     name="Saat Ini (%)"
-                    fill="#8F580A"
+                    fill={THEME_CHART_VARIABLES[3]}
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar

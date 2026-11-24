@@ -228,13 +228,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
         {/* Minimalist Brand Logo & App Name */}
         <div className="flex flex-col items-center text-center">
           <BrandLogo className="w-9 h-9 mb-1.5" />
-          <h1
-            className="text-base font-normal tracking-tight ui-text-main"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontVariationSettings: '"opsz" 48, "SOFT" 10, "WONK" 0',
-            }}
-          >
+          <h1 className="text-base font-normal tracking-tight ui-text-main font-display">
             {showRegisterPrompt ? 'Aktivasi Biometrik' : 'QuantPorto'}
           </h1>
           <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] mt-0.5">
