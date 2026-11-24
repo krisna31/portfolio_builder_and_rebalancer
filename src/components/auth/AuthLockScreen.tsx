@@ -4,9 +4,12 @@ import {
   EyeOff,
   ArrowRight,
   Fingerprint,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { BrandLogo } from '../BrandLogo';
 import { stopInteractiveTour } from '../../services/tourGuide';
+import { useThemeManager } from '../../hooks/useThemeManager';
 import {
   AuthRole,
   resolvePasswordRole,
@@ -58,6 +61,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   const [registerError, setRegisterError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const { colorScheme, toggleColorScheme } = useThemeManager();
 
   // Check WebAuthn platform biometric availability on mount
   useEffect(() => {
@@ -223,7 +227,28 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen ui-page flex flex-col justify-center items-center p-4">
+    <div className="relative min-h-screen ui-page flex flex-col justify-center items-center p-4">
+      <button
+        type="button"
+        onClick={toggleColorScheme}
+        aria-label={
+          colorScheme === 'dark'
+            ? 'Beralih ke tema terang'
+            : 'Beralih ke tema gelap'
+        }
+        title={
+          colorScheme === 'dark'
+            ? 'Beralih ke Tema Terang (Light Mode)'
+            : 'Beralih ke Tema Gelap (Dark Mode)'
+        }
+        className="ui-subtle ui-border fixed top-4 right-4 flex h-10 w-10 items-center justify-center rounded-lg border transition hover:opacity-85"
+      >
+        {colorScheme === 'dark' ? (
+          <Sun className="h-4 w-4 text-amber-400" />
+        ) : (
+          <Moon className="h-4 w-4 text-[var(--text-secondary)]" />
+        )}
+      </button>
       <div className="w-full max-w-[280px] space-y-3.5">
         {/* Minimalist Brand Logo & App Name */}
         <div className="flex flex-col items-center text-center">
@@ -328,13 +353,13 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
-                    className="w-full ui-input disabled:opacity-50 rounded-lg pl-3 pr-8 py-2 text-xs placeholder:text-zinc-500 transition"
+                    className="w-full ui-input disabled:opacity-50 rounded-lg pl-3 pr-11 py-2 text-xs placeholder:text-zinc-500 transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-pressed={showPassword}
-                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center ui-text-muted hover:ui-text-main transition"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center ui-text-muted hover:ui-text-main transition"
                     aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}

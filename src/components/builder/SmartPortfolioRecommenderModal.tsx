@@ -229,22 +229,22 @@ export const SmartPortfolioRecommenderModal: React.FC<
                   4 Langkah Terisi
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
                 <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
-                  <div className="font-bold">1. Universe</div>
-                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{selectedAssetIds.length} aset aktif</div>
+                  <div className="font-bold whitespace-nowrap">1. Universe</div>
+                  <div className="truncate text-[10px] ui-text-muted mt-0.5">{selectedAssetIds.length} aset aktif</div>
                 </div>
                 <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
-                  <div className="font-bold">2. Slot IDX</div>
-                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{idxEquitySlotChoice}</div>
+                  <div className="font-bold whitespace-nowrap">2. Slot IDX</div>
+                  <div className="truncate text-[10px] ui-text-muted mt-0.5">{idxEquitySlotChoice}</div>
                 </div>
                 <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
-                  <div className="font-bold">3. Drawdown</div>
-                  <div className="truncate text-[9px] ui-text-muted mt-0.5 capitalize">{crashTolerance}</div>
+                  <div className="font-bold whitespace-nowrap">3. Drawdown</div>
+                  <div className="truncate text-[10px] ui-text-muted mt-0.5 capitalize">{crashTolerance}</div>
                 </div>
                 <div className="rounded p-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
-                  <div className="font-bold">4. Conviction</div>
-                  <div className="truncate text-[9px] ui-text-muted mt-0.5">{convictionPreference === 'auto-equal' ? 'Equal' : 'Custom'}</div>
+                  <div className="font-bold whitespace-nowrap">4. Conviction</div>
+                  <div className="truncate text-[10px] ui-text-muted mt-0.5">{convictionPreference === 'auto-equal' ? 'Equal' : 'Custom'}</div>
                 </div>
               </div>
             </div>

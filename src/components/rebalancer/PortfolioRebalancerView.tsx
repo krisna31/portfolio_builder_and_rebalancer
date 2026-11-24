@@ -1760,7 +1760,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   ? 'Mode Kunci Anggaran AKTIF: Kas Baru otomatis terpotong saat Anda mengisi saldo aset yang sudah dibeli'
                   : 'Aktifkan untuk mengunci total modal (misal Rp 25 Juta) agar kas baru otomatis terpotong saat beli bertahap'
               }
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
                 isFixedBudgetMode
                   ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 shadow-xs'
                   : 'ui-subtle ui-text-muted hover:ui-text-main'
@@ -2015,8 +2015,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       {/* MAIN REBALANCING TABLE & DRIFT CHART */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div id="tour-rebalance-table-container" className="ui-card rounded-xl p-3.5 sm:p-5 lg:col-span-8">
-          <div className="ui-border flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <div>
+          <div className="ui-border flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => toggleSectionCollapse('rebalanceTable')}
@@ -2024,7 +2024,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 aria-expanded={!collapsedSections['rebalanceTable']}
               >
                 <ChevronDown
-                  className={`h-4 w-4 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
+                  className={`h-4 w-4 shrink-0 ui-text-muted transition-transform duration-200 group-hover:ui-text-main ${
                     collapsedSections['rebalanceTable'] ? '-rotate-90' : ''
                   }`}
                 />
@@ -2032,7 +2032,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   Tabel Instruksi Jual / Beli Rebalancing
                 </h3>
               </button>
-              <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs ui-text-muted">
                 <span>Ubah nilai saldo atau unit untuk menghitung order eksekusi:</span>
                 {rebalanceResult.unallocatedCashRemainderIdr &&
                 Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
@@ -2066,7 +2066,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </div>
             </div>
 
-            <div id="tour-rebalance-actions" className="flex flex-wrap items-center gap-1.5">
+            <div id="tour-rebalance-actions" className="flex shrink-0 flex-wrap items-center gap-1.5">
               {/* Primary Emerald Broker Slip Button Group */}
               {onOpenOrderSlip ? (
                 <div className="inline-flex rounded-lg shadow-2xs">
@@ -2324,22 +2324,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </caption>
                 <thead className="ui-subtle text-[11px] font-semibold uppercase">
                   <tr>
-                    <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)]">
+                    <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] whitespace-nowrap">
                       Instrumen &amp; Harga Spot
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
                       Input Posisi Awal
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
                       Nilai Saat Ini
                     </th>
-                    <th scope="col" className="ui-border border-b px-2.5 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-2.5 py-2 text-right whitespace-nowrap">
                       Now vs Target
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
                       Target (Rp)
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right">
+                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
                       Action (Jual / Beli)
                     </th>
                   </tr>
@@ -2415,7 +2415,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                             currentPrice: asset?.defaultPrice ?? 1,
                                           })
                                         }
-                                        className="ui-text-muted hover:ui-text-main text-[9px] underline decoration-dotted transition"
+                                        className="ui-text-muted hover:ui-text-main whitespace-nowrap text-[10px] underline decoration-dotted transition"
                                         title="Ubah ke mode input harga pasar per unit"
                                       >
                                         Atur Harga
@@ -2573,7 +2573,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                           });
                                         }}
                                         className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
-                                        style={{ width: asset?.currency === 'USD' ? '4.8rem' : '5.8rem' }}
+                                        style={{ width: asset?.currency === 'USD' ? '5.75rem' : '6.75rem' }}
                                         aria-label={`Harga modal beli rata-rata ${item.symbol}`}
                                       />
                                       {h.avgBuyPrice && (
@@ -2723,7 +2723,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           )}
                         </td>
 
-                        <td className="ui-border ui-text-secondary border-b px-3 py-2.5 text-right font-mono">
+                        <td className="ui-border ui-text-secondary border-b px-3 py-2.5 text-right font-mono whitespace-nowrap">
                           <div>{formatIdr(item.postShockValueIdr)}</div>
                           {h.shockPercent !== 0 && (
                             <div
@@ -2776,7 +2776,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
                         </td>
 
-                        <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold">
+                        <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold whitespace-nowrap">
                           {formatIdr(item.targetValueIdr)}
                         </td>
 
@@ -2985,13 +2985,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         : 'ui-subtle ui-border'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-start gap-2">
                         <span
-                          className="h-3 w-3 shrink-0 rounded-full"
+                          className="mt-1 h-3 w-3 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="ui-text-main text-xs font-bold flex items-center gap-1.5 flex-wrap">
                             <span>{item.symbol}</span>
                             <span className="ui-text-muted font-normal">
@@ -3028,7 +3028,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                         currentPrice: asset?.defaultPrice ?? 1,
                                       })
                                     }
-                                    className="ui-text-muted hover:ui-text-main text-[9px] underline decoration-dotted transition"
+                                    className="ui-text-muted hover:ui-text-main whitespace-nowrap text-[10px] underline decoration-dotted transition"
                                     title="Ubah ke mode input harga pasar per unit"
                                   >
                                     Atur Harga
@@ -3125,7 +3125,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                       });
                                     }}
                                     className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
-                                    style={{ width: asset?.currency === 'USD' ? '4.8rem' : '5.8rem' }}
+                                    style={{ width: asset?.currency === 'USD' ? '5.75rem' : '6.75rem' }}
                                     aria-label={`Harga modal beli rata-rata ${item.symbol}`}
                                   />
                                   {h.avgBuyPrice && (
@@ -3511,8 +3511,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           )}
 
           {/* 1-CLICK COMMIT REBALANCE TO HOLDINGS & RECORD SNAPSHOT */}
-          <div className="ui-subtle mt-4 flex flex-col gap-2.5 rounded-lg p-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
+          <div className="ui-subtle mt-4 flex flex-col gap-3 rounded-lg p-3.5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="ui-text-main text-xs font-semibold">
                 Sudah Eksekusi Order di Broker/Exchange?
               </div>
@@ -3521,7 +3521,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 Target (Rp), mereset shock ke 0%, dan mencatat ke Jurnal Rebalancing.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               {onOpenOrderSlip && (
                 <button
                   type="button"
@@ -3557,7 +3557,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 value={rebalanceNoteInput}
                 onChange={(e) => setRebalanceNoteInput(e.target.value)}
                 placeholder="Catatan (mis. Rebalance Q4 / Buy Dip)"
-                className="ui-input rounded-lg px-2.5 py-1.5 text-xs sm:w-52"
+                className="ui-input w-full rounded-lg px-2.5 py-1.5 text-xs sm:w-56"
                 aria-label="Rebalance journal note"
               />
               {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&

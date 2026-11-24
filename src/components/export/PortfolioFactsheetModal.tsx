@@ -164,6 +164,26 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   });
 
   const riskTierBadge = getRiskTierBadge(solvedMetrics.riskTier);
+  const factsheetRiskBadgeClasses = (() => {
+    switch (solvedMetrics.riskTier) {
+      case 'super-high':
+        return isLight
+          ? 'bg-rose-50 text-rose-700 border-rose-300'
+          : 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+      case 'high':
+        return isLight
+          ? 'bg-amber-50 text-amber-800 border-amber-300'
+          : 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      case 'medium':
+        return isLight
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+      case 'low':
+        return isLight
+          ? 'bg-sky-50 text-sky-700 border-sky-300'
+          : 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+    }
+  })();
   const calmarRatio =
     solvedMetrics.maxDrawdown > 0
       ? (solvedMetrics.cagr / solvedMetrics.maxDrawdown).toFixed(2)
@@ -190,6 +210,14 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
         useCORS: true,
         backgroundColor: isLight ? '#ffffff' : '#0f172a',
         logging: false,
+        windowWidth: 960,
+        onclone: (clonedDoc) => {
+          const clonedSheet = clonedDoc.getElementById('quantporto-printable-factsheet');
+          if (clonedSheet) {
+            clonedSheet.style.width = '794px';
+            clonedSheet.style.maxWidth = '794px';
+          }
+        },
       });
 
       const image = canvas.toDataURL('image/png');
@@ -286,20 +314,31 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     >
       <div ref={containerRef} tabIndex={-1} className="factsheet-modal-container relative w-full max-w-5xl my-auto ui-modal overflow-hidden flex flex-col max-h-[95vh] outline-none">
         {/* Top Control Bar (Hidden on print) */}
-        <div className="print:hidden flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 ui-subtle border-b ui-border">
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <h2
-                id="factsheet-modal-title"
-                className="text-base sm:text-lg font-normal ui-text-main tracking-tight font-display"
-              >
-                Institutional 1-Page Factsheet
-              </h2>
-              <p className="text-[11px] ui-text-muted">
-                Format laporan eksekutif siap cetak A4 atau unduh PNG
-              </p>
+        <div className="print:hidden flex flex-col gap-2.5 px-4 py-3 sm:px-5 sm:py-3.5 ui-subtle border-b ui-border lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileSpreadsheet className="w-4 h-4 shrink-0 text-[var(--accent-primary)]" />
+              <div className="min-w-0">
+                <h2
+                  id="factsheet-modal-title"
+                  className="text-base sm:text-lg font-normal ui-text-main tracking-tight font-display truncate"
+                >
+                  Institutional 1-Page Factsheet
+                </h2>
+                <p className="text-[11px] ui-text-muted">
+                  Format laporan eksekutif siap cetak A4 atau unduh PNG
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 ui-text-muted hover:ui-text-main hover:ui-card rounded-lg transition-colors shrink-0 lg:hidden"
+              aria-label="Tutup modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -310,7 +349,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                 onClick={() => setSheetTheme('light')}
                 className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                   isLight
-                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-sm font-semibold'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
                 title="Gaya Putih Institusional (Bersih, Kontras Tinggi, Standar A4)"
@@ -322,7 +361,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                 onClick={() => setSheetTheme('dark')}
                 className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                   !isLight
-                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] shadow-sm font-semibold'
                     : 'ui-text-muted hover:ui-text-main'
                 }`}
                 title="Gaya Dark Eksekutif (Latar Gelap Modern)"
@@ -334,13 +373,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <button
               type="button"
               onClick={handleCopySummaryText}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-secondary ui-card hover:ui-subtle hover:ui-text-main rounded-lg transition-colors border ui-border"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-main ui-card hover:ui-subtle rounded-lg transition-colors border ui-border"
               title="Salin ringkasan teks untuk WhatsApp atau catatan"
             >
               {copyStatus ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-emerald-600 dark:text-emerald-400">{copyStatus}</span>
+                  <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                  <span className="text-[var(--accent-primary)]">{copyStatus}</span>
                 </>
               ) : (
                 <>
@@ -354,17 +393,17 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
               type="button"
               onClick={handleDownloadPng}
               disabled={isExportingPng}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-secondary ui-card hover:ui-subtle hover:ui-text-main rounded-lg transition-colors border ui-border disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ui-text-main ui-card hover:ui-subtle rounded-lg transition-colors border ui-border disabled:opacity-50"
               title="Download gambar resolusi tinggi (PNG)"
             >
-              <Download className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+              <Download className="w-3.5 h-3.5 text-[var(--status-info)]" />
               <span>{isExportingPng ? 'Memproses...' : 'Download PNG'}</span>
             </button>
 
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold bg-[var(--accent-primary)] text-[var(--text-on-accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-xs transition-all"
               title="Cetak langsung atau simpan sebagai dokumen PDF A4"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -374,7 +413,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 ui-text-muted hover:ui-text-main hover:ui-card rounded-lg transition-colors ml-1"
+              className="hidden lg:inline-flex p-1.5 ui-text-muted hover:ui-text-main hover:ui-card rounded-lg transition-colors ml-1"
               aria-label="Tutup modal"
             >
               <X className="w-5 h-5" />
@@ -383,12 +422,14 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
         </div>
 
         {/* Scrollable Factsheet Container */}
-        <div className="factsheet-scroll-container overflow-y-auto p-4 sm:p-6 ui-page flex justify-center">
+        <div className="factsheet-scroll-container overflow-y-auto p-3 sm:p-6 ui-page flex justify-center">
           {/* Printable Factsheet Sheet: Designed to fit exactly 1 Page A4 */}
           <div
             id="quantporto-printable-factsheet"
+            data-factsheet-mode={sheetTheme}
             ref={sheetRef}
-            className={`w-full max-w-[800px] rounded-xl p-5 sm:p-6 shadow-lg space-y-3.5 transition-colors border ${
+            style={{ colorScheme: isLight ? 'only light' : 'only dark' }}
+            className={`w-full max-w-[794px] rounded-xl p-4 sm:p-6 shadow-lg space-y-3.5 transition-colors border ${
               isLight
                 ? 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'
                 : 'bg-slate-900 text-slate-100 border-slate-800 shadow-black/50'
@@ -411,7 +452,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   >
                     QUANTPORTO INSTITUTIONAL FACTSHEET
                   </span>
-                  <span className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <span className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     {todayStr}
                   </span>
                 </div>
@@ -422,19 +463,19 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                 >
                   {portfolioName}
                 </h1>
-                <p className={`text-[11px] mt-0.5 max-w-lg leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                <p className={`text-[11px] mt-0.5 max-w-lg leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                   Portofolio multi-aset berbasis prinsip kuantitatif Risk Parity &amp; Risk Budgeting untuk optimalisasi imbal hasil jangka panjang terhadap risiko tail risk.
                 </p>
               </div>
 
               <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
                 <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${riskTierBadge.bgClass} ${riskTierBadge.textClass} ${riskTierBadge.borderClass}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${factsheetRiskBadgeClasses}`}
                 >
                   <ShieldCheck className="w-3 h-3" />
                   <span>{riskTierBadge.label}</span>
                 </div>
-                <div className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                <div className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                   Kurs Acuan: Rp {usdIdrRate.toLocaleString('id-ID')}/USD
                 </div>
               </div>
@@ -448,13 +489,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     Annual Return (CAGR)
                   </div>
-                  <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                     +{formatPercent(solvedMetrics.cagr)}
                   </div>
-                  <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
                     Imbal hasil tahunan 5Y
                   </div>
                 </div>
@@ -464,13 +505,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     Max Historical Drawdown
                   </div>
-                  <div className="text-base font-bold font-mono tabular-nums text-rose-600 dark:text-rose-400 mt-0.5">
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
                     -{formatPercent(solvedMetrics.maxDrawdown)}
                   </div>
-                  <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
                     Koreksi terdalam 5 tahun
                   </div>
                 </div>
@@ -480,13 +521,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     Calmar Ratio
                   </div>
-                  <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                     {calmarRatio}x
                   </div>
-                  <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
                     Efisiensi return per risiko
                   </div>
                 </div>
@@ -496,15 +537,15 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                     isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                     Waktu Menuju Goal
                   </div>
-                  <div className="text-base font-bold font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-0.5">
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
                     {simulation.reachedGoal
                       ? `${simulation.yearsToGoal} thn ${simulation.monthsToGoal} bln`
                       : '> 45 thn'}
                   </div>
-                  <div className={`text-[9px] ${isLight ? 'text-slate-500' : 'text-slate-500'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
                     Target {formatIdr(targetGoalIdr, true)}
                   </div>
                 </div>
@@ -514,11 +555,11 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             {/* Visual Stacked Allocation Bar */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
-                <span className={`font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                  <Percent className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className={`font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                  <Percent className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
                   <span>Komposisi Alokasi Aset ({activeAssetList.length} Instrumen)</span>
                 </span>
-                <span className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                <span className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                   Modal: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>{formatIdr(initialCapitalIdr)}</strong>
                 </span>
               </div>
@@ -550,10 +591,10 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                       className="h-2 w-2 rounded-full shrink-0"
                       style={{ backgroundColor: asset.color }}
                     />
-                    <span className={isLight ? 'text-slate-900 font-semibold' : 'text-slate-200 font-semibold'}>
+                    <span className={isLight ? 'text-slate-900 font-semibold' : 'text-slate-100 font-semibold'}>
                       {asset.symbol}
                     </span>
-                    <span className={isLight ? 'text-slate-500 font-mono text-[9px]' : 'text-slate-400 font-mono text-[9px]'}>
+                    <span className={isLight ? 'text-slate-600 font-mono text-[10px]' : 'text-slate-300 font-mono text-[10px]'}>
                       {formatPercent(asset.weightPct)}
                     </span>
                   </div>
@@ -565,14 +606,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             <div>
               <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <table className="w-full text-left text-[11px] border-collapse">
-                <caption className="sr-only">Simulasi Proyeksi Portofolio Menuju Target Finansial</caption>
                 <caption className="sr-only">Rincian Alokasi Aset dan Bobot Risiko Portofolio Factsheet</caption>
                   <thead>
                     <tr
                       className={`border-b ${
                         isLight
                           ? 'bg-slate-100 text-slate-700 border-slate-200'
-                          : 'bg-slate-950/80 text-slate-400 border-slate-800'
+                          : 'bg-slate-950/80 text-slate-300 border-slate-800'
                       }`}
                     >
                       <th scope="col" className="py-1.5 px-3 font-semibold">Aset</th>
@@ -601,7 +641,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                                 <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
                                   {asset.symbol}
                                 </span>
-                                <span className={`text-[10px] ml-1 hidden sm:inline ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                                <span className={`text-[10px] ml-1 hidden sm:inline ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                                   {asset.name}
                                 </span>
                               </div>
@@ -609,7 +649,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                           </td>
                           <td className="py-1.5 px-3">
                             <span
-                              className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-medium border ${catBadge.color}`}
+                              className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium border ${catBadge.color}`}
                             >
                               {catBadge.label}
                             </span>
@@ -619,13 +659,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                               {formatPercent(asset.weightPct)}
                             </span>
                           </td>
-                          <td className={`py-1.5 px-3 text-right font-medium font-mono ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                             {formatIdr(asset.nominalIdr)}
                           </td>
-                          <td className="py-1.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-medium font-mono">
+                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                             +{formatPercent(asset.cagr)}
                           </td>
-                          <td className="py-1.5 px-3 text-right text-rose-600 dark:text-rose-400 font-medium font-mono">
+                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
                             -{formatPercent(asset.maxDrawdown)}
                           </td>
                         </tr>
@@ -639,12 +679,16 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             {/* Wealth Accumulation Milestones Table */}
             <div>
               <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                  <Coins className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                  <Coins className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
                   <span>Proyeksi Akumulasi Kekayaan (DCA {formatIdr(monthlySavingsIdr, true)}/Bulan)</span>
                 </span>
                 {dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0 && (
-                  <span className="text-[10px] text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
+                    isLight
+                      ? 'text-amber-800 bg-amber-50 border-amber-300'
+                      : 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+                  }`}>
                     Mode Cashout Dividen ({effectiveNetDividendYieldPercent.toFixed(1)}%/thn ditarik tunai, CAGR modal: +{formatPercent(effectiveCompoundingCagr)})
                   </span>
                 )}
@@ -652,12 +696,13 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
               <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
                 <table className="w-full text-left text-[11px] border-collapse">
+                  <caption className="sr-only">Simulasi Proyeksi Portofolio Menuju Target Finansial</caption>
                   <thead>
                     <tr
                       className={`border-b ${
                         isLight
                           ? 'bg-slate-100 text-slate-700 border-slate-200'
-                          : 'bg-slate-950/80 text-slate-400 border-slate-800'
+                          : 'bg-slate-950/80 text-slate-300 border-slate-800'
                       }`}
                     >
                       <th scope="col" className="py-1.5 px-3 font-semibold">Horison</th>
@@ -672,21 +717,21 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                         key={row.year}
                         className={isLight ? 'hover:bg-slate-50/80' : 'hover:bg-slate-800/30'}
                       >
-                        <td className={`py-1 px-3 font-semibold ${isLight ? 'text-slate-800' : 'text-slate-300'}`}>
+                        <td className={`py-1 px-3 font-semibold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                           Tahun ke-{row.year}
                         </td>
-                        <td className={`py-1 px-3 text-right font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        <td className={`py-1 px-3 text-right font-mono whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                           {formatIdr(row.principal)}
                         </td>
-                        <td className={`py-1 px-3 text-right font-bold font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        <td className={`py-1 px-3 text-right font-bold font-mono whitespace-nowrap ${isLight ? 'text-slate-900' : 'text-white'}`}>
                           {formatIdr(row.wealth)}
                           {annualInflationPercent > 0 && (
-                            <span className={`block text-[9px] font-normal ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                            <span className={`block text-[9px] font-normal ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                               Riil: {formatIdr(row.realPurchasingPower, true)}
                             </span>
                           )}
                         </td>
-                        <td className="py-1 px-3 text-right font-semibold font-mono text-emerald-600 dark:text-emerald-400">
+                        <td className={`py-1 px-3 text-right font-semibold font-mono whitespace-nowrap ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                           +{formatIdr(row.gain)}
                         </td>
                       </tr>
@@ -701,30 +746,30 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
               className={`p-3 rounded-xl border text-[10px] space-y-1 ${
                 isLight
                   ? 'bg-slate-50 border-slate-200 text-slate-700'
-                  : 'bg-slate-950/70 border-slate-800/80 text-slate-400'
+                  : 'bg-slate-950/70 border-slate-800/80 text-slate-300'
               }`}
             >
-              <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                <Clock className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                <Clock className={`w-3 h-3 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
                 <span>Pedoman Disiplin Rebalancing QuantPorto:</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5 leading-relaxed">
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-200'}>Toleransi Drift (3% - 5%):</strong> Lakukan rebalance hanya bila bobot riil melenceng lebih dari ambang toleransi.
+                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Toleransi Drift (3% - 5%):</strong> Lakukan rebalance hanya bila bobot riil melenceng lebih dari ambang toleransi.
                 </div>
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-200'}>Prioritas Cash Injection:</strong> Arahkan setoran DCA bulanan untuk menyerok aset tertinggal tanpa harus menjual aset untung.
+                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Prioritas Cash Injection:</strong> Arahkan setoran DCA bulanan untuk menyerok aset tertinggal tanpa harus menjual aset untung.
                 </div>
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-200'}>Disiplin Jangka Panjang:</strong> Dirancang menahan volatilitas siklus pasar tanpa memerlukan spekulasi timing market.
+                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Disiplin Jangka Panjang:</strong> Dirancang menahan volatilitas siklus pasar tanpa memerlukan spekulasi timing market.
                 </div>
               </div>
             </div>
 
             {/* Footer Disclaimer */}
             <div
-              className={`pt-2.5 border-t text-[9px] flex flex-col sm:flex-row items-center justify-between gap-1.5 ${
-                isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-500'
+              className={`pt-2.5 border-t text-[10px] flex flex-col sm:flex-row items-center justify-between gap-1.5 ${
+                isLight ? 'border-slate-200 text-slate-600' : 'border-slate-800 text-slate-400'
               }`}
             >
               <div>

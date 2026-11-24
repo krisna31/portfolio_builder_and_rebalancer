@@ -104,6 +104,30 @@
   --radius-pill: var(--radius-pill);
 }
 
+@utility shadow-surface {
+  box-shadow: var(--shadow-surface);
+}
+
+@utility shadow-elevated {
+  box-shadow: var(--shadow-elevated);
+}
+
+@utility ui-text-main {
+  color: var(--text-primary);
+}
+
+@utility ui-text-secondary {
+  color: var(--text-secondary);
+}
+
+@utility ui-text-muted {
+  color: var(--text-muted);
+}
+
+@utility ui-border {
+  border-color: var(--border-subtle);
+}
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -247,20 +271,12 @@ select option {
   contain-intrinsic-size: auto none auto 420px;
 }
 
-.ui-border {
-  border-color: var(--border-subtle);
+.hover\:ui-subtle:hover {
+  background-color: var(--bg-subtle);
 }
 
-.ui-text-main {
-  color: var(--text-primary);
-}
-
-.ui-text-secondary {
-  color: var(--text-secondary);
-}
-
-.ui-text-muted {
-  color: var(--text-muted);
+.hover\:ui-card:hover {
+  background-color: var(--bg-surface);
 }
 
 /* Contrast-safe theme bridge for legacy primary CTA emerald button classes */
@@ -373,6 +389,8 @@ select option {
   header,
   main,
   footer,
+  nav[aria-label="Utama (Mobile)"],
+  aside[role="status"],
   #tour-guide-btn,
   .print\:hidden {
     display: none !important;
@@ -428,13 +446,24 @@ select option {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #quantporto-printable-factsheet[data-factsheet-mode="light"] {
+    padding: 0 !important;
     border-radius: 0 !important;
-    background: transparent !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  #quantporto-printable-factsheet[data-factsheet-mode="dark"] {
+    padding: 12px !important;
+    border-radius: 8px !important;
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
   }
 
   * {

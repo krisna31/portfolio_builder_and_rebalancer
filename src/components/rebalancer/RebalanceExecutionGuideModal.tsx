@@ -113,7 +113,7 @@ export const RebalanceExecutionGuideModal: React.FC<
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b ui-border ui-subtle px-5 pt-2 gap-1.5 shrink-0 overflow-x-auto">
+        <div className="flex border-b ui-border ui-subtle px-5 pt-2 gap-1.5 shrink-0 overflow-x-auto overflow-y-hidden">
           <button
             type="button"
             onClick={() => setActiveTab('initial-buy')}

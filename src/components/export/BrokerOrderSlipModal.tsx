@@ -351,26 +351,36 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     >
       <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-4xl my-auto ui-modal overflow-hidden flex flex-col max-h-[92vh] outline-none">
         {/* Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 ui-subtle border-b ui-border">
-          <div className="flex items-center gap-2.5">
-            <Building2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <h2
-                id="broker-slip-modal-title"
-                className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex items-center gap-2 font-display"
-              >
-                <span>Multi-Platform Broker Order Slips</span>
-                <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border">
-                  {platformGroups.length} Platform
-                </span>
-              </h2>
-              <p className="text-xs ui-text-muted mt-0.5">
-                Panduan eksekusi beli &amp; jual dikelompokkan sesuai aplikasi broker di Indonesia
-              </p>
+        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4 ui-subtle border-b ui-border lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start justify-between gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <Building2 className="w-4 h-4 mt-1 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div className="min-w-0">
+                <h2
+                  id="broker-slip-modal-title"
+                  className="text-base sm:text-lg font-normal tracking-tight ui-text-main flex flex-wrap items-center gap-2 font-display"
+                >
+                  <span>Multi-Platform Broker Order Slips</span>
+                  <span className="text-[11px] font-normal px-2 py-0.5 rounded-full ui-card ui-text-muted border ui-border whitespace-nowrap">
+                    {platformGroups.length} Platform
+                  </span>
+                </h2>
+                <p className="text-xs ui-text-muted mt-0.5">
+                  Panduan eksekusi beli &amp; jual dikelompokkan sesuai aplikasi broker di Indonesia
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors shrink-0 lg:hidden"
+              aria-label="Tutup modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => handleSendWhatsApp()}
@@ -403,7 +413,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="hidden lg:inline-flex p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Tutup modal"
             >
               <X className="w-5 h-5" />
@@ -512,9 +522,9 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                       {group.icon}
                     </div>
                     <div>
-                      <div className="font-bold text-sm ui-text-main flex items-center gap-2">
+                      <div className="font-bold text-sm ui-text-main flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span>{group.name}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${group.badgeClass}`}>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${group.badgeClass}`}>
                           {group.apps}
                         </span>
                       </div>
@@ -524,7 +534,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start sm:self-auto">
                     {/* Batch Check All in Platform */}
                     <button
                       type="button"

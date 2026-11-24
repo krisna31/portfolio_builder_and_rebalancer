@@ -698,13 +698,13 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 aria-label="Modal awal (lump sum)"
                 className="mt-1.5 h-1.5 w-full cursor-pointer"
               />
-              <div className="mt-1 flex gap-1.5 text-[11px]">
+              <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
                 {[0, 50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map((v) => (
                   <button
                     key={v}
                     type="button"
                     onClick={() => setInitialCapitalIdr(v)}
-                    className="ui-subtle ui-text-secondary rounded px-2 py-0.5"
+                    className="ui-subtle ui-text-secondary whitespace-nowrap rounded px-2 py-0.5"
                   >
                     {formatIdr(v, true)}
                   </button>
@@ -802,7 +802,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     key={g}
                     type="button"
                     onClick={() => setTargetGoalIdr(g)}
-                    className={`flex-1 rounded px-2 py-1 font-mono text-[11px] font-medium transition shadow-2xs ${
+                    className={`flex-1 min-w-[4.75rem] whitespace-nowrap rounded px-2 py-1 font-mono text-[11px] font-medium transition shadow-2xs ${
                       targetGoalIdr === g
                         ? 'bg-emerald-600 font-semibold text-white ring-1 ring-emerald-500'
                         : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
@@ -1031,7 +1031,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 {simulationViewMode === 'deterministic' ? (
                   <AreaChart
                     data={chartTimeline}
-                    margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
+                    margin={{ top: 18, right: 18, left: 0, bottom: 0 }}
                   >
                     <XAxis dataKey="yearLabel" stroke="#71717a" fontSize={11} />
                     <YAxis
@@ -1063,6 +1063,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
                         fill: THEME_CHART_VARIABLES[3],
                         fontSize: 11,
+                        position: 'insideTopRight',
                       }}
                     />
                     <Area
@@ -1104,7 +1105,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 ) : (
                   <AreaChart
                     data={monteCarloChartData}
-                    margin={{ top: 10, right: 15, left: 0, bottom: 0 }}
+                    margin={{ top: 18, right: 18, left: 0, bottom: 0 }}
                   >
                     <XAxis dataKey="yearLabel" stroke="#71717a" fontSize={11} />
                     <YAxis
@@ -1136,6 +1137,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
                         fill: THEME_CHART_VARIABLES[3],
                         fontSize: 11,
+                        position: 'insideTopRight',
                       }}
                     />
                     <Area

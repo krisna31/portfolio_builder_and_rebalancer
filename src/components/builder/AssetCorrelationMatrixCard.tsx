@@ -327,10 +327,10 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
           )}
 
           {/* Grid Layout: Wide table on Left (7-8 cols), Deep Dive on Right (4-5 cols) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             {/* Left: Heatmap Matrix Table */}
-            <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-              <div className="ui-subtle rounded-xl border ui-border p-3 sm:p-4 overflow-hidden">
+            <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
+              <div className="ui-subtle flex-1 flex flex-col justify-between rounded-xl border ui-border p-3 sm:p-4 overflow-hidden">
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="w-full text-center border-collapse text-xs">
                     <caption className="sr-only">Matriks Korelasi Spearman Antar-Aset Portofolio</caption>
@@ -460,12 +460,12 @@ export const AssetCorrelationMatrixCard: React.FC<AssetCorrelationMatrixCardProp
             {/* Right: Selected Pair Deep-Dive Card */}
             <div className="lg:col-span-5 xl:col-span-4 ui-card rounded-xl p-4 sm:p-5 border ui-border shadow-xs space-y-4">
               {/* Header with selected pair badge */}
-              <div className="flex items-center justify-between pb-3 border-b ui-border">
-                <div>
-                  <span className="font-bold ui-text-main text-sm">Wawasan Pasangan Terpilih</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b ui-border">
+                <div className="min-w-0 flex-1">
+                  <span className="font-bold ui-text-main text-sm block">Wawasan Pasangan Terpilih</span>
                   <div className="ui-text-muted text-[11px]">Dinamika hubungan makro &amp; risiko</div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1 shrink-0">
                   <div
                     className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg border ${insight.badgeBg}`}
                   >

@@ -800,7 +800,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Expected CAGR (5Y)
                 </div>
-                <div className="mt-1 font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="mt-1 font-mono text-xl xl:text-2xl font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
                   {solvedMetrics.cagr.toFixed(2)}%
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[11px]">Return tahunan</div>
@@ -810,7 +810,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Max Drawdown (5Y)
                 </div>
-                <div className="mt-1 font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+                <div className="mt-1 font-mono text-xl xl:text-2xl font-bold whitespace-nowrap text-rose-600 dark:text-rose-400">
                   -{solvedMetrics.maxDrawdown.toFixed(2)}%
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[11px]">
@@ -822,7 +822,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Return / Drawdown
                 </div>
-                <div className="ui-text-main mt-1 font-mono text-2xl font-bold">
+                <div className="ui-text-main mt-1 font-mono text-xl xl:text-2xl font-bold whitespace-nowrap">
                   {solvedMetrics.maxDrawdown > 0
                     ? (solvedMetrics.cagr / solvedMetrics.maxDrawdown).toFixed(2)
                     : '∞'}
@@ -835,7 +835,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Sharpe Ratio
                 </div>
-                <div className="ui-text-main mt-1 font-mono text-2xl font-bold">
+                <div className="ui-text-main mt-1 font-mono text-xl xl:text-2xl font-bold whitespace-nowrap">
                   {solvedMetrics.sharpeRatio.toFixed(2)}
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[11px]">
@@ -847,7 +847,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 <div className="ui-text-muted text-[11px] font-medium uppercase">
                   Dividen Bersih
                 </div>
-                <div className="mt-1 font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="mt-1 font-mono text-xl xl:text-2xl font-bold whitespace-nowrap text-emerald-600 dark:text-emerald-400">
                   {builderDividendStats.netYield.toFixed(2)}%
                 </div>
                 <div className="ui-text-muted mt-0.5 text-[10px]">
@@ -986,7 +986,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             key={dom.presetId}
                             type="button"
                             onClick={() => onSelectPreset(targetPreset)}
-                            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 font-mono text-[11px] font-semibold text-amber-950 transition hover:bg-amber-500 hover:text-white dark:text-amber-100 dark:hover:bg-amber-500 dark:hover:text-zinc-950"
+                            className="inline-flex flex-wrap items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/20 px-2.5 py-1 text-left font-mono text-[11px] font-semibold text-amber-950 transition hover:bg-amber-500 hover:text-white dark:text-amber-100 dark:hover:bg-amber-500 dark:hover:text-zinc-950"
                           >
                             <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-amber-500" /><span>{dom.name}</span></span>
                             <span className="rounded bg-emerald-500/20 px-1 py-0.2 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
@@ -1036,7 +1036,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           type="button"
                           onClick={() => onSelectPreset(saferAlternativePreset)}
                           title={`Turunkan risiko Max Drawdown dari -${solvedMetrics.maxDrawdown.toFixed(2)}% ke -${saferAlternativePreset.maxDrawdown.toFixed(2)}%`}
-                          className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                          className="ui-card ui-text-main inline-flex flex-wrap items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-left text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                         >
                           <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-500" /><span>Lebih Aman:</span></span>
                           <strong className="font-semibold">
@@ -1054,7 +1054,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                           type="button"
                           onClick={() => onSelectPreset(higherReturnAlternativePreset)}
                           title={`Tingkatkan potensi CAGR dari ${solvedMetrics.cagr.toFixed(2)}% ke ${higherReturnAlternativePreset.cagr.toFixed(2)}%`}
-                          className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                          className="ui-card ui-text-main inline-flex flex-wrap items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-left text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                         >
                           <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500" /><span>Return Lebih Tinggi:</span></span>
                           <strong className="font-semibold">
@@ -1074,7 +1074,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             type="button"
                             onClick={() => onSelectPreset(bestCalmarPreset)}
                             title="Strategi dengan Rasio Return / Drawdown (Calmar) paling efisien"
-                            className="ui-card ui-text-main inline-flex items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
+                            className="ui-card ui-text-main inline-flex flex-wrap items-center gap-1 rounded-md border border-emerald-500/30 px-2 py-1 text-left text-[11px] font-medium transition hover:border-emerald-500 hover:bg-emerald-500/20"
                           >
                             <span className="flex items-center gap-1"><Award className="h-3 w-3 text-amber-500" /><span>Optimal Calmar:</span></span>
                             <strong className="font-semibold">
@@ -1111,7 +1111,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {/* Editable Initial Capital (Default Rp 100 Jt) & Target Goal Selector (Default Rp 1 Miliar / Pilihan Rp 10 Miliar) */}
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="ui-subtle rounded-lg p-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="builder-initial-capital" className="ui-text-muted block text-[10px] font-medium">
@@ -1132,13 +1132,13 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                     ariaLabel="Modal Awal dalam Rupiah"
                   />
                 </div>
-                <div className="mt-1 flex gap-1 text-[10px]">
+                <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
                   {[0, 50_000_000, 100_000_000, 500_000_000].map((v) => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => setInitialCapitalIdr(v)}
-                      className={`rounded px-1.5 py-0.5 font-mono ${
+                      className={`whitespace-nowrap rounded px-1.5 py-0.5 font-mono ${
                         initialCapitalIdr === v
                           ? 'bg-emerald-600 font-semibold text-white'
                           : 'ui-card ui-text-muted'
@@ -2935,16 +2935,23 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
               <span className="ui-text-muted text-[10px] font-medium">
                 Quick Add:
               </span>
-              {Object.keys(POPULAR_TICKER_ESTIMATES)
+              {Array.from(
+                new Map(
+                  Object.keys(POPULAR_TICKER_ESTIMATES).map((sym) => [
+                    sym.replace(/\.JK$/i, ''),
+                    sym,
+                  ])
+                ).entries()
+              )
                 .slice(0, 9)
-                .map((sym) => (
+                .map(([label, sym]) => (
                   <button
                     key={sym}
                     type="button"
                     onClick={() => handleYahooLookup(sym)}
                     className="ui-subtle ui-text-secondary rounded px-2 py-0.5 font-mono text-[10px] hover:opacity-80"
                   >
-                    +{sym.replace('.JK', '')}
+                    +{label}
                   </button>
                 ))}
             </div>
@@ -3385,25 +3392,25 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
             </div>
 
             {/* Interactive Frontier Stepper Bar below Chart */}
-            <div className="ui-subtle mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs">
+            <div className="ui-subtle mt-3 flex flex-col gap-2 rounded-lg px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="ui-text-muted text-[10px] uppercase">
                   Titik Aktif di Kurva Pareto:
                 </div>
-                <div className="ui-text-main truncate font-semibold">
+                <div className="ui-text-main break-words font-semibold">
                   {activePresetObj ? activePresetObj.name : 'Custom Racikan Anda'} (
-                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                     +{solvedMetrics.cagr.toFixed(2)}%
                   </span>{' '}
                   /{' '}
-                  <span className="font-mono text-rose-600 dark:text-rose-400">
+                  <span className="font-mono text-rose-600 dark:text-rose-400 whitespace-nowrap">
                     -{solvedMetrics.maxDrawdown.toFixed(2)}%
                   </span>
                   )
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => {

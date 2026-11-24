@@ -346,12 +346,12 @@ export const Header: React.FC<HeaderProps> = ({
         <aside
           role="status"
           aria-live="polite"
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-md text-xs font-semibold transition max-w-sm ${
+          className={`print:hidden fixed top-4 right-4 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-md text-xs font-semibold transition max-w-sm ${
             biometricToast.type === 'success'
               ? 'border-emerald-500/40 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/95 dark:text-emerald-200'
               : biometricToast.type === 'error'
               ? 'border-rose-500/40 bg-rose-50 text-rose-900 dark:bg-rose-950/95 dark:text-rose-200'
-              : 'border-ui-border ui-card ui-text-main'
+              : 'ui-border ui-card ui-text-main'
           }`}
         >
           <Fingerprint
@@ -414,11 +414,11 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     QuantPorto
                   </h1>
-                  <span className="hidden sm:inline-block font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] bg-[var(--accent-tint)] px-1.5 py-0.5 rounded-[var(--radius-xs)] font-medium">
+                  <span className="hidden sm:inline-block whitespace-nowrap font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] bg-[var(--accent-tint)] px-1.5 py-0.5 rounded-[var(--radius-xs)] font-medium">
                     Rp10M Edition
                   </span>
                 </div>
-                <p className="ui-text-muted hidden text-[11px] sm:block mt-0.5 font-medium">
+                <p className="ui-text-muted hidden text-[11px] sm:block sm:whitespace-nowrap mt-0.5 font-medium">
                   Risk Parity &amp; Dynamic Rebalancing
                 </p>
               </div>
@@ -479,10 +479,11 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenRecommender}
                 title="Tanya Quant: Kuis profil risiko"
-                className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--accent-primary)]/30 bg-[var(--accent-tint)] px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-primary)] transition hover:opacity-90"
+                aria-label="Tanya Quant: Kuis profil risiko"
+                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--accent-primary)]/30 bg-[var(--accent-tint)] px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-primary)] transition hover:opacity-90"
               >
                 <Compass className="h-3.5 w-3.5 shrink-0 text-[var(--accent-primary)]" />
-                <span>Tanya Quant</span>
+                <span className="hidden sm:inline">Tanya Quant</span>
               </button>
 
               {/* Interactive Help & Reference Popover Hub */}
@@ -585,10 +586,10 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsToolsMenuOpen(false);
                     setIsHelpMenuOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
                     isExportMenuOpen
                       ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-tint)] text-[var(--accent-primary)]'
-                      : 'ui-subtle ui-text-secondary hover:opacity-80'
+                      : 'ui-subtle ui-text-main hover:opacity-85'
                   }`}
                   title="Ekspor & Dokumen"
                 >
@@ -804,10 +805,10 @@ export const Header: React.FC<HeaderProps> = ({
                     setIsExportMenuOpen(false);
                     setIsHelpMenuOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
                       ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-tint)] text-[var(--accent-primary)]'
-                      : 'ui-subtle ui-text-secondary hover:opacity-80'
+                      : 'ui-subtle ui-text-main hover:opacity-85'
                   }`}
                   title="Pengaturan & Pasar"
                 >
@@ -1028,7 +1029,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                 aria-expanded={isMobileMenuOpen}
                 aria-label="Buka menu pengaturan kurs, backup, dan bantuan"
-                className={`flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs font-medium transition lg:hidden ${
+                className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1.5 text-xs font-medium transition lg:hidden ${
                   isMobileMenuOpen || rdptPromoActive
                     ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'ui-subtle ui-text-main'
@@ -1516,6 +1517,7 @@ export const Header: React.FC<HeaderProps> = ({
                 currentThemeId={themeId}
                 onSelectTheme={setThemeId}
                 colorScheme={colorScheme}
+                placement="up"
               />
             </div>
 
@@ -1557,7 +1559,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Thumb-Friendly Ergonomic 4-Tab Mobile Bottom Navigation Bar (< lg) */}
       <nav
         aria-label="Utama (Mobile)"
-        className="ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-md lg:hidden"
+        className="print:hidden ui-card ui-border fixed inset-x-0 bottom-0 z-40 border-t px-2 py-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-md lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
           <button

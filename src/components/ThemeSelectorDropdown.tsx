@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Palette, Check, Sparkles } from 'lucide-react';
 import { ThemeId, ALL_THEME_IDS, THEME_REGISTRY, getThemeDefinition } from '../types/theme';
 
@@ -6,16 +6,19 @@ interface ThemeSelectorDropdownProps {
   currentThemeId: ThemeId;
   onSelectTheme: (id: ThemeId) => void;
   colorScheme: 'light' | 'dark';
+  placement?: 'down' | 'up';
 }
 
 export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
   currentThemeId,
   onSelectTheme,
   colorScheme,
+  placement = 'down',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerId = useId();
 
   const activeTheme = getThemeDefinition(currentThemeId);
 
@@ -55,7 +58,7 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
       <button
         ref={triggerRef}
         type="button"
-        id="theme-selector-trigger"
+        id={triggerId}
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -79,8 +82,12 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
         <div
           role="menu"
           aria-orientation="vertical"
-          aria-labelledby="theme-selector-trigger"
-          className="absolute right-0 top-full mt-1.5 w-72 origin-top-right rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-elevated z-50 animate-in fade-in zoom-in-95 duration-100"
+          aria-labelledby={triggerId}
+          className={`absolute right-0 w-72 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-1.5 shadow-elevated z-50 animate-in fade-in zoom-in-95 duration-100 ${
+            placement === 'up'
+              ? 'bottom-full mb-1.5 origin-bottom-right'
+              : 'top-full mt-1.5 origin-top-right'
+          }`}
         >
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[var(--border-subtle)] mb-1">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
@@ -92,7 +99,11 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
             </span>
           </div>
 
-          <div className="space-y-0.5 max-h-[360px] overflow-y-auto">
+          <div
+            className={`space-y-0.5 overflow-y-auto ${
+              placement === 'up' ? 'max-h-[260px]' : 'max-h-[360px]'
+            }`}
+          >
             {ALL_THEME_IDS.map((id) => {
               const theme = THEME_REGISTRY[id];
               const isSelected = id === currentThemeId;
