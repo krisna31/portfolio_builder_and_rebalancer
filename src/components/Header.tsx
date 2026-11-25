@@ -125,6 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const helpMenuRef = useRef<HTMLDivElement>(null);
@@ -133,6 +134,20 @@ export const Header: React.FC<HeaderProps> = ({
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+
+  // Publish live sticky header height so sub-navs and scroll-padding stay clear across breakpoints
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const syncHeight = () => {
+      document.documentElement.style.setProperty('--header-height', `${el.offsetHeight}px`);
+    };
+    syncHeight();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isGuestMode, isMobileMenuOpen]);
 
   // Biometric / WebAuthn settings state
   const [isBiometricSupported, setIsBiometricSupported] = useState(false);
@@ -375,7 +390,7 @@ export const Header: React.FC<HeaderProps> = ({
         </aside>
       )}
 
-      <header className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
+      <header ref={headerRef} className="ui-card sticky top-0 z-30 border-x-0 border-t-0 shadow-2xs">
         {isGuestMode && (
           <div className="border-b border-amber-500/25 bg-amber-500/10 px-3 py-1 sm:px-6">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 text-[11px]">
@@ -402,9 +417,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-6 sm:py-2.5">
           <div className="flex items-center justify-between gap-2">
             {/* Minimalist Botanical Brand Title (Fraunces & DM Mono) */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0">
               <BrandLogo className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-baseline gap-1.5">
                   <h1
                     className="ui-text-main text-base sm:text-lg leading-none font-display"
@@ -414,11 +429,11 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     QuantPorto
                   </h1>
-                  <span className="hidden sm:inline-block whitespace-nowrap font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] bg-[var(--accent-tint)] px-1.5 py-0.5 rounded-[var(--radius-xs)] font-medium">
+                  <span className="hidden 2xl:inline-block whitespace-nowrap font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] bg-[var(--accent-tint)] px-1.5 py-0.5 rounded-[var(--radius-xs)] font-medium">
                     Rp10M Edition
                   </span>
                 </div>
-                <p className="ui-text-muted hidden text-[11px] sm:block sm:whitespace-nowrap mt-0.5 font-medium">
+                <p className="ui-text-muted hidden text-[11px] sm:block lg:hidden xl:block sm:whitespace-nowrap mt-0.5 font-medium">
                   Risk Parity &amp; Dynamic Rebalancing
                 </p>
               </div>
@@ -428,13 +443,13 @@ export const Header: React.FC<HeaderProps> = ({
             <nav
               id="tour-nav-tabs"
               aria-label="Utama (Desktop)"
-              className="ui-subtle hidden items-center gap-1 rounded-[var(--radius-sm)] p-1 lg:flex border border-[var(--border-subtle)]"
+              className="ui-subtle hidden items-center gap-0.5 xl:gap-1 rounded-[var(--radius-sm)] p-1 lg:flex border border-[var(--border-subtle)] shrink-0"
             >
               <button
                 type="button"
                 onClick={() => setActiveTab('builder')}
                 title="Portfolio Builder (Shortcut: Alt+1)"
-                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] px-2.5 xl:px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'builder'
                     ? 'ui-card text-[var(--accent-primary)] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
@@ -447,7 +462,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setActiveTab('rebalancer')}
                 title="Portfolio Rebalancer (Shortcut: Alt+2)"
-                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] px-2.5 xl:px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'rebalancer'
                     ? 'ui-card text-[var(--accent-primary)] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
@@ -460,7 +475,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setActiveTab('roadmap')}
                 title="Wealth Simulator (Shortcut: Alt+3)"
-                className={`flex items-center justify-center gap-1.5 rounded-[6px] px-3.5 py-1.5 text-xs font-medium transition ${
+                className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] px-2.5 xl:px-3.5 py-1.5 text-xs font-medium transition ${
                   activeTab === 'roadmap'
                     ? 'ui-card text-[var(--accent-primary)] font-semibold shadow-2xs border border-[var(--border-default)]'
                     : 'ui-text-muted hover:ui-text-main'
@@ -472,7 +487,7 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
 
             {/* Right Action Bar: Clean Partitioned Hierarchy */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               {/* Primary Advisory Action: Tanya Quant */}
               <button
                 id="tour-tanya-quant"
@@ -480,10 +495,10 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenRecommender}
                 title="Tanya Quant: Kuis profil risiko"
                 aria-label="Tanya Quant: Kuis profil risiko"
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--accent-primary)]/30 bg-[var(--accent-tint)] px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-primary)] transition hover:opacity-90"
+                className="hidden sm:flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--accent-primary)]/30 bg-[var(--accent-tint)] px-2 xl:px-2.5 py-1.5 text-xs font-semibold text-[var(--accent-primary)] transition hover:opacity-90"
               >
                 <Compass className="h-3.5 w-3.5 shrink-0 text-[var(--accent-primary)]" />
-                <span className="hidden sm:inline">Tanya Quant</span>
+                <span className="hidden sm:inline lg:hidden xl:inline">Tanya Quant</span>
               </button>
 
               {/* Interactive Help & Reference Popover Hub */}
@@ -493,20 +508,21 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   aria-expanded={isHelpMenuOpen}
                   aria-haspopup="menu"
+                  aria-label="Panduan & Pintasan"
                   onClick={() => {
                     setIsHelpMenuOpen((prev) => !prev);
                     setIsExportMenuOpen(false);
                     setIsToolsMenuOpen(false);
                   }}
                   title="Panduan & Pintasan (?)"
-                  className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2 xl:px-2.5 py-1.5 text-xs font-medium transition ${
                     isHelpMenuOpen
                       ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-tint)] text-[var(--accent-primary)]'
                       : 'ui-subtle ui-text-main hover:opacity-80'
                   }`}
                 >
                   <HelpCircle className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
-                  <span>Panduan</span>
+                  <span className="hidden 2xl:inline">Panduan</span>
                   <ChevronDown
                     className={`h-3 w-3 transition-transform ${
                       isHelpMenuOpen ? 'rotate-180' : ''
@@ -800,12 +816,13 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   aria-expanded={isToolsMenuOpen}
                   aria-haspopup="menu"
+                  aria-label="Pengaturan & Pasar"
                   onClick={() => {
                     setIsToolsMenuOpen((prev) => !prev);
                     setIsExportMenuOpen(false);
                     setIsHelpMenuOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-medium transition ${
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2 xl:px-2.5 py-1.5 text-xs font-medium transition ${
                     isToolsMenuOpen || rdptPromoActive
                       ? 'border-[var(--accent-primary)]/40 bg-[var(--accent-tint)] text-[var(--accent-primary)]'
                       : 'ui-subtle ui-text-main hover:opacity-85'
@@ -813,7 +830,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Pengaturan & Pasar"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>Pengaturan</span>
+                  <span className="hidden xl:inline">Pengaturan</span>
                   <ChevronDown
                     className={`h-3 w-3 transition-transform ${
                       isToolsMenuOpen ? 'rotate-180' : ''
@@ -996,7 +1013,7 @@ export const Header: React.FC<HeaderProps> = ({
                       ? 'Beralih ke tema terang'
                       : 'Beralih ke tema gelap'
                   }
-                  className="flex h-7 w-7 items-center justify-center rounded transition hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex h-8 w-8 lg:h-7 lg:w-7 items-center justify-center rounded transition hover:bg-black/5 dark:hover:bg-white/10"
                 >
                   {colorScheme === 'dark' ? (
                     <Sun className="h-3.5 w-3.5 text-amber-400" />
@@ -1015,7 +1032,7 @@ export const Header: React.FC<HeaderProps> = ({
                         : 'Kunci Layar (Keluar dari Sesi)'
                     }
                     aria-label={isGuestMode ? 'Keluar Mode Tamu' : 'Kunci Layar'}
-                    className="flex h-7 w-7 items-center justify-center rounded transition hover:bg-amber-500/15 text-amber-500/80 hover:text-amber-500"
+                    className="flex h-8 w-8 lg:h-7 lg:w-7 items-center justify-center rounded transition hover:bg-amber-500/15 text-amber-500/80 hover:text-amber-500"
                   >
                     <Lock className="h-3.5 w-3.5" />
                   </button>
@@ -1029,7 +1046,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                 aria-expanded={isMobileMenuOpen}
                 aria-label="Buka menu pengaturan kurs, backup, dan bantuan"
-                className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1.5 text-xs font-medium transition lg:hidden ${
+                className={`flex min-h-9 lg:min-h-0 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1.5 text-xs font-medium transition lg:hidden ${
                   isMobileMenuOpen || rdptPromoActive
                     ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'ui-subtle ui-text-main'

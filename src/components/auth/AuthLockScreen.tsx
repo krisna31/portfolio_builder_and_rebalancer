@@ -249,21 +249,21 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
           <Moon className="h-4 w-4 text-[var(--text-secondary)]" />
         )}
       </button>
-      <div className="w-full max-w-[280px] space-y-3.5">
+      <div className="w-full max-w-xs sm:max-w-sm space-y-4">
         {/* Minimalist Brand Logo & App Name */}
         <div className="flex flex-col items-center text-center">
-          <BrandLogo className="w-9 h-9 mb-1.5" />
-          <h1 className="text-base font-normal tracking-tight ui-text-main font-display">
+          <BrandLogo className="w-10 h-10 mb-1.5" />
+          <h1 className="text-lg font-normal tracking-tight ui-text-main font-display">
             {showRegisterPrompt ? 'Aktivasi Biometrik' : 'QuantPorto'}
           </h1>
-          <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--accent-primary)] mt-0.5">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-primary)] mt-0.5">
             Rp10M Edition
           </span>
         </div>
 
         {/* Minimalist Card */}
         <div
-          className={`ui-card rounded-[var(--radius-lg)] p-4 shadow-surface transition duration-150 ${
+          className={`ui-card rounded-[var(--radius-lg)] p-5 sm:p-6 shadow-surface transition-colors duration-[var(--duration-fast)] ${
             isShaking ? 'animate-shake border-[var(--status-danger)]/50' : ''
           }`}
         >
@@ -353,7 +353,7 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
-                    className="w-full ui-input disabled:opacity-50 rounded-lg pl-3 pr-11 py-2 text-xs placeholder:text-zinc-500 transition"
+                    className="w-full min-h-10 ui-input disabled:opacity-50 rounded-lg pl-3.5 pr-11 py-2.5 text-sm placeholder:text-[var(--text-muted)] transition"
                   />
                   <button
                     type="button"
@@ -362,17 +362,17 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                     className="absolute inset-y-0 right-0 flex w-11 items-center justify-center ui-text-muted hover:ui-text-main transition"
                     aria-label={showPassword ? 'Sembunyikan sandi' : 'Tampilkan sandi'}
                   >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
                 {/* Lockout or Error message */}
                 {lockoutSec > 0 ? (
-                  <div className="text-[11px] text-amber-600 dark:text-amber-400 text-center font-mono py-0.5">
+                  <div className="text-xs text-amber-600 dark:text-amber-400 text-center font-mono py-0.5">
                     Tunggu {lockoutSec} detik
                   </div>
                 ) : errorMessage ? (
-                  <div className="text-[11px] text-rose-500 text-center py-0.5">
+                  <div className="text-xs text-rose-500 text-center py-0.5">
                     {errorMessage}
                   </div>
                 ) : null}
@@ -380,10 +380,10 @@ export const AuthLockScreen: React.FC<AuthLockScreenProps> = ({
                 <button
                   type="submit"
                   disabled={!password || isVerifying || lockoutSec > 0}
-                  className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-medium text-xs py-2 rounded-lg transition shadow-2xs"
+                  className="w-full min-h-10 flex items-center justify-center gap-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-[var(--text-on-accent)] disabled:opacity-50 font-semibold text-sm py-2.5 rounded-lg transition shadow-2xs"
                 >
                   <span>{isVerifying ? 'Memeriksa...' : 'Buka'}</span>
-                  {!isVerifying && <ArrowRight className="w-3.5 h-3.5" />}
+                  {!isVerifying && <ArrowRight className="w-4 h-4" />}
                 </button>
               </form>
               <p className="text-[10px] ui-text-muted text-center leading-snug pt-0.5">

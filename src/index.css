@@ -133,6 +133,12 @@
     box-sizing: border-box;
   }
 
+  html {
+    /* Reserve space under sticky header + sub-nav bar and fixed mobile bottom bar */
+    scroll-padding-top: calc(var(--header-height, 5.75rem) + 3.25rem);
+    scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
   body {
     margin: 0;
     background-color: var(--bg-canvas);
@@ -286,11 +292,41 @@ select option {
   color: var(--text-on-accent);
 }
 
+.bg-emerald-700 {
+  background-color: var(--accent-hover);
+  color: var(--text-on-accent);
+}
+
 .hover\:bg-emerald-500:hover,
 .hover\:bg-emerald-600:hover,
 .hover\:bg-emerald-700:hover {
   background-color: var(--accent-hover);
   color: var(--text-on-accent);
+}
+
+/* Re-specify bridged tokens per component polarity so app Dark/Light never leaks into Factsheet */
+#quantporto-printable-factsheet[data-factsheet-mode="light"] {
+  color-scheme: only light;
+  --accent-primary: #21543D;
+  --accent-hover: #173D2C;
+  --text-on-accent: #F9F8F4;
+  --color-emerald-300: #489B73;
+  --color-emerald-400: #2D7A56;
+  --color-emerald-500: #216644;
+  --color-emerald-600: #21543D;
+  --color-emerald-700: #173D2C;
+}
+
+#quantporto-printable-factsheet[data-factsheet-mode="dark"] {
+  color-scheme: only dark;
+  --accent-primary: #68B68E;
+  --accent-hover: #82C7A3;
+  --text-on-accent: #111613;
+  --color-emerald-300: #82C7A3;
+  --color-emerald-400: #68B68E;
+  --color-emerald-500: #68B68E;
+  --color-emerald-600: #68B68E;
+  --color-emerald-700: #82C7A3;
 }
 
 /* Custom Driver.js Spotlight & Popover Theme */
@@ -378,12 +414,12 @@ select option {
 }
 
 /* =========================================================================
-   Print Styles for Institutional Portfolio Factsheet (A4 Export)
+   Print Styles for Factsheet A4 & Multi-Platform Broker Order Slip
    ========================================================================= */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 6mm 8mm;
   }
 
   header,
@@ -408,7 +444,15 @@ select option {
     overflow: visible !important;
   }
 
-  .factsheet-modal-backdrop {
+  /* Match page margins when printing the Dark Factsheet variant */
+  html:has(#quantporto-printable-factsheet[data-factsheet-mode="dark"]),
+  body:has(#quantporto-printable-factsheet[data-factsheet-mode="dark"]) {
+    background: #111613 !important;
+    color: #EAECE7 !important;
+  }
+
+  .factsheet-modal-backdrop,
+  .order-slip-modal-backdrop {
     position: static !important;
     display: block !important;
     padding: 0 !important;
@@ -417,11 +461,14 @@ select option {
     backdrop-filter: none !important;
     overflow: visible !important;
     max-height: none !important;
+    height: auto !important;
   }
 
-  .factsheet-modal-container {
+  .factsheet-modal-container,
+  .order-slip-modal-container {
     position: static !important;
     display: block !important;
+    width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -430,22 +477,27 @@ select option {
     box-shadow: none !important;
     background: transparent !important;
     max-height: none !important;
+    height: auto !important;
     overflow: visible !important;
   }
 
-  .factsheet-scroll-container {
+  .factsheet-scroll-container,
+  .order-slip-scroll-container {
     padding: 0 !important;
     margin: 0 !important;
     background: transparent !important;
     overflow: visible !important;
     display: block !important;
+    max-height: none !important;
+    height: auto !important;
   }
 
   #quantporto-printable-factsheet {
     position: static !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
+    max-width: 210mm !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
     box-shadow: none !important;
     border: none !important;
     page-break-inside: auto !important;
@@ -455,15 +507,51 @@ select option {
   #quantporto-printable-factsheet[data-factsheet-mode="light"] {
     padding: 0 !important;
     border-radius: 0 !important;
-    background: #ffffff !important;
-    color: #0f172a !important;
+    background: #FFFFFF !important;
+    color: #19201C !important;
   }
 
   #quantporto-printable-factsheet[data-factsheet-mode="dark"] {
     padding: 12px !important;
     border-radius: 8px !important;
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
+    background: #111613 !important;
+    color: #EAECE7 !important;
+  }
+
+  #quantporto-printable-order-slip {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #FFFFFF !important;
+    color: #19201C !important;
+    color-scheme: only light;
+    --bg-canvas: #FFFFFF;
+    --bg-page: #FFFFFF;
+    --bg-surface: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-subtle: #F4F3EC;
+    --border-subtle: #DCDCD2;
+    --border-default: #C8CBC1;
+    --border-strong: #BFC2B8;
+    --text-primary: #19201C;
+    --text-main: #19201C;
+    --text-secondary: #48524B;
+    --text-muted: #657068;
+    --accent-primary: #21543D;
+    --accent-hover: #173D2C;
+    --color-emerald-400: #21543D;
+    --color-emerald-500: #21543D;
+    --color-emerald-600: #21543D;
+  }
+
+  .order-slip-platform-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 10px !important;
   }
 
   * {

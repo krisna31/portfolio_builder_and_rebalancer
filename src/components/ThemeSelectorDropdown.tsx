@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Palette, Check, Sparkles } from 'lucide-react';
+import { Palette, Check } from 'lucide-react';
 import { ThemeId, ALL_THEME_IDS, THEME_REGISTRY, getThemeDefinition } from '../types/theme';
 
 interface ThemeSelectorDropdownProps {
@@ -64,7 +64,7 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
         aria-expanded={isOpen}
         aria-label={`Tema Tampilan: ${activeTheme.name}`}
         title={`Tema Tampilan: ${activeTheme.name} (${activeTheme.archetype})`}
-        className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-[var(--text-primary)] transition hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
+        className="flex h-8 lg:h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-[var(--text-primary)] transition hover:bg-black/5 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
       >
         <span
           className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/20 dark:border-white/30"
@@ -73,7 +73,7 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
           }}
         />
         <Palette className="h-3.5 w-3.5 shrink-0 opacity-80" />
-        <span className="hidden md:inline font-mono text-[11px] truncate max-w-[110px]">
+        <span className="hidden 2xl:inline font-mono text-[11px] truncate max-w-[110px]">
           {activeTheme.name}
         </span>
       </button>
@@ -91,7 +91,7 @@ export const ThemeSelectorDropdown: React.FC<ThemeSelectorDropdownProps> = ({
         >
           <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-[var(--border-subtle)] mb-1">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-[var(--accent-primary)]" />
+              <Palette className="h-3 w-3 text-[var(--accent-primary)]" />
               Pilih Tema (8 Preset)
             </span>
             <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[var(--text-secondary)]">

@@ -113,37 +113,37 @@ export const RebalanceExecutionGuideModal: React.FC<
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b ui-border ui-subtle px-5 pt-2 gap-1.5 shrink-0 overflow-x-auto overflow-y-hidden">
+        <div className="flex border-b ui-border ui-subtle px-3 sm:px-5 pt-2 gap-1 sm:gap-1.5 shrink-0 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setActiveTab('initial-buy')}
-            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'initial-buy' ? 'border-emerald-500 ui-card text-emerald-600 dark:text-emerald-400' : 'border-transparent ui-text-muted hover:ui-text-main hover:ui-subtle'
             }`}
           >
-            <Coins className="h-4 w-4" />
+            <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span>1. Investasi Perdana (Mulai Rp 0)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('routine-rebalance')}
-            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'routine-rebalance' ? 'border-emerald-500 ui-card text-emerald-600 dark:text-emerald-400' : 'border-transparent ui-text-muted hover:ui-text-main hover:ui-subtle'
             }`}
           >
-            <Scale className="h-4 w-4" />
+            <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span>2. Rebalancing Rutin Portofolio</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('crash-ladder')}
-            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 text-[11px] sm:text-xs font-semibold rounded-t-lg transition border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'crash-ladder' ? 'border-emerald-500 ui-card text-emerald-600 dark:text-emerald-400' : 'border-transparent ui-text-muted hover:ui-text-main hover:ui-subtle'
             }`}
           >
-            <TrendingDown className="h-4 w-4" />
+            <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span>3. Jaring Serok Krisis (Buy the Dip)</span>
           </button>
         </div>
@@ -352,7 +352,7 @@ export const RebalanceExecutionGuideModal: React.FC<
                         Sinkronkan Harga Pasar Terkini
                       </h5>
                       <p className="text-xs ui-text-muted">
-                        Klik tombol <strong>Sync Harga Pasar Live</strong> di Header untuk memperbarui harga saham,
+                        Klik tombol <strong>Sync Harga</strong> di menu Pengaturan Header untuk memperbarui harga saham,
                         obligasi, emas, ETF AS, dan kripto hari ini.
                       </p>
                     </div>
@@ -368,7 +368,8 @@ export const RebalanceExecutionGuideModal: React.FC<
                       </h5>
                       <p className="text-xs ui-text-muted">
                         Masukkan nominal saldo nyata yang ada di sekuritas/aplikasi Anda. Jika malas mengetik satu per satu,
-                        gunakan tombol <strong>Import / Export Teks (Excel)</strong> untuk *copy-paste* langsung.
+                        gunakan tombol <strong>Import / Export Teks (Excel)</strong> di menu Opsi &amp; Simulasi untuk{' '}
+                        <em>copy-paste</em> langsung.
                       </p>
                     </div>
                   </div>
@@ -407,8 +408,9 @@ export const RebalanceExecutionGuideModal: React.FC<
                         Eksekusi Order & Catat ke Jurnal
                       </h5>
                       <p className="text-xs ui-text-muted">
-                        Setelah melakukan pembelian/penjualan di broker, klik{' '}
-                        <strong>Terapkan & Catat ke Jurnal</strong> agar riwayat audit rebalancing Anda tercatat permanen.
+                        Tinjau daftar transaksi lewat <strong>Buka Slip Order Broker</strong> (bisa{' '}
+                        <strong>Salin Slip</strong> atau <strong>Cetak Slip</strong>). Setelah order tereksekusi di broker,
+                        klik <strong>Catat &amp; Terapkan Rebalance Ini</strong> agar riwayat audit rebalancing tercatat permanen.
                       </p>
                     </div>
                   </div>

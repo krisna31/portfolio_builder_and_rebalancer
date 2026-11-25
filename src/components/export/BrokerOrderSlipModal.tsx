@@ -26,6 +26,7 @@ import {
   CircleDollarSign,
   ExternalLink,
   Share2,
+  Printer,
 } from 'lucide-react';
 
 export interface BrokerOrderSlipModalProps {
@@ -139,8 +140,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Saham Bursa Efek Indonesia (IDX)',
         apps: 'Stockbit / Ajaib / IPOT / Mirae',
         icon: <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
-        colorClass: 'border-zinc-500/30 bg-zinc-500/5 dark:bg-zinc-900/40',
-        badgeClass: 'bg-zinc-500/10 text-emerald-600 dark:text-emerald-400 border-zinc-500/30',
+        colorClass: 'border ui-border ui-card',
+        badgeClass: 'ui-subtle text-emerald-600 dark:text-emerald-400 border ui-border',
         note: '1 Lot = 100 lembar saham. Gunakan fitur Order Pad / Limit Order pada jam bursa (09:00 - 15:50 WIB).',
         items: groups.idx_stocks,
       });
@@ -191,8 +192,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         name: 'Aset Kustom Lainnya',
         apps: 'Platform Terkait',
         icon: <ShieldAlert className="w-4 h-4 ui-text-secondary" />,
-        colorClass: 'border-zinc-500/30 bg-zinc-500/5 dark:bg-zinc-900/40',
-        badgeClass: 'bg-zinc-500/10 ui-text-secondary border-zinc-500/30',
+        colorClass: 'border ui-border ui-card',
+        badgeClass: 'ui-subtle ui-text-secondary border ui-border',
         note: 'Aset kustom yang ditambahkan secara manual.',
         items: groups.custom,
       });
@@ -336,6 +337,12 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
     window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
   };
 
+  const printTodayStr = new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
+
   // If not open, do not render modal DOM
   if (!isOpen) return null;
 
@@ -347,11 +354,11 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 overflow-y-auto animate-in fade-in"
+      className="order-slip-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/80 overflow-y-auto animate-in fade-in"
     >
-      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-4xl my-auto ui-modal overflow-hidden flex flex-col max-h-[92vh] outline-none">
-        {/* Header Bar */}
-        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4 ui-subtle border-b ui-border lg:flex-row lg:items-center lg:justify-between">
+      <div ref={containerRef} tabIndex={-1} className="order-slip-modal-container relative w-full max-w-4xl my-auto ui-modal overflow-hidden flex flex-col max-h-[92vh] outline-none">
+        {/* Header Bar (Hidden on print) */}
+        <div className="print:hidden flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4 ui-subtle border-b ui-border lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start justify-between gap-2.5">
             <div className="flex items-start gap-2.5 min-w-0">
               <Building2 className="w-4 h-4 mt-1 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -412,6 +419,16 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
 
             <button
               type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold ui-text-main ui-card ui-border hover:opacity-90 rounded-lg shadow-xs transition-all"
+              title="Cetak atau simpan Slip Order Broker sebagai PDF"
+            >
+              <Printer className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+              <span>Cetak Slip</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onClose}
               className="hidden lg:inline-flex p-1.5 ui-text-muted hover:ui-text-main hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Tutup modal"
@@ -421,8 +438,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           </div>
         </div>
 
-        {/* Sub-header / Progress Bar */}
-        <div className="px-6 py-3 border-b ui-border flex flex-wrap items-center justify-between gap-3 text-xs bg-black/5 dark:bg-white/5">
+        {/* Sub-header / Progress Bar (Hidden on print) */}
+        <div className="print:hidden px-6 py-3 border-b ui-border flex flex-wrap items-center justify-between gap-3 text-xs bg-black/5 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <span className="ui-text-muted">
               Progres Eksekusi: <strong className="ui-text-main font-mono tabular-nums">{executedActionCount} / {totalActionCount}</strong> (<span className="font-mono tabular-nums">{progressPercent}%</span>)
@@ -469,10 +486,36 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
         </div>
 
         {/* Content Body: Platform Cards */}
-        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 bg-zinc-50/70 dark:bg-zinc-950/60">
+        <div
+          id="quantporto-printable-order-slip"
+          className="order-slip-scroll-container flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 ui-page"
+        >
+          {/* Print-Only Header Summary */}
+          <div className="hidden print:flex items-start justify-between border-b border-[#DCDCD2] pb-3 mb-3">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[#21543D]">
+                QUANTPORTO BROKER ORDER SLIP
+              </div>
+              <h1 className="text-lg font-bold text-[#19201C] mt-0.5">
+                {activePortfolioName}
+              </h1>
+              <p className="text-[11px] text-[#48524B]">
+                {printTodayStr} • Kurs Acuan: Rp {usdIdrRate.toLocaleString('id-ID')}/USD
+              </p>
+            </div>
+            <div className="text-right font-mono text-[11px] space-y-0.5">
+              <div>
+                Total Beli: <strong className="text-emerald-700">{formatIdr(rebalanceResult.totalBuyIdr)}</strong>
+              </div>
+              <div>
+                Total Jual: <strong className="text-rose-700">{formatIdr(rebalanceResult.totalSellIdr)}</strong>
+              </div>
+            </div>
+          </div>
+
           {/* Celebration Banner when 100% of trades are executed */}
           {progressPercent === 100 && totalActionCount > 0 && (
-            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-wrap items-center justify-between gap-3 text-emerald-900 dark:text-emerald-100 shadow-xs animate-in fade-in">
+            <div className="print:hidden rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-wrap items-center justify-between gap-3 text-emerald-900 dark:text-emerald-100 shadow-xs animate-in fade-in">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30">
                   <Check className="h-5 w-5" />
@@ -513,15 +556,15 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
             platformGroups.map((group) => (
               <div
                 key={group.id}
-                className={`rounded-xl border p-4 sm:p-5 transition-all ${group.colorClass}`}
+                className={`order-slip-platform-card rounded-xl border p-4 sm:p-5 transition-all ${group.colorClass}`}
               >
                 {/* Platform Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b ui-border">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg ui-card border ui-border shadow-2xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg ui-card border ui-border shadow-2xs shrink-0">
                       {group.icon}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="font-bold text-sm ui-text-main flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span>{group.name}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${group.badgeClass}`}>
@@ -534,7 +577,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start sm:self-auto">
+                  <div className="print:hidden flex flex-wrap sm:flex-nowrap items-center gap-1.5 self-start sm:self-auto shrink-0">
                     {/* Batch Check All in Platform */}
                     <button
                       type="button"
@@ -549,7 +592,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                           return next;
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded border ui-border transition-colors shadow-2xs"
+                      className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded border ui-border transition-colors shadow-2xs"
                       title={`Centang atau lepas centang semua order di ${group.apps}`}
                     >
                       <CheckSquare className="w-3 h-3 text-emerald-500" />
@@ -564,7 +607,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSendWhatsApp(group.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded border border-emerald-500/30 transition-colors"
+                      className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 rounded border border-emerald-500/30 transition-colors"
                       title={`Kirim slip ${group.apps} ke WhatsApp`}
                     >
                       <Share2 className="w-3 h-3 text-emerald-500" />
@@ -574,18 +617,18 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleCopySlip(group.id)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold ui-text-main ui-card hover:bg-black/5 dark:hover:bg-white/5 rounded border ui-border transition-colors shadow-2xs"
+                      className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] font-semibold ui-text-main ui-card hover:bg-black/5 dark:hover:bg-white/5 rounded border ui-border transition-colors shadow-2xs"
                       title={`Salin slip pesanan ${group.apps} saja`}
                     >
                       {copiedGroupId === group.id ? (
                         <>
                           <Check className="w-3 h-3 text-emerald-500" />
-                          <span className="text-emerald-500">Slip Disalin!</span>
+                          <span className="text-emerald-500">Tersalin!</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3 h-3" />
-                          <span>Salin Slip Platform</span>
+                          <span>Salin Slip</span>
                         </>
                       )}
                     </button>
@@ -612,6 +655,11 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                     const shockMultiplier = Math.max(0, 1 + (holdings?.[item.assetId]?.shockPercent ?? 0) / 100);
                     const rawSpot = rawPrice * shockMultiplier;
                     const spotPrice = isIdx ? roundToIdxTick(rawSpot, 'nearest') : Math.round(rawSpot);
+                    const actionAmountClass = isSell
+                      ? 'text-rose-600 dark:text-rose-400 print:text-rose-700'
+                      : isBuy
+                        ? 'text-emerald-600 dark:text-emerald-400 print:text-emerald-700'
+                        : 'ui-text-main';
 
                     return (
                       <div
@@ -653,7 +701,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                       : isSell
                                       ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
-                                      : 'bg-zinc-200 dark:bg-zinc-800 ui-text-secondary border ui-border'
+                                      : 'ui-subtle ui-text-secondary border ui-border'
                                   }`}
                                 >
                                   {isBuy && <ArrowUpRight className="w-3 h-3" />}
@@ -674,7 +722,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                           {item.isNominalOnly || def?.isNominalOnly ? (
                             <div>
                               <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">
-                                <span className="text-emerald-600 dark:text-emerald-400">
+                                <span className={actionAmountClass}>
                                   {formatIdr(Math.abs(item.tradeAmountIdr))}
                                 </span>
                               </div>
@@ -685,14 +733,14 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                           ) : isIdx ? (
                             <div>
                               <div className="text-sm font-bold ui-text-main flex items-center sm:justify-end gap-1.5">
-                                <span className="text-emerald-600 dark:text-emerald-400">
+                                <span className={actionAmountClass}>
                                   {lots} Lot
                                 </span>
                                 <span className="text-xs font-normal ui-text-muted">
                                   ({shares.toLocaleString('id-ID')} lbr @ Rp {spotPrice.toLocaleString('id-ID')})
                                 </span>
                               </div>
-                              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <div className={`text-xs font-semibold ${actionAmountClass}`}>
                                 Nilai Order: {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
                               {item.tradeLotsRemainderIdr && Math.abs(item.tradeLotsRemainderIdr) > 0 ? (
@@ -703,10 +751,10 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                             </div>
                           ) : group.id === 'us_etfs' ? (
                             <div>
-                              <div className="text-sm font-bold ui-text-main">
+                              <div className={`text-sm font-bold ${actionAmountClass}`}>
                                 {formatUsd(Math.abs(item.tradeAmountUsd))}
                               </div>
-                              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <div className={`text-xs font-semibold ${actionAmountClass}`}>
                                 Ekuivalen {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
                               <div className="text-[10px] ui-text-muted">
@@ -715,7 +763,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                             </div>
                           ) : group.id === 'crypto' ? (
                             <div>
-                              <div className="text-sm font-bold ui-text-main">
+                              <div className={`text-sm font-bold ${actionAmountClass}`}>
                                 {formatIdr(Math.abs(item.tradeAmountIdr))}
                               </div>
                               <div className="text-xs text-amber-600 dark:text-amber-400 font-medium">
@@ -725,7 +773,7 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
                           ) : (
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-bold ui-text-main">
+                                <span className={`text-sm font-bold ${actionAmountClass}`}>
                                   {formatIdr(Math.abs(item.tradeAmountIdr))}
                                 </span>
                                 {item.isNominalOnly && (
@@ -749,8 +797,8 @@ export const BrokerOrderSlipModal: React.FC<BrokerOrderSlipModalProps> = ({
           )}
         </div>
 
-        {/* Bottom Action Footer */}
-        <div className="px-6 py-4 ui-subtle border-t ui-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        {/* Bottom Action Footer (Hidden on print) */}
+        <div className="print:hidden px-6 py-4 ui-subtle border-t ui-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="ui-text-muted flex items-center gap-4">
             <div>
               Total Beli: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatIdr(rebalanceResult.totalBuyIdr)}</strong>

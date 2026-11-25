@@ -181,7 +181,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
           )}
 
           <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold ${confluence.badgeClass}`}
+            className={`flex flex-wrap items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold leading-tight text-center ${confluence.badgeClass}`}
           >
             <Activity className="w-3.5 h-3.5" />
             <span>
@@ -210,7 +210,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
       </div>
 
       {/* Main Table Styled After CoinMarketCap Crypto Market Cycle Top Indicators */}
-      <div className="rounded-xl border ui-border overflow-hidden bg-white dark:bg-zinc-950 shadow-sm">
+      <div className="rounded-xl border ui-border overflow-hidden ui-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <caption className="sr-only">Daftar Indikator Siklus dan Valuasi Pasar Multi-Faktor</caption>
@@ -249,9 +249,9 @@ export const CoinMarketCapIndicatorTable: React.FC<
                       {idx + 1}
                     </td>
 
-                    {/* Indicator Name + Source Transparency + Tooltip */}
-                    <td className="py-3 px-3.5">
-                      <div className="space-y-1 group">
+                    {/* Indicator Name + Source Transparency + Inline Expandable Info */}
+                    <td className="py-3 px-3.5 align-top">
+                      <div className="space-y-1.5 group">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-semibold ui-text-main">
                             {ind.name}
@@ -261,77 +261,24 @@ export const CoinMarketCapIndicatorTable: React.FC<
                               OVERRIDE
                             </span>
                           )}
-                          <div className="relative inline-block">
-                            <button
-                              type="button"
-                              data-cmc-trigger="true"
-                              onClick={() =>
-                                setTooltipIndicatorId(
-                                  tooltipIndicatorId === ind.id ? null : ind.id
-                                )
-                              }
-                              className="ui-text-muted hover:ui-text-main transition p-0.5"
-                              aria-label={`Info ${ind.name}`}
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                            </button>
-
-                            {/* Inline Popover Tooltip */}
-                            {tooltipIndicatorId === ind.id && (
-                              <div
-                                data-cmc-popover="true"
-                                className="absolute left-0 bottom-full mb-1.5 z-50 w-72 p-3 rounded-lg border ui-border ui-card ui-text-main text-[11px] leading-relaxed shadow-md"
-                              >
-                                <p className="font-semibold text-emerald-400 mb-1">
-                                  {ind.name}
-                                </p>
-                                <p>{ind.description}</p>
-
-                                <div className="mt-2.5 pt-2 border-t ui-border space-y-1 text-[10px]">
-                                  <div className="flex items-center justify-between ui-text-secondary">
-                                    <span>Acuan Beli:</span>
-                                    <span className="font-mono ui-text-main font-semibold">
-                                      {ind.formattedReference}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between text-zinc-400">
-                                    <span>Sumber Data:</span>
-                                    <a
-                                      href={ind.sourceUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
-                                    >
-                                      <span>{ind.sourceName}</span>
-                                      <ExternalLink className="w-2.5 h-2.5" />
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center justify-between text-zinc-400">
-                                    <span>Tipe Sumber:</span>
-                                    <span className="font-medium text-zinc-300">
-                                      {sourceBadge.label}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between text-zinc-400">
-                                    <span>Pembaruan:</span>
-                                    <span className="font-mono text-zinc-300">
-                                      {ind.lastSuccessTimestamp || 'Live Sync'}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="mt-2 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => setTooltipIndicatorId(null)}
-                                    className="text-[10px] text-zinc-400 hover:text-white"
-                                  >
-                                    Tutup
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            type="button"
+                            data-cmc-trigger="true"
+                            aria-expanded={tooltipIndicatorId === ind.id}
+                            onClick={() =>
+                              setTooltipIndicatorId(
+                                tooltipIndicatorId === ind.id ? null : ind.id
+                              )
+                            }
+                            className={`transition p-1 rounded ${
+                              tooltipIndicatorId === ind.id
+                                ? 'bg-[var(--accent-tint)] text-[var(--accent-primary)]'
+                                : 'ui-text-muted hover:ui-text-main'
+                            }`}
+                            aria-label={`Info ${ind.name}`}
+                          >
+                            <Info className="w-3.5 h-3.5" />
+                          </button>
                         </div>
 
                         {/* Direct Clickable Data Source Link & Badge */}
@@ -345,13 +292,62 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             href={ind.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 text-[10px] text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 underline decoration-zinc-400/40 hover:decoration-emerald-500 transition group/link"
+                            className="inline-flex items-center gap-0.5 text-[10px] ui-text-muted hover:text-[var(--accent-primary)] underline decoration-[var(--border-default)] hover:decoration-[var(--accent-primary)] transition group/link"
                             title={`Buka sumber data resmi: ${ind.sourceName}`}
                           >
                             <span>{ind.sourceName}</span>
                             <ExternalLink className="w-2.5 h-2.5 opacity-60 group-hover/link:opacity-100" />
                           </a>
                         </div>
+
+                        {/* Unclipped Inline Explanation Panel (theme-aware Light/Dark contrast) */}
+                        {tooltipIndicatorId === ind.id && (
+                          <div
+                            data-cmc-popover="true"
+                            className="ui-subtle border ui-border rounded-lg p-2.5 text-[11px] leading-relaxed ui-text-main space-y-1.5 max-w-sm"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-semibold text-[var(--accent-primary)]">
+                                {ind.name}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setTooltipIndicatorId(null)}
+                                className="text-[10px] ui-text-muted hover:ui-text-main font-medium shrink-0"
+                              >
+                                Tutup
+                              </button>
+                            </div>
+                            <p className="ui-text-secondary">{ind.description}</p>
+
+                            <div className="pt-1.5 border-t ui-border space-y-1 text-[10px]">
+                              <div className="flex items-center justify-between ui-text-secondary">
+                                <span>Acuan Beli:</span>
+                                <span className="font-mono ui-text-main font-semibold">
+                                  {ind.formattedReference}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between ui-text-secondary">
+                                <span>Sumber Data:</span>
+                                <a
+                                  href={ind.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[var(--accent-primary)] hover:underline"
+                                >
+                                  <span>{ind.sourceName}</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              </div>
+                              <div className="flex items-center justify-between ui-text-secondary">
+                                <span>Tipe &amp; Pembaruan:</span>
+                                <span className="font-mono ui-text-main">
+                                  {sourceBadge.label} • {ind.lastSuccessTimestamp || 'Live Sync'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
 
@@ -365,7 +361,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             value={editCurrentVal}
                             onChange={(e) => setEditCurrentVal(e.target.value)}
                             aria-label={`Nilai saat ini ${ind.name}`}
-                            className="w-20 px-1.5 py-0.5 rounded border ui-border text-right text-xs bg-white dark:bg-zinc-900 ui-text-main"
+                            className="ui-input w-20 px-1.5 py-0.5 rounded border text-right text-xs"
                           />
                         </div>
                       ) : (
@@ -422,7 +418,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                             value={editRefVal}
                             onChange={(e) => setEditRefVal(e.target.value)}
                             aria-label={`Ambang acuan ${ind.name}`}
-                            className="w-16 px-1.5 py-0.5 rounded border ui-border text-right text-xs bg-white dark:bg-zinc-900 ui-text-main"
+                            className="ui-input w-16 px-1.5 py-0.5 rounded border text-right text-xs"
                           />
                           <button
                             type="button"
@@ -436,7 +432,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                           <button
                             type="button"
                             onClick={() => setEditingIndicatorId(null)}
-                            className="p-1.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-muted hover:ui-text-main"
+                            className="p-1.5 rounded ui-subtle border ui-border ui-text-muted hover:ui-text-main"
                             title="Batal"
                             aria-label="Batal"
                           >
@@ -523,7 +519,7 @@ export const CoinMarketCapIndicatorTable: React.FC<
                   return (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-2 rounded-lg border ui-border bg-white dark:bg-zinc-900 text-[11px]"
+                      className="flex items-center justify-between p-2 rounded-lg border ui-border ui-card text-[11px]"
                     >
                       <div className="flex items-center gap-2 truncate">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />

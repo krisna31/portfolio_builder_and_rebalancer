@@ -1143,7 +1143,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </button>
 
               {isOptionsMenuOpen && (
-                <div className="ui-card absolute right-0 z-50 mt-1.5 w-84 max-w-[92vw] space-y-2.5 rounded-xl p-3.5 text-xs shadow-md border ui-border">
+                <div className="ui-card fixed inset-x-3 top-[calc(var(--header-height,5rem)+0.5rem)] z-50 max-h-[calc(100dvh-7rem)] overflow-y-auto sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-1.5 sm:w-84 sm:max-h-none sm:overflow-visible space-y-2.5 rounded-xl p-3.5 text-xs shadow-md border ui-border">
                   <div className="ui-border flex items-center justify-between border-b pb-2">
                     <span className="ui-text-main font-bold">
                       Opsi &amp; Simulasi Lanjutan
@@ -2324,22 +2324,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </caption>
                 <thead className="ui-subtle text-[11px] font-semibold uppercase">
                   <tr>
-                    <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-3 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] whitespace-nowrap">
+                    <th scope="col" className="ui-subtle ui-border sticky left-0 z-20 border-b border-r px-2.5 py-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] whitespace-nowrap">
                       Instrumen &amp; Harga Spot
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
+                    <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Input Posisi Awal
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
+                    <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Nilai Saat Ini
                     </th>
-                    <th scope="col" className="ui-border border-b px-2.5 py-2 text-right whitespace-nowrap">
+                    <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Now vs Target
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
+                    <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Target (Rp)
                     </th>
-                    <th scope="col" className="ui-border border-b px-3 py-2 text-right whitespace-nowrap">
+                    <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Action (Jual / Beli)
                     </th>
                   </tr>
@@ -2380,7 +2380,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       >
                         <th
                           scope="row"
-                          className="ui-card ui-border sticky left-0 z-10 border-b border-r px-3 py-2.5 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] min-w-[170px]"
+                          className="ui-card ui-border sticky left-0 z-10 border-b border-r px-2.5 py-2 font-normal shadow-[2px_0_5px_-2px_rgba(0,0,0,0.18)] min-w-[144px]"
                         >
                           {(() => {
                             const isNominal =
@@ -2600,7 +2600,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           })()}
                         </th>
 
-                        <td className="ui-border border-b px-3 py-2.5 text-right">
+                        <td className="ui-border border-b px-2 py-2 text-right">
                           {holdingEntryMode === 'nominal' ? (
                             <div className="flex flex-col items-end gap-1">
                               <FormattedNumberInput
@@ -2612,7 +2612,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     currentValueIdr: val,
                                   })
                                 }
-                                className="ui-input w-32 rounded px-2 py-1 text-right font-mono text-xs font-medium"
+                                className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-medium"
                                 ariaLabel={`Nominal value in IDR for ${item.symbol}`}
                               />
                               <div className="flex items-center gap-1 text-[9px]">
@@ -2723,7 +2723,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           )}
                         </td>
 
-                        <td className="ui-border ui-text-secondary border-b px-3 py-2.5 text-right font-mono whitespace-nowrap">
+                        <td className="ui-border ui-text-secondary border-b px-2 py-2 text-right font-mono whitespace-nowrap">
                           <div>{formatIdr(item.postShockValueIdr)}</div>
                           {h.shockPercent !== 0 && (
                             <div
@@ -2741,8 +2741,8 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           )}
                         </td>
 
-                        <td className="ui-border border-b px-2.5 py-2.5 text-right font-mono">
-                          <div className="ui-text-main font-semibold">
+                        <td className="ui-border border-b px-2 py-2 text-right font-mono">
+                          <div className="ui-text-main font-semibold whitespace-nowrap">
                             {item.currentWeightPercent.toFixed(1)}%{' '}
                             <span className="ui-text-muted font-normal">
                               / {item.targetWeightPercent.toFixed(1)}%
@@ -2776,11 +2776,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
                         </td>
 
-                        <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold whitespace-nowrap">
+                        <td className="ui-border ui-text-main border-b px-2 py-2 text-right font-mono font-semibold whitespace-nowrap">
                           {formatIdr(item.targetValueIdr)}
                         </td>
 
-                        <td className="ui-border border-b px-3 py-2.5 text-right">
+                        <td className="ui-border border-b px-2 py-2 text-right">
                           {item.action === 'BUY' ? (
                             <div className="inline-flex flex-col items-end rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">
                               <div className="flex items-center gap-1 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
@@ -3511,7 +3511,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           )}
 
           {/* 1-CLICK COMMIT REBALANCE TO HOLDINGS & RECORD SNAPSHOT */}
-          <div className="ui-subtle mt-4 flex flex-col gap-3 rounded-lg p-3.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="ui-subtle mt-4 flex flex-col gap-2.5 rounded-lg p-3.5">
             <div className="min-w-0 flex-1">
               <div className="ui-text-main text-xs font-semibold">
                 Sudah Eksekusi Order di Broker/Exchange?

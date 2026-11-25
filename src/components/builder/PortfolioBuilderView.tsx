@@ -1285,9 +1285,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
       {/* In-Page Quick Jump Sub-Navigation Pills */}
       <nav
         aria-label="Navigasi Bagian Builder"
-        className="sticky top-14 z-20 -mx-1 px-2 py-1.5 rounded-xl ui-card border ui-border shadow-xs flex items-center justify-between gap-2"
+        className="sticky top-[calc(var(--header-height,5.5rem)+0.375rem)] z-20 -mx-1 px-2 py-1.5 rounded-xl ui-card border ui-border shadow-xs flex items-center justify-between gap-2"
       >
-        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5 scrollbar-thin">
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider px-1">
             Lompat ke:
           </span>
@@ -1428,6 +1428,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 type="button"
                 onClick={() => setTableViewMode('table')}
                 title="Tampilan Tabel"
+                aria-label="Tampilan Tabel"
+                aria-pressed={tableViewMode === 'table'}
                 className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                   tableViewMode === 'table'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -1441,6 +1443,8 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                 type="button"
                 onClick={() => setTableViewMode('cards')}
                 title="Tampilan Kartu"
+                aria-label="Tampilan Kartu"
+                aria-pressed={tableViewMode === 'cards'}
                 className={`flex items-center gap-1 rounded px-2 py-1 font-medium transition ${
                   tableViewMode === 'cards'
                     ? 'ui-card ui-text-main font-semibold shadow-2xs'
@@ -2810,7 +2814,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                   Math.max(0, Math.min(100, Number(e.target.value)))
                                 )
                               }
-                              className={`ui-card ui-text-main w-14 rounded px-1.5 py-0.5 text-right font-mono text-xs font-semibold ${
+                              className={`ui-card ui-text-main w-[4.5rem] rounded px-1.5 py-0.5 text-right font-mono text-xs font-semibold ${
                                 isLocked
                                   ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 cursor-not-allowed opacity-90'
                                   : ''
@@ -2853,7 +2857,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 cagr: Number(e.target.value),
                               })
                             }
-                            className="ui-card ui-text-main w-14 rounded px-1 py-0.5 text-right font-mono text-[10px] font-semibold"
+                            className="ui-card ui-text-main w-[4.5rem] rounded px-1.5 py-0.5 text-right font-mono text-[10px] font-semibold"
                             aria-label={`Asumsi CAGR tahunan ${asset.shortName}`}
                           />
                           <span className="ui-text-muted font-mono">%/thn</span>
@@ -2878,7 +2882,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                                 maxDrawdown: Math.max(0.5, Number(e.target.value)),
                               })
                             }
-                            className="ui-card ui-text-main w-14 rounded px-1 py-0.5 text-right font-mono text-[10px] font-semibold"
+                            className="ui-card ui-text-main w-[4.5rem] rounded px-1.5 py-0.5 text-right font-mono text-[10px] font-semibold"
                             aria-label={`Asumsi Max Drawdown ${asset.shortName}`}
                           />
                           <span className="ui-text-muted font-mono">%</span>

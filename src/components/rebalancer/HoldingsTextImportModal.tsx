@@ -335,7 +335,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                     <button
                       type="button"
                       onClick={() => setStrategy('merge')}
-                      className={`rounded-lg py-1.5 px-2 text-center transition ${
+                      className={`rounded-lg py-1.5 px-2 text-center text-[11px] sm:text-xs whitespace-nowrap transition ${
                         strategy === 'merge'
                           ? 'bg-emerald-600 text-white font-bold'
                           : 'ui-card ui-border border ui-text-muted hover:ui-text-main'
@@ -346,7 +346,7 @@ export const HoldingsTextImportModal: React.FC<HoldingsTextImportModalProps> = (
                     <button
                       type="button"
                       onClick={() => setStrategy('replace')}
-                      className={`rounded-lg py-1.5 px-2 text-center transition ${
+                      className={`rounded-lg py-1.5 px-2 text-center text-[11px] sm:text-xs whitespace-nowrap transition ${
                         strategy === 'replace'
                           ? 'bg-rose-600 text-white font-bold'
                           : 'ui-card ui-border border ui-text-muted hover:ui-text-main'

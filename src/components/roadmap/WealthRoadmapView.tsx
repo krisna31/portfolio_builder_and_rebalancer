@@ -577,9 +577,9 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       {/* In-Page Quick Jump Sub-Navigation Pills */}
       <nav
         aria-label="Navigasi Bagian Roadmap"
-        className="sticky top-14 z-20 -mx-1 px-1 py-1.5 sm:px-2 rounded-xl ui-card border ui-border shadow-xs"
+        className="sticky top-[calc(var(--header-height,5.5rem)+0.375rem)] z-20 -mx-1 px-1 py-1.5 sm:px-2 rounded-xl ui-card border ui-border shadow-xs"
       >
-        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5">
+        <div className="flex items-center gap-1.5 text-xs whitespace-nowrap overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="ui-text-muted text-[10px] font-bold uppercase tracking-wider px-1">
             Lompat ke:
           </span>
@@ -789,7 +789,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                   />
                 </div>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+              <div className="mt-2 grid grid-cols-3 gap-1.5 text-xs">
                 {[
                   1_000_000_000,
                   2_500_000_000,
@@ -802,7 +802,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                     key={g}
                     type="button"
                     onClick={() => setTargetGoalIdr(g)}
-                    className={`flex-1 min-w-[4.75rem] whitespace-nowrap rounded px-2 py-1 font-mono text-[11px] font-medium transition shadow-2xs ${
+                    className={`whitespace-nowrap rounded px-2 py-1 font-mono text-[11px] font-medium transition shadow-2xs ${
                       targetGoalIdr === g
                         ? 'bg-emerald-600 font-semibold text-white ring-1 ring-emerald-500'
                         : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
@@ -1062,8 +1062,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
                         fill: THEME_CHART_VARIABLES[3],
-                        fontSize: 11,
-                        position: 'insideTopRight',
+                        fontSize: 12,
+                        position: 'insideTopLeft',
                       }}
                     />
                     <Area
@@ -1136,8 +1136,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                       label={{
                         value: `Target ${formatIdr(targetGoalIdr, true)}`,
                         fill: THEME_CHART_VARIABLES[3],
-                        fontSize: 11,
-                        position: 'insideTopRight',
+                        fontSize: 12,
+                        position: 'insideTopLeft',
                       }}
                     />
                     <Area

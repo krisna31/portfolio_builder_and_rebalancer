@@ -183,39 +183,40 @@ export const SmartPortfolioRecommenderModal: React.FC<
       ref={dialogRef}
       {...({ closedby: 'any' } as React.DialogHTMLAttributes<HTMLDialogElement>)}
       aria-labelledby={titleId}
-      className="ui-modal ui-text-main m-auto max-h-[92vh] w-full max-w-5xl overflow-y-auto p-0 backdrop:bg-black/60"
+      className="ui-modal ui-text-main m-auto max-h-[90dvh] w-[calc(100vw-1.5rem)] sm:w-full max-w-5xl overflow-hidden open:flex open:flex-col p-0 backdrop:bg-black/60"
     >
-      <div className="p-5 sm:p-6">
-        {/* Header */}
-        <div className="ui-border flex items-start justify-between gap-3 border-b pb-4">
-          <div className="flex items-center gap-2.5">
-            <Compass className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <h2
-                id={titleId}
-                className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display"
-              >
-                Tanya Quant: Asisten Penentu Portfolio Ideal Anda
-              </h2>
-              <p className="ui-text-muted text-xs">
-                Jawab pilihan ganda di bawah (atau gunakan default semua instrumen)
-                untuk mengestimasi pembagian bobot terbaik sesuai profil Anda:
-              </p>
-            </div>
+      {/* Sticky Header (always visible while inner body scrolls) */}
+      <div className="ui-card ui-border shrink-0 flex items-start justify-between gap-3 border-b px-4 py-3.5 sm:px-6 sm:py-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Compass className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="min-w-0">
+            <h2
+              id={titleId}
+              className="ui-text-main text-base sm:text-lg font-normal tracking-tight font-display"
+            >
+              Tanya Quant: Asisten Penentu Portfolio Ideal Anda
+            </h2>
+            <p className="ui-text-muted text-xs">
+              Jawab pilihan ganda di bawah (atau gunakan default semua instrumen)
+              untuk mengestimasi pembagian bobot terbaik sesuai profil Anda:
+            </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            className="ui-subtle ui-text-muted hover:ui-text-main rounded-lg p-1.5"
-            aria-label="Tutup asisten rekomendasi"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          className="ui-subtle ui-text-muted hover:ui-text-main shrink-0 rounded-lg p-1.5"
+          aria-label="Tutup asisten rekomendasi"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Scrollable Modal Body */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
         {/* Main 2-Column Layout: Left = Multiple Choice Questions, Right = Live Estimated Portfolio */}
-        <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* LEFT 7 COLS: MULTIPLE-CHOICE QUESTIONS */}
           <div className="space-y-4 lg:col-span-7">
             {/* Stepped Diagnostic Progress Tracker */}

@@ -262,10 +262,26 @@ export function parseHoldingsText(
     }
 
     // Remaining tokens contain quantity / value / units / price
+    const isDelimited = line.includes('\t') || line.includes(';') || line.includes(',');
     const remainingTokens = tokens.slice(1);
-    const digitTokenIdx = remainingTokens.findIndex(
-      (t) => /^(rp\.?|idr|\$|usd)/i.test(t) || /\d/.test(t)
-    );
+    const UNIT_WORD_RE =
+      /^(rp\.?|idr|usd|lot|lots|lbr|lembar|sh|shs|share|shares|u|unit|units|koin|coin|coins|gr|gram|jt|juta|rb|ribu|m|miliar|k|b)$/i;
+    const isDescriptiveNameColumn = (tok: string): boolean => {
+      if (!/^(rp\.?|idr|\$|usd)/i.test(tok) && !/\d/.test(tok)) return true;
+      if (/^(rp\.?|idr|\$|usd)\s*\d/i.test(tok) || /^\d/.test(tok)) return false;
+      const words = tok.replace(/[0-9.,$+\-\s/()]/g, ' ').trim().split(/\s+/).filter(Boolean);
+      return words.some((w) => !UNIT_WORD_RE.test(w));
+    };
+
+    let digitTokenIdx = -1;
+    if (isDelimited && remainingTokens.length >= 2) {
+      digitTokenIdx = remainingTokens.findIndex((t) => !isDescriptiveNameColumn(t));
+    }
+    if (digitTokenIdx === -1) {
+      digitTokenIdx = remainingTokens.findIndex(
+        (t) => /^(rp\.?|idr|\$|usd)/i.test(t) || /\d/.test(t)
+      );
+    }
     const valueTokens =
       digitTokenIdx !== -1
         ? remainingTokens.slice(digitTokenIdx).join(' ')

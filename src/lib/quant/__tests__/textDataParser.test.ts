@@ -89,6 +89,18 @@ UNKNOWN_COIN\tUnknown\t1.000.000`;
     expect(res.items[2].warning).toBeDefined();
   });
 
+  it('ignores digits inside delimited descriptive asset names like SPY S&P 500 ETF', () => {
+    const tsv = `SPY\tSPDR S&P 500 ETF\t10.000.000
+BBCA\tBank Central Asia 45\t25 lot`;
+
+    const res = parseHoldingsText(tsv, CORE_AND_EXPANDED_ASSETS, 'nominal', 18000);
+    expect(res.items).toHaveLength(2);
+    expect(res.items[0].assetId).toBe('SPY');
+    expect(res.items[0].nominalIdr).toBe(10_000_000);
+    expect(res.items[1].assetId).toBe('BBCA');
+    expect(res.items[1].lots).toBe(25);
+  });
+
   it('skips comments and headers', () => {
     const text = `
       # Catatan Portofolio Saya

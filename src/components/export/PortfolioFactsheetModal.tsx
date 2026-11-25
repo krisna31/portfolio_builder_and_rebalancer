@@ -71,26 +71,28 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     containerRef,
   });
 
-  if (!isOpen) return null;
-
   const isLight = sheetTheme === 'light';
 
-  // Bug 18 fix: Normalize activeWeights by sum before computing nominalIdr
+  // Normalize activeWeights by sum before computing nominalIdr
   const totalActiveWeight =
     Object.values(activeWeights).reduce((sum, w) => sum + (w > 0 ? w : 0), 0) || 100;
-  const activeAssetList = allAssets
-    .filter((a) => (activeWeights[a.id] ?? 0) > 0)
-    .map((a) => {
-      const rawWeight = activeWeights[a.id] ?? 0;
-      const weightPct = Number(((rawWeight / totalActiveWeight) * 100).toFixed(2));
-      const nominalIdr = Math.round(initialCapitalIdr * (rawWeight / totalActiveWeight));
-      return {
-        ...a,
-        weightPct,
-        nominalIdr,
-      };
-    })
-    .sort((a, b) => b.weightPct - a.weightPct);
+  const activeAssetList = useMemo(
+    () =>
+      allAssets
+        .filter((a) => (activeWeights[a.id] ?? 0) > 0)
+        .map((a) => {
+          const rawWeight = activeWeights[a.id] ?? 0;
+          const weightPct = Number(((rawWeight / totalActiveWeight) * 100).toFixed(2));
+          const nominalIdr = Math.round(initialCapitalIdr * (rawWeight / totalActiveWeight));
+          return {
+            ...a,
+            weightPct,
+            nominalIdr,
+          };
+        })
+        .sort((a, b) => b.weightPct - a.weightPct),
+    [allAssets, activeWeights, initialCapitalIdr, totalActiveWeight]
+  );
 
   // Weighted net dividend yield calculation (fallback if not supplied explicitly)
   const effectiveNetDividendYieldPercent = useMemo(() => {
@@ -111,6 +113,8 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     }
     return Number(weighted.toFixed(2));
   }, [activeAssetList, netDividendYieldPercent]);
+
+  if (!isOpen) return null;
 
   // If user selected "Cashout Passive Income", total return compounding reduces by the cashout dividend yield
   const effectiveCompoundingCagr =
@@ -168,20 +172,20 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
     switch (solvedMetrics.riskTier) {
       case 'super-high':
         return isLight
-          ? 'bg-rose-50 text-rose-700 border-rose-300'
-          : 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+          ? 'bg-[#FDF0F0] text-[#9E2A2B] border-[#E7B7B7]'
+          : 'bg-[#361D1E] text-[#F29B9B] border-[#5C3032]';
       case 'high':
         return isLight
-          ? 'bg-amber-50 text-amber-800 border-amber-300'
-          : 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+          ? 'bg-[#FCF5E8] text-[#8F580A] border-[#E6CE9D]'
+          : 'bg-[#332917] text-[#F2C374] border-[#594624]';
       case 'medium':
         return isLight
-          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          ? 'bg-[#E6EFEA] text-[#173D2C] border-[#BBD5C6]'
+          : 'bg-[#1E3328] text-[#82C7A3] border-[#2F5240]';
       case 'low':
         return isLight
-          ? 'bg-sky-50 text-sky-700 border-sky-300'
-          : 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+          ? 'bg-[#EDF5F8] text-[#25586B] border-[#B8D5E0]'
+          : 'bg-[#1B2D36] text-[#85C4D6] border-[#2B4957]';
     }
   })();
   const calmarRatio =
@@ -208,7 +212,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
       const canvas = await html2canvas(sheetRef.current, {
         scale: 2, // High resolution (retina display 2x)
         useCORS: true,
-        backgroundColor: isLight ? '#ffffff' : '#0f172a',
+        backgroundColor: isLight ? '#FFFFFF' : '#111613',
         logging: false,
         windowWidth: 960,
         onclone: (clonedDoc) => {
@@ -286,19 +290,54 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
   const getCategoryBadge = (category: string) => {
     switch (category) {
       case 'bonds':
-        return { label: 'Obligasi', color: isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        return {
+          label: 'Obligasi',
+          color: isLight
+            ? 'bg-[#E6EFEA] text-[#173D2C] border-[#BBD5C6]'
+            : 'bg-[#1E3328] text-[#82C7A3] border-[#2F5240]',
+        };
       case 'money-market':
-        return { label: 'Pasar Uang', color: isLight ? 'bg-sky-50 text-sky-700 border-sky-300' : 'bg-sky-500/15 text-sky-400 border-sky-500/30' };
+        return {
+          label: 'Pasar Uang',
+          color: isLight
+            ? 'bg-[#EDF5F8] text-[#25586B] border-[#B8D5E0]'
+            : 'bg-[#1B2D36] text-[#85C4D6] border-[#2B4957]',
+        };
       case 'idx-equity':
-        return { label: 'Saham IDX', color: isLight ? 'bg-zinc-100 text-zinc-700 border-zinc-300' : 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' };
+        return {
+          label: 'Saham IDX',
+          color: isLight
+            ? 'bg-[#F2F1EA] text-[#3B443E] border-[#DCDCD2]'
+            : 'bg-[#222C26] text-[#C8D1CB] border-[#344239]',
+        };
       case 'us-equity':
-        return { label: 'Saham US', color: isLight ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+        return {
+          label: 'Saham US',
+          color: isLight
+            ? 'bg-[#EDF3F8] text-[#234C73] border-[#BAD0E4]'
+            : 'bg-[#1C2A38] text-[#8CBCE8] border-[#2D445C]',
+        };
       case 'crypto':
-        return { label: 'Kripto', color: isLight ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-amber-500/15 text-amber-400 border-amber-500/30' };
+        return {
+          label: 'Kripto',
+          color: isLight
+            ? 'bg-[#FCF5E8] text-[#8F580A] border-[#E6CE9D]'
+            : 'bg-[#332917] text-[#F2C374] border-[#594624]',
+        };
       case 'gold':
-        return { label: 'Emas', color: isLight ? 'bg-yellow-50 text-yellow-800 border-yellow-300' : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' };
+        return {
+          label: 'Emas',
+          color: isLight
+            ? 'bg-[#FAF4DF] text-[#7D5E08] border-[#E2CF8B]'
+            : 'bg-[#312A15] text-[#EBCD6E] border-[#544721]',
+        };
       default:
-        return { label: 'Custom', color: isLight ? 'bg-zinc-100 text-zinc-700 border-zinc-300' : 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' };
+        return {
+          label: 'Custom',
+          color: isLight
+            ? 'bg-[#F2F1EA] text-[#3B443E] border-[#DCDCD2]'
+            : 'bg-[#222C26] text-[#C8D1CB] border-[#344239]',
+        };
     }
   };
 
@@ -421,24 +460,24 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
           </div>
         </div>
 
-        {/* Scrollable Factsheet Container */}
-        <div className="factsheet-scroll-container overflow-y-auto p-3 sm:p-6 ui-page flex justify-center">
-          {/* Printable Factsheet Sheet: Designed to fit exactly 1 Page A4 */}
+        {/* Scrollable Factsheet Container (items-start avoids flexing height clamp when sheet taller than viewport) */}
+        <div className="factsheet-scroll-container flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 ui-page flex items-start justify-center">
+          {/* Printable Factsheet Sheet: Mode-locked Limestone & Moss palette, compact 1-Page A4 */}
           <div
             id="quantporto-printable-factsheet"
             data-factsheet-mode={sheetTheme}
             ref={sheetRef}
             style={{ colorScheme: isLight ? 'only light' : 'only dark' }}
-            className={`w-full max-w-[794px] rounded-xl p-4 sm:p-6 shadow-lg space-y-3.5 transition-colors border ${
+            className={`w-full max-w-[794px] min-h-0 rounded-xl p-4 sm:p-5 shadow-lg space-y-3 transition-colors border ${
               isLight
-                ? 'bg-white text-slate-900 border-slate-200 shadow-slate-200/50'
-                : 'bg-slate-900 text-slate-100 border-slate-800 shadow-black/50'
-            } print:border-none print:shadow-none print:p-0 print:m-0 print:w-full print:max-w-none`}
+                ? 'bg-[#FFFFFF] text-[#19201C] border-[#DCDCD2] shadow-black/10'
+                : 'bg-[#111613] text-[#EAECE7] border-[#2D3A32] shadow-black/50'
+            } print:border-none print:shadow-none print:p-0 print:m-0 print:w-full print:max-w-none print:space-y-2.5`}
           >
             {/* Header: Brand & Document Meta */}
             <div
-              className={`flex flex-col sm:flex-row sm:items-start justify-between pb-3.5 border-b gap-3 ${
-                isLight ? 'border-slate-200' : 'border-slate-800'
+              className={`flex flex-col sm:flex-row sm:items-start justify-between pb-3 border-b gap-2.5 ${
+                isLight ? 'border-[#DCDCD2]' : 'border-[#2D3A32]'
               }`}
             >
               <div>
@@ -446,24 +485,24 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <span
                     className={`font-bold tracking-wider text-[10px] px-2 py-0.5 rounded border ${
                       isLight
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        ? 'bg-[#E6EFEA] text-[#173D2C] border-[#BBD5C6]'
+                        : 'bg-[#1E3328] text-[#82C7A3] border-[#2F5240]'
                     }`}
                   >
                     QUANTPORTO INSTITUTIONAL FACTSHEET
                   </span>
-                  <span className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <span className={`text-[11px] ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                     {todayStr}
                   </span>
                 </div>
                 <h1
-                  className={`text-lg sm:text-xl font-bold tracking-tight mt-1.5 ${
-                    isLight ? 'text-slate-900' : 'text-white'
+                  className={`text-lg sm:text-xl font-bold tracking-tight mt-1 ${
+                    isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'
                   }`}
                 >
                   {portfolioName}
                 </h1>
-                <p className={`text-[11px] mt-0.5 max-w-lg leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                <p className={`text-[11px] mt-0.5 max-w-lg leading-snug ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                   Portofolio multi-aset berbasis prinsip kuantitatif Risk Parity &amp; Risk Budgeting untuk optimalisasi imbal hasil jangka panjang terhadap risiko tail risk.
                 </p>
               </div>
@@ -475,7 +514,7 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
                   <ShieldCheck className="w-3 h-3" />
                   <span>{riskTierBadge.label}</span>
                 </div>
-                <div className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                <div className={`text-[10px] font-mono ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                   Kurs Acuan: Rp {usdIdrRate.toLocaleString('id-ID')}/USD
                 </div>
               </div>
@@ -483,69 +522,69 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
             {/* Key Metrics Grid */}
             <div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div
-                  className={`p-2.5 rounded-xl border ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
+                  className={`p-2 rounded-xl border ${
+                    isLight ? 'bg-[#F9F8F4] border-[#DCDCD2]' : 'bg-[#1B231E] border-[#2D3A32]'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                     Annual Return (CAGR)
                   </div>
-                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`}>
                     +{formatPercent(solvedMetrics.cagr)}
                   </div>
-                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-[#5A655D]' : 'text-[#9BA69E]'}`}>
                     Imbal hasil tahunan 5Y
                   </div>
                 </div>
 
                 <div
-                  className={`p-2.5 rounded-xl border ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
+                  className={`p-2 rounded-xl border ${
+                    isLight ? 'bg-[#F9F8F4] border-[#DCDCD2]' : 'bg-[#1B231E] border-[#2D3A32]'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                     Max Historical Drawdown
                   </div>
-                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-[#A62E2E]' : 'text-[#F28B82]'}`}>
                     -{formatPercent(solvedMetrics.maxDrawdown)}
                   </div>
-                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-[#5A655D]' : 'text-[#9BA69E]'}`}>
                     Koreksi terdalam 5 tahun
                   </div>
                 </div>
 
                 <div
-                  className={`p-2.5 rounded-xl border ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
+                  className={`p-2 rounded-xl border ${
+                    isLight ? 'bg-[#F9F8F4] border-[#DCDCD2]' : 'bg-[#1B231E] border-[#2D3A32]'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                     Calmar Ratio
                   </div>
-                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`}>
                     {calmarRatio}x
                   </div>
-                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-[#5A655D]' : 'text-[#9BA69E]'}`}>
                     Efisiensi return per risiko
                   </div>
                 </div>
 
                 <div
-                  className={`p-2.5 rounded-xl border ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950/60 border-slate-800/80'
+                  className={`p-2 rounded-xl border ${
+                    isLight ? 'bg-[#F9F8F4] border-[#DCDCD2]' : 'bg-[#1B231E] border-[#2D3A32]'
                   }`}
                 >
-                  <div className={`text-[10px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                  <div className={`text-[10px] font-medium ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                     Waktu Menuju Goal
                   </div>
-                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                  <div className={`text-base font-bold font-mono tabular-nums mt-0.5 ${isLight ? 'text-[#8F580A]' : 'text-[#F2B764]'}`}>
                     {simulation.reachedGoal
                       ? `${simulation.yearsToGoal} thn ${simulation.monthsToGoal} bln`
                       : '> 45 thn'}
                   </div>
-                  <div className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-400'} mt-0.5`}>
+                  <div className={`text-[10px] ${isLight ? 'text-[#5A655D]' : 'text-[#9BA69E]'}`}>
                     Target {formatIdr(targetGoalIdr, true)}
                   </div>
                 </div>
@@ -553,21 +592,21 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
             </div>
 
             {/* Visual Stacked Allocation Bar */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex items-center justify-between text-[11px]">
-                <span className={`font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
-                  <Percent className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+                <span className={`font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-[#2E3832]' : 'text-[#DCE2DD]'}`}>
+                  <Percent className={`w-3.5 h-3.5 ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`} />
                   <span>Komposisi Alokasi Aset ({activeAssetList.length} Instrumen)</span>
                 </span>
-                <span className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  Modal: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>{formatIdr(initialCapitalIdr)}</strong>
+                <span className={`text-[10px] ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
+                  Modal: <strong className={isLight ? 'text-[#19201C] font-bold' : 'text-[#F4F6F3] font-bold'}>{formatIdr(initialCapitalIdr)}</strong>
                 </span>
               </div>
 
               {/* Stacked Percentage Bar */}
               <div
-                className={`flex h-2.5 w-full overflow-hidden rounded-full border ${
-                  isLight ? 'border-slate-200 bg-slate-100' : 'border-slate-800 bg-slate-950'
+                className={`flex h-2 w-full overflow-hidden rounded-full border ${
+                  isLight ? 'border-[#DCDCD2] bg-[#F2F1EA]' : 'border-[#2D3A32] bg-[#1B231E]'
                 }`}
               >
                 {activeAssetList.map((asset) => (
@@ -584,17 +623,17 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
               </div>
 
               {/* Asset Chips Row */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] pt-0.5">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px] pt-0.5">
                 {activeAssetList.map((asset) => (
                   <div key={asset.id} className="flex items-center gap-1">
                     <span
                       className="h-2 w-2 rounded-full shrink-0"
                       style={{ backgroundColor: asset.color }}
                     />
-                    <span className={isLight ? 'text-slate-900 font-semibold' : 'text-slate-100 font-semibold'}>
+                    <span className={isLight ? 'text-[#19201C] font-semibold' : 'text-[#EAECE7] font-semibold'}>
                       {asset.symbol}
                     </span>
-                    <span className={isLight ? 'text-slate-600 font-mono text-[10px]' : 'text-slate-300 font-mono text-[10px]'}>
+                    <span className={isLight ? 'text-[#48524B] font-mono text-[10px]' : 'text-[#B5BFB8] font-mono text-[10px]'}>
                       {formatPercent(asset.weightPct)}
                     </span>
                   </div>
@@ -604,68 +643,68 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
             {/* Target Asset Allocation Table */}
             <div>
-              <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-[#DCDCD2]' : 'border-[#2D3A32]'}`}>
                 <table className="w-full text-left text-[11px] border-collapse">
                 <caption className="sr-only">Rincian Alokasi Aset dan Bobot Risiko Portofolio Factsheet</caption>
                   <thead>
                     <tr
                       className={`border-b ${
                         isLight
-                          ? 'bg-slate-100 text-slate-700 border-slate-200'
-                          : 'bg-slate-950/80 text-slate-300 border-slate-800'
+                          ? 'bg-[#F2F1EA] text-[#3B443E] border-[#DCDCD2]'
+                          : 'bg-[#222C26] text-[#C8D1CB] border-[#2D3A32]'
                       }`}
                     >
-                      <th scope="col" className="py-1.5 px-3 font-semibold">Aset</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold">Kelas</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Bobot</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Nominal Alokasi</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">CAGR 5Y</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Max DD</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold">Aset</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold">Kelas</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Bobot</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Nominal Alokasi</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">CAGR 5Y</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Max DD</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
+                  <tbody className={`divide-y ${isLight ? 'divide-[#E6E5DD]' : 'divide-[#26302A]'}`}>
                     {activeAssetList.map((asset) => {
                       const catBadge = getCategoryBadge(asset.category);
                       return (
                         <tr
                           key={asset.id}
-                          className={isLight ? 'hover:bg-slate-50/80' : 'hover:bg-slate-800/30'}
+                          className={isLight ? 'hover:bg-[#F9F8F4]' : 'hover:bg-[#1B231E]'}
                         >
-                          <td className="py-1.5 px-3">
+                          <td className="py-1 px-2.5">
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: asset.color }}
                               />
                               <div>
-                                <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                                <span className={`font-semibold ${isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}`}>
                                   {asset.symbol}
                                 </span>
-                                <span className={`text-[10px] ml-1 hidden sm:inline ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                                <span className={`text-[10px] ml-1 hidden sm:inline ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                                   {asset.name}
                                 </span>
                               </div>
                             </div>
                           </td>
-                          <td className="py-1.5 px-3">
+                          <td className="py-1 px-2.5">
                             <span
                               className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-medium border ${catBadge.color}`}
                             >
                               {catBadge.label}
                             </span>
                           </td>
-                          <td className="py-1.5 px-3 text-right">
-                            <span className={`font-bold font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          <td className="py-1 px-2.5 text-right">
+                            <span className={`font-bold font-mono ${isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}`}>
                               {formatPercent(asset.weightPct)}
                             </span>
                           </td>
-                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                          <td className={`py-1 px-2.5 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-[#2E3832]' : 'text-[#DCE2DD]'}`}>
                             {formatIdr(asset.nominalIdr)}
                           </td>
-                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                          <td className={`py-1 px-2.5 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`}>
                             +{formatPercent(asset.cagr)}
                           </td>
-                          <td className={`py-1.5 px-3 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
+                          <td className={`py-1 px-2.5 text-right font-medium font-mono whitespace-nowrap ${isLight ? 'text-[#A62E2E]' : 'text-[#F28B82]'}`}>
                             -{formatPercent(asset.maxDrawdown)}
                           </td>
                         </tr>
@@ -678,60 +717,63 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
             {/* Wealth Accumulation Milestones Table */}
             <div>
-              <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
-                  <Coins className={`w-3.5 h-3.5 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <span className={`text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 ${isLight ? 'text-[#2E3832]' : 'text-[#DCE2DD]'}`}>
+                  <Coins className={`w-3.5 h-3.5 ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`} />
                   <span>Proyeksi Akumulasi Kekayaan (DCA {formatIdr(monthlySavingsIdr, true)}/Bulan)</span>
                 </span>
                 {dividendUsageMode === 'cashout-passive' && effectiveNetDividendYieldPercent > 0 && (
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
                     isLight
-                      ? 'text-amber-800 bg-amber-50 border-amber-300'
-                      : 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+                      ? 'text-[#8F580A] bg-[#FCF5E8] border-[#E6CE9D]'
+                      : 'text-[#F2C374] bg-[#332917] border-[#594624]'
                   }`}>
                     Mode Cashout Dividen ({effectiveNetDividendYieldPercent.toFixed(1)}%/thn ditarik tunai, CAGR modal: +{formatPercent(effectiveCompoundingCagr)})
                   </span>
                 )}
               </div>
 
-              <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+              <div className={`overflow-x-auto rounded-xl border ${isLight ? 'border-[#DCDCD2]' : 'border-[#2D3A32]'}`}>
                 <table className="w-full text-left text-[11px] border-collapse">
                   <caption className="sr-only">Simulasi Proyeksi Portofolio Menuju Target Finansial</caption>
                   <thead>
                     <tr
                       className={`border-b ${
                         isLight
-                          ? 'bg-slate-100 text-slate-700 border-slate-200'
-                          : 'bg-slate-950/80 text-slate-300 border-slate-800'
+                          ? 'bg-[#F2F1EA] text-[#3B443E] border-[#DCDCD2]'
+                          : 'bg-[#222C26] text-[#C8D1CB] border-[#2D3A32]'
                       }`}
                     >
-                      <th scope="col" className="py-1.5 px-3 font-semibold">Horison</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Total Modal Pokok</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Estimasi Nilai Akhir</th>
-                      <th scope="col" className="py-1.5 px-3 font-semibold text-right">Estimasi Keuntungan</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold">Horison</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Total Modal Pokok</th>
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Estimasi Nilai Akhir</th>
+                      {annualInflationPercent > 0 && (
+                        <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Daya Beli Riil</th>
+                      )}
+                      <th scope="col" className="py-1.5 px-2.5 font-semibold text-right">Estimasi Keuntungan</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
+                  <tbody className={`divide-y ${isLight ? 'divide-[#E6E5DD]' : 'divide-[#26302A]'}`}>
                     {milestoneRows.map((row) => (
                       <tr
                         key={row.year}
-                        className={isLight ? 'hover:bg-slate-50/80' : 'hover:bg-slate-800/30'}
+                        className={isLight ? 'hover:bg-[#F9F8F4]' : 'hover:bg-[#1B231E]'}
                       >
-                        <td className={`py-1 px-3 font-semibold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                        <td className={`py-1 px-2.5 font-semibold ${isLight ? 'text-[#2E3832]' : 'text-[#DCE2DD]'}`}>
                           Tahun ke-{row.year}
                         </td>
-                        <td className={`py-1 px-3 text-right font-mono whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                        <td className={`py-1 px-2.5 text-right font-mono whitespace-nowrap ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
                           {formatIdr(row.principal)}
                         </td>
-                        <td className={`py-1 px-3 text-right font-bold font-mono whitespace-nowrap ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                        <td className={`py-1 px-2.5 text-right font-bold font-mono whitespace-nowrap ${isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}`}>
                           {formatIdr(row.wealth)}
-                          {annualInflationPercent > 0 && (
-                            <span className={`block text-[9px] font-normal ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                              Riil: {formatIdr(row.realPurchasingPower, true)}
-                            </span>
-                          )}
                         </td>
-                        <td className={`py-1 px-3 text-right font-semibold font-mono whitespace-nowrap ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                        {annualInflationPercent > 0 && (
+                          <td className={`py-1 px-2.5 text-right font-mono whitespace-nowrap ${isLight ? 'text-[#48524B]' : 'text-[#B5BFB8]'}`}>
+                            {formatIdr(row.realPurchasingPower, true)}
+                          </td>
+                        )}
+                        <td className={`py-1 px-2.5 text-right font-semibold font-mono whitespace-nowrap ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`}>
                           +{formatIdr(row.gain)}
                         </td>
                       </tr>
@@ -743,33 +785,33 @@ export const PortfolioFactsheetModal: React.FC<PortfolioFactsheetModalProps> = (
 
             {/* Rebalancing Strategy & Guidelines */}
             <div
-              className={`p-3 rounded-xl border text-[10px] space-y-1 ${
+              className={`p-2.5 rounded-xl border text-[10px] space-y-1 ${
                 isLight
-                  ? 'bg-slate-50 border-slate-200 text-slate-700'
-                  : 'bg-slate-950/70 border-slate-800/80 text-slate-300'
+                  ? 'bg-[#F9F8F4] border-[#DCDCD2] text-[#3B443E]'
+                  : 'bg-[#1B231E] border-[#2D3A32] text-[#C8D1CB]'
               }`}
             >
-              <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-                <Clock className={`w-3 h-3 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+              <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}`}>
+                <Clock className={`w-3 h-3 ${isLight ? 'text-[#21543D]' : 'text-[#68B68E]'}`} />
                 <span>Pedoman Disiplin Rebalancing QuantPorto:</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5 leading-relaxed">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 leading-snug">
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Toleransi Drift (3% - 5%):</strong> Lakukan rebalance hanya bila bobot riil melenceng lebih dari ambang toleransi.
+                  <strong className={isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}>Toleransi Drift (3% - 5%):</strong> Lakukan rebalance hanya bila bobot riil melenceng lebih dari ambang toleransi.
                 </div>
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Prioritas Cash Injection:</strong> Arahkan setoran DCA bulanan untuk menyerok aset tertinggal tanpa harus menjual aset untung.
+                  <strong className={isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}>Prioritas Cash Injection:</strong> Arahkan setoran DCA bulanan untuk menyerok aset tertinggal tanpa harus menjual aset untung.
                 </div>
                 <div>
-                  <strong className={isLight ? 'text-slate-900' : 'text-slate-100'}>Disiplin Jangka Panjang:</strong> Dirancang menahan volatilitas siklus pasar tanpa memerlukan spekulasi timing market.
+                  <strong className={isLight ? 'text-[#19201C]' : 'text-[#F4F6F3]'}>Disiplin Jangka Panjang:</strong> Dirancang menahan volatilitas siklus pasar tanpa memerlukan spekulasi timing market.
                 </div>
               </div>
             </div>
 
             {/* Footer Disclaimer */}
             <div
-              className={`pt-2.5 border-t text-[10px] flex flex-col sm:flex-row items-center justify-between gap-1.5 ${
-                isLight ? 'border-slate-200 text-slate-600' : 'border-slate-800 text-slate-400'
+              className={`pt-2 border-t text-[10px] flex flex-col sm:flex-row items-center justify-between gap-1 ${
+                isLight ? 'border-[#DCDCD2] text-[#5A655D]' : 'border-[#2D3A32] text-[#9BA69E]'
               }`}
             >
               <div>

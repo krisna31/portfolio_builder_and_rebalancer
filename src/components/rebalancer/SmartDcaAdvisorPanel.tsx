@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   AssetDefinition,
   HoldingEntry,
@@ -258,6 +259,24 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   // Modal / Drawer state for "Mengapa Direkomendasikan?"
   const [selectedAssetForWhy, setSelectedAssetForWhy] =
     useState<SmartDcaItemResult | null>(null);
+  const whyModalRef = useRef<HTMLDivElement>(null);
+
+  useModalAccessibility({
+    isOpen: Boolean(selectedAssetForWhy),
+    onClose: () => setSelectedAssetForWhy(null),
+    containerRef: whyModalRef,
+  });
+
+  // Render inline **bold** segments from explanation prose without showing raw markdown markers
+  const renderFormattedNarrative = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+        return <strong key={idx}>{part.slice(2, -2)}</strong>;
+      }
+      return <React.Fragment key={idx}>{part}</React.Fragment>;
+    });
+  };
 
   // Close modal on Escape key
   useEffect(() => {
@@ -443,10 +462,10 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <button
               type="button"
               onClick={onSwitchToStandardRebalancer}
-              className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800 ui-text-secondary text-xs px-3 py-2 transition shrink-0"
+              className="flex items-center gap-1.5 rounded-lg border ui-border ui-subtle hover:opacity-85 ui-text-main text-xs font-medium px-3 py-2 transition shrink-0"
               title="Kembali ke Rebalancer Reguler"
             >
-              <Scale className="h-3.5 w-3.5 ui-text-muted" />
+              <Scale className="h-3.5 w-3.5 text-[var(--accent-primary)]" />
               <span>Mode Rebalancer Reguler</span>
             </button>
           )}
@@ -492,7 +511,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           <span className="font-bold ui-text-main">Sentimen Valuasi Pasar Aktif (Pilar 1):</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg ui-card border ui-border">
             <span className="ui-text-secondary">Kripto (Fear&amp;Greed):</span>
             <span
               className={`font-mono font-bold ${
@@ -506,7 +525,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               {tacticalConfig?.cryptoScore ?? 50}/100
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg ui-card border ui-border">
             <span className="ui-text-secondary">Saham AS (S&amp;P 500):</span>
             <span
               className={`font-mono font-bold ${
@@ -520,7 +539,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               {tacticalConfig?.usEquityScore ?? 50}/100
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg ui-card border ui-border">
             <span className="ui-text-secondary">IHSG (Domestik):</span>
             <span
               className={`font-mono font-bold ${
@@ -642,7 +661,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     overflowMode === 'park-rdpu'
                       ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                      : 'ui-border ui-subtle hover:opacity-85'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
@@ -662,7 +681,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     overflowMode === 'boost-discount'
                       ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                      : 'ui-border ui-subtle hover:opacity-85'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
@@ -680,12 +699,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
 
             {/* Mode 2: Toggle Alokasi Rupiah (Bobot Target vs Murni Ranking Konfluensi) */}
             <div className="space-y-1.5 pt-2 border-t ui-border">
-              <span className="text-xs font-bold ui-text-main flex items-center justify-between">
+              <span className="text-xs font-bold ui-text-main flex flex-wrap items-center justify-between gap-1.5">
                 <span className="flex items-center gap-1.5">
                   <Scale className="h-3.5 w-3.5 text-emerald-500" />
                   <span>Mode Alokasi Budget DCA:</span>
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-muted">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded ui-subtle border ui-border ui-text-secondary">
                   {allocationMode === 'pure-confluence-rank'
                     ? 'Murni Ranking Konfluensi'
                     : 'Target Weight × Multiplier'}
@@ -699,7 +718,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     allocationMode === 'target-weight-multiplier'
                       ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                      : 'ui-border ui-subtle hover:opacity-85'
                   }`}
                 >
                   <span className="text-xs font-bold ui-text-main">
@@ -716,7 +735,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition ${
                     allocationMode === 'pure-confluence-rank'
                       ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                      : 'ui-border ui-subtle hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                      : 'ui-border ui-subtle hover:opacity-85'
                   }`}
                 >
                   <span className="text-xs font-bold ui-text-main">
@@ -789,12 +808,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
         <section className="ui-card rounded-xl border ui-border p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ui-border pb-3">
             <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Table2 className="h-4 w-4 text-emerald-500" />
+              <div className="flex flex-wrap items-center gap-2">
+                <Table2 className="h-4 w-4 shrink-0 text-emerald-500" />
                 <h4 className="text-sm font-bold ui-text-main">
                   Market Cycle Indicators Board (CMC Style)
                 </h4>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span className="whitespace-nowrap shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   100% Indicator Driven
                 </span>
               </div>
@@ -843,14 +862,14 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   />
                   <span>{item.symbol}</span>
                   <span
-                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full ${
+                      className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full ${
                       conf.confluencePercent >= 80
                         ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                         : conf.confluencePercent >= 60
                           ? 'bg-teal-500/20 text-teal-600 dark:text-teal-400'
                           : conf.confluencePercent < 20
                             ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                            : 'bg-zinc-200 dark:bg-zinc-800 ui-text-muted'
+                            : 'ui-card ui-text-muted'
                     }`}
                   >
                     {conf.triggeredCount}/{conf.totalIndicators} ({conf.confluencePercent}%)
@@ -883,7 +902,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           <div>
             <h4 className="text-sm font-bold ui-text-main flex items-center gap-2">
               <span>Rekomendasi Alokasi Smart DCA</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 ui-text-secondary">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded ui-subtle border ui-border ui-text-secondary">
                 {smartDcaResult.items.length} Aset
               </span>
             </h4>
@@ -1296,7 +1315,9 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
           onClick={() => setSelectedAssetForWhy(null)}
         >
           <div
-            className="ui-card w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border ui-border shadow-md p-5 sm:p-6 space-y-5"
+            ref={whyModalRef}
+            tabIndex={-1}
+            className="ui-card w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border ui-border shadow-md p-5 sm:p-6 space-y-5 outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1345,7 +1366,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <Lightbulb className="h-4 w-4" />
                 <span>Analisis Rationale:</span>
               </div>
-              <p>{selectedAssetForWhy.explanation.narrativeWhy}</p>
+              <p>{renderFormattedNarrative(selectedAssetForWhy.explanation.narrativeWhy)}</p>
             </div>
 
             {/* CMC Market Cycle Indicators Checklist Table */}
@@ -1546,7 +1567,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                     `Alokasi: ${formatIdr(selectedAssetForWhy.recommendedAmountIdr)} (${unitsLabel})`,
                     ``,
                     `[1] Analisis Rationale:`,
-                    selectedAssetForWhy.explanation.narrativeWhy,
+                    selectedAssetForWhy.explanation.narrativeWhy.replace(/\*\*([^*]+)\*\*/g, '$1'),
                     ``,
                     `[2] Konfluensi Indikator Siklus Pasar (CMC Style Table):`,
                     `- Rasio Terpicu: ${conf.triggeredCount} dari ${conf.totalIndicators} (${conf.confluencePercent}%)`,
