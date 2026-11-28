@@ -7,6 +7,7 @@ import {
 import {
   AssetDefinition,
   AllocationMethod,
+  CurrencyCode,
   HoldingEntry,
   PortfolioPreset,
   RebalanceHistoryEntry,
@@ -167,6 +168,8 @@ interface PersistedAppState {
   enableIdxLotRounding?: boolean;
   enableBrokerFees?: boolean;
   filterDustTrades?: boolean;
+  rebalancerCurrency?: CurrencyCode;
+  showAvgBuyPrice?: boolean;
   tacticalConfig?: ValuationSentimentConfig;
   holdings?: Record<string, HoldingEntry>;
   slotMap?: Record<string, string>;
@@ -580,6 +583,12 @@ function AuthenticatedQuantPorto({
   const [filterDustTrades, setFilterDustTrades] = useState<boolean>(
     () => initialSaved?.filterDustTrades !== undefined ? Boolean(initialSaved.filterDustTrades) : true
   );
+  const [rebalancerCurrency, setRebalancerCurrency] = useState<CurrencyCode>(() =>
+    initialSaved?.rebalancerCurrency === 'USD' ? 'USD' : 'IDR'
+  );
+  const [showAvgBuyPrice, setShowAvgBuyPrice] = useState<boolean>(() =>
+    Boolean(initialSaved?.showAvgBuyPrice ?? false)
+  );
   const [tacticalConfig, setTacticalConfig] = useState<ValuationSentimentConfig>(
     () => initialSaved?.tacticalConfig ?? {
       enabled: false,
@@ -735,6 +744,8 @@ function AuthenticatedQuantPorto({
       setFixedTotalBudgetIdr(0);
       setEnableIdxLotRounding(true);
       setFilterDustTrades(true);
+      setRebalancerCurrency('IDR');
+      setShowAvgBuyPrice(false);
       setTacticalConfig({
         enabled: false,
         aggressiveness: 0.2,
@@ -1023,6 +1034,8 @@ function AuthenticatedQuantPorto({
           enableIdxLotRounding,
           enableBrokerFees,
           filterDustTrades,
+          rebalancerCurrency,
+          showAvgBuyPrice,
           allAssets,
           pinnedPresetIds,
           lockedAssetIds,
@@ -1067,6 +1080,8 @@ function AuthenticatedQuantPorto({
     enableIdxLotRounding,
     enableBrokerFees,
     filterDustTrades,
+    rebalancerCurrency,
+    showAvgBuyPrice,
     allAssets,
     pinnedPresetIds,
     lockedAssetIds,
@@ -1413,6 +1428,7 @@ function AuthenticatedQuantPorto({
         enableBrokerFees,
         filterDustTrades,
         tacticalConfig,
+        ignoreAvgBuyPrice: !showAvgBuyPrice,
       }),
     [
       allAssets,
@@ -1427,6 +1443,7 @@ function AuthenticatedQuantPorto({
       enableBrokerFees,
       filterDustTrades,
       tacticalConfig,
+      showAvgBuyPrice,
     ]
   );
 
@@ -2162,6 +2179,7 @@ function AuthenticatedQuantPorto({
       hasManualTableEdits,
       hasPlanOverride,
       baselineHoldings: manualEditBaselineRef.current ?? undefined,
+      preserveAvgBuyPrice: !showAvgBuyPrice,
     });
 
     setRebalanceHistory((prev) => [newEntry, ...prev]);
@@ -2292,6 +2310,8 @@ function AuthenticatedQuantPorto({
           enableIdxLotRounding,
           enableBrokerFees,
           filterDustTrades,
+          rebalancerCurrency,
+          showAvgBuyPrice,
           isFixedBudgetMode,
           fixedTotalBudgetIdr,
           tacticalConfig,
@@ -2543,6 +2563,10 @@ function AuthenticatedQuantPorto({
         setEnableBrokerFees(Boolean(d2.enableBrokerFees));
       if (d2.filterDustTrades !== undefined)
         setFilterDustTrades(Boolean(d2.filterDustTrades));
+      if (d2.rebalancerCurrency === 'IDR' || d2.rebalancerCurrency === 'USD')
+        setRebalancerCurrency(d2.rebalancerCurrency);
+      if (d2.showAvgBuyPrice !== undefined)
+        setShowAvgBuyPrice(Boolean(d2.showAvgBuyPrice));
       if (d2.isFixedBudgetMode !== undefined)
         setIsFixedBudgetMode(Boolean(d2.isFixedBudgetMode));
       if (typeof d2.fixedTotalBudgetIdr === 'number')
@@ -2718,6 +2742,14 @@ function AuthenticatedQuantPorto({
             d2.enableIdxLotRounding ?? enableIdxLotRounding,
           enableBrokerFees: d2.enableBrokerFees ?? enableBrokerFees,
           filterDustTrades: d2.filterDustTrades ?? filterDustTrades,
+          rebalancerCurrency:
+            d2.rebalancerCurrency === 'IDR' || d2.rebalancerCurrency === 'USD'
+              ? d2.rebalancerCurrency
+              : rebalancerCurrency,
+          showAvgBuyPrice:
+            d2.showAvgBuyPrice !== undefined
+              ? Boolean(d2.showAvgBuyPrice)
+              : showAvgBuyPrice,
           tacticalConfig: d2.tacticalConfig ?? tacticalConfig,
           inputMode: d2.inputMode ?? inputMode,
           rebalanceMode: d2.rebalanceMode ?? rebalanceMode,
@@ -3085,6 +3117,11 @@ function AuthenticatedQuantPorto({
               driftThresholdPercent={driftThresholdPercent}
               setDriftThresholdPercent={setDriftThresholdPercent}
               usdIdrRate={usdIdrRate}
+              setUsdIdrRate={setUsdIdrRate}
+              rebalancerCurrency={rebalancerCurrency}
+              setRebalancerCurrency={setRebalancerCurrency}
+              showAvgBuyPrice={showAvgBuyPrice}
+              setShowAvgBuyPrice={setShowAvgBuyPrice}
               rebalanceResult={rebalanceResult}
               onApplyPeerDiversification={handleApplyPeerDiversification}
               rebalanceHistory={rebalanceHistory}

@@ -38,6 +38,7 @@ export function calculateRebalancePlan(params: {
   filterDustTrades?: boolean;
   dustTradeThresholdIdr?: number;
   tacticalConfig?: ValuationSentimentConfig;
+  ignoreAvgBuyPrice?: boolean;
 }): RebalanceSummaryResult {
   const {
     assets,
@@ -54,6 +55,7 @@ export function calculateRebalancePlan(params: {
     filterDustTrades = true,
     dustTradeThresholdIdr = 25_000,
     tacticalConfig,
+    ignoreAvgBuyPrice = false,
   } = params;
 
   // Apply tactical valuation band multiplier if enabled
@@ -199,8 +201,9 @@ export function calculateRebalancePlan(params: {
       const tgtW = rawWeightSum > 0 ? ((effectiveTargetWeights[item.asset.id] ?? 0) / rawWeightSum) * 100 : 0;
       const drift = curW - tgtW;
       const surplus = surpluses[item.asset.id] ?? 0;
-      // Feature 5: If user specified avgBuyPrice, protect underwater positions from profit-trimming
+      // Feature 5: If user specified avgBuyPrice (and Avg Price tracking is active), protect underwater positions from profit-trimming
       const isProfitable =
+        ignoreAvgBuyPrice ||
         !item.holding.avgBuyPrice ||
         item.holding.avgBuyPrice <= 0 ||
         ((item.holding.currentPrice || item.asset.defaultPrice) >= item.holding.avgBuyPrice);
@@ -457,11 +460,11 @@ export function calculateRebalancePlan(params: {
       totalEstimatedFeeIdr += estimatedFeeIdr;
     }
 
-    // Feature 5: Unrealized P&L calculation if avgBuyPrice is provided
+    // Feature 5: Unrealized P&L calculation if avgBuyPrice is provided and Avg Price tracking is active
     let unrealizedGainPercent: number | undefined;
     let unrealizedGainIdr: number | undefined;
     const avgBuyPrice = item.holding.avgBuyPrice;
-    if (avgBuyPrice && avgBuyPrice > 0) {
+    if (!ignoreAvgBuyPrice && avgBuyPrice && avgBuyPrice > 0) {
       const spotNative = item.holding.currentPrice > 0 ? item.holding.currentPrice : item.asset.defaultPrice;
       unrealizedGainPercent = Number((((spotNative - avgBuyPrice) / avgBuyPrice) * 100).toFixed(2));
       const unitsHeld =
@@ -922,6 +925,7 @@ export interface BuildRebalanceCommitParams {
   hasManualTableEdits?: boolean;
   hasPlanOverride?: boolean;
   baselineHoldings?: Record<string, HoldingEntry>;
+  preserveAvgBuyPrice?: boolean;
   now?: Date;
 }
 
@@ -973,6 +977,7 @@ export function buildRebalanceCommitResult(
     hasManualTableEdits,
     hasPlanOverride = false,
     baselineHoldings,
+    preserveAvgBuyPrice = false,
     now,
   } = params;
 
@@ -1164,16 +1169,18 @@ export function buildRebalanceCommitResult(
       const buyPrice =
         postShockUnitPriceNative > 0 ? postShockUnitPriceNative : asset.defaultPrice || 1;
 
-      const newAvgBuyPrice = computeUpdatedAverageCostBasis({
-        prevUnits: prevHold?.units ?? 0,
-        prevAvgBuyPrice: prevHold?.avgBuyPrice,
-        prevCurrentPrice: prevHold?.currentPrice ?? asset.defaultPrice ?? 1,
-        boughtUnits,
-        buyPrice,
-        newTotalUnits: newUnits,
-        isNominal,
-        category: asset.category,
-      });
+      const newAvgBuyPrice = preserveAvgBuyPrice
+        ? prevHold?.avgBuyPrice
+        : computeUpdatedAverageCostBasis({
+            prevUnits: prevHold?.units ?? 0,
+            prevAvgBuyPrice: prevHold?.avgBuyPrice,
+            prevCurrentPrice: prevHold?.currentPrice ?? asset.defaultPrice ?? 1,
+            boughtUnits,
+            buyPrice,
+            newTotalUnits: newUnits,
+            isNominal,
+            category: asset.category,
+          });
 
       nextHoldings[item.assetId] = {
         ...prevHold,

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useModalAccessibility } from '../../hooks/useModalAccessibility';
 import {
   AssetDefinition,
+  CurrencyCode,
   HoldingEntry,
   RebalanceSummaryResult,
   ValuationSentimentConfig,
@@ -15,8 +16,13 @@ import {
 import { CycleIndicatorState } from '../../lib/quant/smartDcaIndicators';
 import { fetchLiveCryptoFearAndGreed } from '../../lib/quant/tacticalValuationEngine';
 import { CoinMarketCapIndicatorTable } from './CoinMarketCapIndicatorTable';
-import { formatIdr, formatUsd } from '../../lib/formatters';
-import { FormattedNumberInput } from '../FormattedNumberInput';
+import { formatIdr, formatUsd, usdToIdr } from '../../lib/formatters';
+import {
+  CurrencyAmount,
+  CurrencyNumberInput,
+  formatRebalancerMoney,
+  formatRebalancerMoneyWithIdr,
+} from './CurrencyAmount';
 import {
   Shield,
   TrendingUp,
@@ -48,6 +54,7 @@ export interface SmartDcaAdvisorPanelProps {
   holdings: Record<string, HoldingEntry>;
   inputMode: 'nominal' | 'units';
   usdIdrRate: number;
+  rebalancerCurrency?: CurrencyCode;
   monthlySavingsMenu1Idr: number;
   enableIdxLotRounding?: boolean;
   filterDustTrades?: boolean;
@@ -82,6 +89,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   holdings,
   inputMode,
   usdIdrRate,
+  rebalancerCurrency = 'IDR',
   monthlySavingsMenu1Idr,
   enableIdxLotRounding = true,
   filterDustTrades = true,
@@ -104,6 +112,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
   onSwitchToStandardRebalancer,
   isGuestMode = false,
 }) => {
+  const isUsdMode = rebalancerCurrency === 'USD';
   // Monthly DCA budget state (synchronized with App persistence)
   const [localMonthlyBudgetIdr, setLocalMonthlyBudgetIdr] = useState<number>(
     smartDcaMonthlyBudgetIdr ?? (monthlySavingsMenu1Idr > 0 ? monthlySavingsMenu1Idr : 3_000_000)
@@ -577,23 +586,30 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold ui-text-main flex items-center gap-1.5">
                 <Coins className="h-4 w-4 text-emerald-500" />
-                <span>Budget DCA Bulan Ini</span>
+                <span>Budget DCA Bulan Ini ({rebalancerCurrency})</span>
               </label>
-              <span className="text-[11px] font-mono ui-text-muted">
-                {formatIdr(monthlyBudgetIdr, true)}
+              <span className="text-[11px] font-mono ui-text-muted tabular-nums">
+                {isUsdMode
+                  ? `≈ ${formatIdr(monthlyBudgetIdr)}`
+                  : formatIdr(monthlyBudgetIdr, true)}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <div className="ui-subtle flex flex-1 items-center gap-1.5 rounded-lg border ui-border px-3 py-2">
-                <span className="ui-text-muted font-mono text-xs font-bold">Rp</span>
-                <FormattedNumberInput
-                  step={500_000}
+                <span className="ui-text-muted font-mono text-xs font-bold">
+                  {isUsdMode ? '$' : 'Rp'}
+                </span>
+                <CurrencyNumberInput
+                  stepIdr={500_000}
+                  stepUsd={50}
                   min={0}
-                  value={monthlyBudgetIdr}
-                  onChange={(val) => handleSetMonthlyBudgetIdr(val)}
+                  valueIdr={monthlyBudgetIdr}
+                  onChangeIdr={(val) => handleSetMonthlyBudgetIdr(val)}
+                  currency={rebalancerCurrency}
+                  usdIdrRate={usdIdrRate}
                   className="ui-text-main w-full bg-transparent font-mono text-sm font-bold focus:outline-none"
-                  ariaLabel="Monthly DCA Budget in IDR"
+                  ariaLabel={`Monthly DCA Budget in ${rebalancerCurrency}`}
                 />
               </div>
             </div>
@@ -611,7 +627,7 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   }`}
                   title="Gunakan target DCA bulanan dari racikan Menu 1"
                 >
-                  DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
+                  DCA Menu 1 ({formatRebalancerMoney(monthlySavingsMenu1Idr, rebalancerCurrency, usdIdrRate, true)})
                 </button>
               )}
               {cashInjectionIdr > 0 && cashInjectionIdr !== monthlyBudgetIdr && (
@@ -621,27 +637,47 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   className="rounded px-2 py-1 text-[11px] font-mono font-semibold border border-emerald-500/40 bg-emerald-500/10 ui-text-main hover:bg-emerald-500/20 transition"
                   title="Gunakan nominal kas masuk / cash injection dari Rebalancer"
                 >
-                  Kas Rebalance ({formatIdr(cashInjectionIdr, true)})
+                  Kas Rebalance ({formatRebalancerMoney(cashInjectionIdr, rebalancerCurrency, usdIdrRate, true)})
                 </button>
               )}
-              {[500_000, 1_000_000, 2_000_000, 3_000_000, 5_000_000, 10_000_000, 25_000_000].map((preset) => {
-                const label = preset < 1_000_000 ? '500 Rb' : `${preset / 1_000_000} Jt`;
-                const isActive = monthlyBudgetIdr === preset;
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => handleSetMonthlyBudgetIdr(preset)}
-                    className={`rounded px-2 py-1 text-[11px] font-mono transition shadow-2xs ${
-                      isActive
-                        ? 'bg-emerald-600 text-white font-bold ring-1 ring-emerald-500'
-                        : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+              {isUsdMode
+                ? [50, 100, 250, 500, 1_000, 2_500].map((presetUsd) => {
+                    const presetIdr = usdToIdr(presetUsd, usdIdrRate);
+                    const label = presetUsd >= 1_000 ? `$${presetUsd / 1_000}K` : `$${presetUsd}`;
+                    const isActive = Math.abs(monthlyBudgetIdr - presetIdr) < usdIdrRate * 0.5;
+                    return (
+                      <button
+                        key={presetUsd}
+                        type="button"
+                        onClick={() => handleSetMonthlyBudgetIdr(presetIdr)}
+                        className={`rounded px-2 py-1 text-[11px] font-mono transition shadow-2xs ${
+                          isActive
+                            ? 'bg-emerald-600 text-white font-bold ring-1 ring-emerald-500'
+                            : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })
+                : [500_000, 1_000_000, 2_000_000, 3_000_000, 5_000_000, 10_000_000, 25_000_000].map((preset) => {
+                    const label = preset < 1_000_000 ? '500 Rb' : `${preset / 1_000_000} Jt`;
+                    const isActive = monthlyBudgetIdr === preset;
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleSetMonthlyBudgetIdr(preset)}
+                        className={`rounded px-2 py-1 text-[11px] font-mono transition shadow-2xs ${
+                          isActive
+                            ? 'bg-emerald-600 text-white font-bold ring-1 ring-emerald-500'
+                            : 'ui-subtle border ui-border ui-text-secondary hover:ui-text-main hover:border-emerald-500/40'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
             </div>
           </div>
 
@@ -759,7 +795,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <Coins className="h-4 w-4 ui-text-muted" />
           </div>
           <div className="text-lg font-bold font-mono ui-text-main">
-            {formatIdr(monthlyBudgetIdr)}
+            <CurrencyAmount
+              amountIdr={monthlyBudgetIdr}
+              currency={rebalancerCurrency}
+              usdIdrRate={usdIdrRate}
+            />
           </div>
           <p className="text-[10px] ui-text-muted">
             Budget dana segar yang dialokasikan bulan ini
@@ -772,7 +812,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <TrendingUp className="h-4 w-4" />
           </div>
           <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-            {formatIdr(smartDcaResult.totalAllocatedAssetsIdr)}
+            <CurrencyAmount
+              amountIdr={smartDcaResult.totalAllocatedAssetsIdr}
+              currency={rebalancerCurrency}
+              usdIdrRate={usdIdrRate}
+            />
           </div>
           <p className="text-[10px] ui-text-muted">
             {smartDcaResult.items.filter((i) => i.recommendedAmountIdr > 0).length} aset aktif dieksekusi akumulasi
@@ -785,15 +829,19 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             <Shield className="h-4 w-4" />
           </div>
           <div className="text-lg font-bold font-mono ui-text-main">
-            {formatIdr(
-              smartDcaResult.warChestParkedIdr +
+            <CurrencyAmount
+              amountIdr={
+                smartDcaResult.warChestParkedIdr +
                 smartDcaResult.unallocatedCashRemainderIdr
-            )}
+              }
+              currency={rebalancerCurrency}
+              usdIdrRate={usdIdrRate}
+            />
           </div>
           <p className="text-[10px] ui-text-muted">
             {smartDcaResult.warChestParkedIdr > 0 &&
             smartDcaResult.unallocatedCashRemainderIdr > 0
-              ? `${formatIdr(smartDcaResult.warChestParkedIdr, true)} war chest + ${formatIdr(smartDcaResult.unallocatedCashRemainderIdr, true)} sisa lot`
+              ? `${formatRebalancerMoney(smartDcaResult.warChestParkedIdr, rebalancerCurrency, usdIdrRate, true)} war chest + ${formatRebalancerMoney(smartDcaResult.unallocatedCashRemainderIdr, rebalancerCurrency, usdIdrRate, true)} sisa lot`
               : smartDcaResult.warChestParkedIdr > 0
                 ? 'Dana siaga dari aset yang di-Hold untuk serok nanti'
                 : smartDcaResult.unallocatedCashRemainderIdr > 0
@@ -1118,13 +1166,18 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                       </div>
                     </td>
 
-                    {/* Recommended Amount IDR */}
+                    {/* Recommended Amount */}
                     <td className="py-3 px-3 text-right">
                       <div className="font-mono font-bold text-xs ui-text-main">
-                        {formatIdr(item.recommendedAmountIdr)}
+                        <CurrencyAmount
+                          amountIdr={item.recommendedAmountIdr}
+                          currency={rebalancerCurrency}
+                          usdIdrRate={usdIdrRate}
+                          className="items-end"
+                        />
                       </div>
                       <div className="text-[10px] ui-text-muted font-mono">
-                        Base: {formatIdr(item.baseAllocationIdr, true)}
+                        Base: {formatRebalancerMoney(item.baseAllocationIdr, rebalancerCurrency, usdIdrRate, true)}
                       </div>
                     </td>
 
@@ -1252,10 +1305,14 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                   <div>
                     <span className="text-[10px] ui-text-muted block">Alokasi Smart DCA</span>
                     <span className="font-mono font-bold ui-text-main text-xs">
-                      {formatIdr(item.recommendedAmountIdr)}
+                      <CurrencyAmount
+                        amountIdr={item.recommendedAmountIdr}
+                        currency={rebalancerCurrency}
+                        usdIdrRate={usdIdrRate}
+                      />
                     </span>
                     <span className="text-[10px] ui-text-muted block">
-                      Base: {formatIdr(item.baseAllocationIdr, true)}
+                      Base: {formatRebalancerMoney(item.baseAllocationIdr, rebalancerCurrency, usdIdrRate, true)}
                     </span>
                   </div>
 
@@ -1296,7 +1353,11 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
               <span>
                 Sisa Kas Pecahan Lot BEI:{' '}
                 <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                  {formatIdr(smartDcaResult.unallocatedCashRemainderIdr)}
+                  {formatRebalancerMoneyWithIdr(
+                    smartDcaResult.unallocatedCashRemainderIdr,
+                    rebalancerCurrency,
+                    usdIdrRate
+                  )}
                 </strong>{' '}
                 (disimpan di kas siaga / RDPU untuk top-up berikutnya).
               </span>
@@ -1471,9 +1532,14 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
             {/* Budget Math Arithmetic */}
             <div className="rounded-xl border ui-border p-3.5 space-y-2 bg-black/5 dark:bg-white/5">
               <div className="flex items-center justify-between border-b ui-border pb-1.5 text-xs font-bold ui-text-main">
-                <span>Alur Matematika Alokasi Rupiah</span>
+                <span>Alur Matematika Alokasi ({rebalancerCurrency})</span>
                 <span className="font-mono font-semibold text-emerald-500">
-                  {formatIdr(selectedAssetForWhy.recommendedAmountIdr)}
+                  <CurrencyAmount
+                    amountIdr={selectedAssetForWhy.recommendedAmountIdr}
+                    currency={rebalancerCurrency}
+                    usdIdrRate={usdIdrRate}
+                    inline
+                  />
                 </span>
               </div>
 
@@ -1481,7 +1547,12 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
                   <span className="text-[10px] ui-text-muted block">Base DCA</span>
                   <span className="font-mono font-bold">
-                    {formatIdr(selectedAssetForWhy.explanation.budgetMath.baseAllocationIdr, true)}
+                    <CurrencyAmount
+                      amountIdr={selectedAssetForWhy.explanation.budgetMath.baseAllocationIdr}
+                      currency={rebalancerCurrency}
+                      usdIdrRate={usdIdrRate}
+                      compact
+                    />
                   </span>
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
@@ -1493,13 +1564,23 @@ export const SmartDcaAdvisorPanel: React.FC<SmartDcaAdvisorPanelProps> = ({
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
                   <span className="text-[10px] ui-text-muted block">Alokasi Final</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatIdr(selectedAssetForWhy.recommendedAmountIdr, true)}
+                    <CurrencyAmount
+                      amountIdr={selectedAssetForWhy.recommendedAmountIdr}
+                      currency={rebalancerCurrency}
+                      usdIdrRate={usdIdrRate}
+                      compact
+                    />
                   </span>
                 </div>
                 <div className="p-2 rounded bg-black/10 dark:bg-white/5 space-y-0.5">
                   <span className="text-[10px] ui-text-muted block">War Chest / Parkir</span>
                   <span className="font-mono font-bold ui-text-secondary">
-                    {formatIdr(selectedAssetForWhy.explanation.budgetMath.warChestShareIdr, true)}
+                    <CurrencyAmount
+                      amountIdr={selectedAssetForWhy.explanation.budgetMath.warChestShareIdr}
+                      currency={rebalancerCurrency}
+                      usdIdrRate={usdIdrRate}
+                      compact
+                    />
                   </span>
                 </div>
               </div>

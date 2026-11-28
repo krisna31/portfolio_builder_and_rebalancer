@@ -24,9 +24,32 @@ export function formatIdr(amount: number, compact: boolean = false): string {
   return `${sign}Rp ${Math.round(abs).toLocaleString('id-ID')}`;
 }
 
-export function formatUsd(amount: number): string {
+export function idrToUsd(amountIdr: number, usdIdrRate: number): number {
+  const safeRate = Number.isFinite(usdIdrRate) && usdIdrRate > 0 ? usdIdrRate : 1;
+  return amountIdr / safeRate;
+}
+
+export function usdToIdr(amountUsd: number, usdIdrRate: number): number {
+  const safeRate = Number.isFinite(usdIdrRate) && usdIdrRate > 0 ? usdIdrRate : 1;
+  return Math.round(amountUsd * safeRate);
+}
+
+export function formatUsd(amount: number, compact: boolean = false): string {
   const abs = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
+
+  if (compact) {
+    if (abs >= 1_000_000_000) {
+      return `${sign}$${(abs / 1_000_000_000).toFixed(2)}B`;
+    }
+    if (abs >= 1_000_000) {
+      return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+    }
+    if (abs >= 1_000) {
+      return `${sign}$${(abs / 1_000).toFixed(1)}K`;
+    }
+  }
+
   return `${sign}$${abs.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

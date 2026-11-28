@@ -357,6 +357,8 @@ export interface QuantPortoBackupPayload {
       smartDcaIndicatorOverrides?: Record<string, Record<string, any>>;
       smartDcaLastRefreshSuccessAt?: string;
       tacticalConfig?: ValuationSentimentConfig;
+      rebalancerCurrency?: CurrencyCode;
+      showAvgBuyPrice?: boolean;
     };
     menu3_simulator: {
       initialCapitalIdr?: number;

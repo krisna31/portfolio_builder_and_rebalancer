@@ -626,6 +626,8 @@ export function parseBackupPayload(text: string): ParsedBackupResult {
                 inputMode: d2.inputMode,
                 rebalanceMode: d2.rebalanceMode,
                 cashInjectionIdr: d2.cashInjectionIdr,
+                rebalancerCurrency: d2.rebalancerCurrency,
+                showAvgBuyPrice: d2.showAvgBuyPrice,
               },
               menu3_simulator: {
                 initialCapitalIdr: d3.initialCapitalIdr,

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AssetDefinition,
+  CurrencyCode,
   HoldingEntry,
   RebalanceHistoryEntry,
   RebalanceMode,
@@ -16,7 +17,13 @@ import {
   generateCrashBuyingLadder,
   roundToIdxTick,
 } from '../../lib/quant/rebalancerEngine';
-import { formatIdr, formatUsd } from '../../lib/formatters';
+import { formatIdr, formatUsd, idrToUsd, usdToIdr } from '../../lib/formatters';
+import {
+  CurrencyAmount,
+  CurrencyNumberInput,
+  formatRebalancerMoney,
+  formatRebalancerMoneyWithIdr,
+} from './CurrencyAmount';
 const HoldingsTextImportModal = React.lazy(() =>
   import('./HoldingsTextImportModal').then((m) => ({
     default: m.HoldingsTextImportModal,
@@ -66,6 +73,9 @@ import {
   RefreshCw,
   Target,
   Zap,
+  Eye,
+  EyeOff,
+  ArrowLeftRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -105,6 +115,11 @@ interface PortfolioRebalancerViewProps {
   driftThresholdPercent: number;
   setDriftThresholdPercent: (val: number) => void;
   usdIdrRate: number;
+  setUsdIdrRate?: (rate: number) => void;
+  rebalancerCurrency?: CurrencyCode;
+  setRebalancerCurrency?: (currency: CurrencyCode) => void;
+  showAvgBuyPrice?: boolean;
+  setShowAvgBuyPrice?: (show: boolean) => void;
   rebalanceResult: RebalanceSummaryResult;
   onApplyPeerDiversification: () => void;
   rebalanceHistory: RebalanceHistoryEntry[];
@@ -170,6 +185,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   driftThresholdPercent,
   setDriftThresholdPercent,
   usdIdrRate,
+  setUsdIdrRate,
+  rebalancerCurrency,
+  setRebalancerCurrency,
+  showAvgBuyPrice,
+  setShowAvgBuyPrice,
   rebalanceResult: baseRebalanceResult,
   onApplyPeerDiversification,
   rebalanceHistory,
@@ -212,6 +232,25 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   isSyncingPrices,
   isGuestMode = false,
 }) => {
+  const [localCurrency, setLocalCurrency] = useState<CurrencyCode>('IDR');
+  const activeCurrency: CurrencyCode = rebalancerCurrency ?? localCurrency;
+  const handleSetCurrency = (next: CurrencyCode) => {
+    setLocalCurrency(next);
+    setRebalancerCurrency?.(next);
+  };
+  const isUsdMode = activeCurrency === 'USD';
+
+  const [localShowAvgBuyPrice, setLocalShowAvgBuyPrice] = useState<boolean>(false);
+  const effectiveShowAvgBuyPrice = showAvgBuyPrice ?? localShowAvgBuyPrice;
+  const handleToggleShowAvgBuyPrice = () => {
+    const next = !effectiveShowAvgBuyPrice;
+    setLocalShowAvgBuyPrice(next);
+    setShowAvgBuyPrice?.(next);
+  };
+
+  const [isFxPopoverOpen, setIsFxPopoverOpen] = useState(false);
+  const fxPopoverRef = React.useRef<HTMLDivElement>(null);
+
   const [rebalancerSubMode, setRebalancerSubMode] = useState<'rebalance' | 'smart-dca'>('rebalance');
   const [showShockSliders, setShowShockSliders] = useState(false);
   const [showPriceSimControls, setShowPriceSimControls] = useState(false);
@@ -263,6 +302,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOptionsMenuOpen]);
+
+  // Close quick FX rate popover on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        fxPopoverRef.current &&
+        !fxPopoverRef.current.contains(e.target as Node)
+      ) {
+        setIsFxPopoverOpen(false);
+      }
+    };
+    if (isFxPopoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isFxPopoverOpen]);
 
   // Listen for programmatic event to open options menu (e.g. from Tour Guide Step 12)
   React.useEffect(() => {
@@ -902,29 +957,44 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       ? (pnlFromShockIdr / rebalanceResult.initialTotalIdr) * 100
       : 0;
 
-  // Escape closes the options popover and confirmation dialogs (standard menu/dialog keyboard contract)
+  // Escape closes popovers and confirmation dialogs (standard menu/dialog keyboard contract)
   useEffect(() => {
-    if (!isOptionsMenuOpen && !showDeficitConfirmModal && !showShockCommitConfirmModal) return;
+    if (
+      !isOptionsMenuOpen &&
+      !isFxPopoverOpen &&
+      !showDeficitConfirmModal &&
+      !showShockCommitConfirmModal
+    ) {
+      return;
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setIsOptionsMenuOpen(false);
+      setIsFxPopoverOpen(false);
       setShowDeficitConfirmModal(false);
       setShowShockCommitConfirmModal(false);
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOptionsMenuOpen, showDeficitConfirmModal, showShockCommitConfirmModal]);
+  }, [
+    isOptionsMenuOpen,
+    isFxPopoverOpen,
+    showDeficitConfirmModal,
+    showShockCommitConfirmModal,
+  ]);
 
   const historyChartData = [...rebalanceHistory]
     .reverse()
     .map((entry, idx) => ({
       step: `#${idx + 1} (${entry.timestamp})`,
       NetWorthJuta: Math.round(entry.totalValueAfterIdr / 1_000_000),
+      NetWorthUsd: Number(idrToUsd(entry.totalValueAfterIdr, usdIdrRate).toFixed(2)),
+      NetWorthIdr: entry.totalValueAfterIdr,
     }));
 
   return (
     <div className="space-y-6">
-      {/* SUB-MODE SWITCHER TABS: STANDARD REBALANCER vs SMART DCA ADVISOR */}
+      {/* SUB-MODE SWITCHER TABS + CURRENCY (IDR/USD) & QUICK FX BAR */}
       <div className="flex items-center justify-between flex-wrap gap-2 border-b ui-border pb-3">
         <div className="ui-subtle inline-flex rounded-xl p-1 border ui-border shadow-xs">
           <button
@@ -956,6 +1026,126 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </span>
           </button>
         </div>
+
+        {/* Right: Currency Mode Switcher (IDR / USD) & Quick FX Rate Editor */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            aria-label="Mata uang tampilan dan input Menu Rebalancer"
+            className="ui-subtle inline-flex items-center rounded-lg p-0.5 border ui-border text-xs"
+          >
+            <button
+              type="button"
+              aria-pressed={!isUsdMode}
+              onClick={() => handleSetCurrency('IDR')}
+              className={`rounded-md px-2.5 py-1 font-mono font-bold transition ${
+                !isUsdMode
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'ui-text-secondary hover:ui-text-main'
+              }`}
+              title="Tampilkan & input nominal dalam Rupiah (IDR)"
+            >
+              IDR (Rp)
+            </button>
+            <button
+              type="button"
+              aria-pressed={isUsdMode}
+              onClick={() => handleSetCurrency('USD')}
+              className={`rounded-md px-2.5 py-1 font-mono font-bold transition ${
+                isUsdMode
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'ui-text-secondary hover:ui-text-main'
+              }`}
+              title="Tampilkan & input nominal dalam USD ($) disertai nilai konversi IDR"
+            >
+              USD ($) + IDR
+            </button>
+          </div>
+
+          <div ref={fxPopoverRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                if (setUsdIdrRate) setIsFxPopoverOpen((prev) => !prev);
+              }}
+              aria-expanded={setUsdIdrRate ? isFxPopoverOpen : undefined}
+              aria-label="Kurs acuan USD ke IDR"
+              className={`ui-subtle ui-border inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-mono transition ${
+                setUsdIdrRate
+                  ? 'hover:border-emerald-500/50 hover:ui-text-main cursor-pointer'
+                  : 'cursor-default'
+              } ${
+                isFxPopoverOpen
+                  ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                  : 'ui-text-secondary'
+              }`}
+              title={
+                setUsdIdrRate
+                  ? 'Klik untuk mengubah kurs acuan USD/IDR secara cepat'
+                  : 'Kurs acuan USD/IDR aktif'
+              }
+            >
+              <ArrowLeftRight className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              <span className="tabular-nums">
+                Rp {Math.round(usdIdrRate).toLocaleString('id-ID')}/$
+              </span>
+            </button>
+
+            {isFxPopoverOpen && setUsdIdrRate && (
+              <div className="ui-card absolute right-0 mt-1.5 z-50 w-64 rounded-xl border ui-border p-3 shadow-md space-y-2.5 text-xs">
+                <div className="flex items-center justify-between border-b ui-border pb-1.5">
+                  <span className="font-bold ui-text-main">Kurs USD / IDR</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsFxPopoverOpen(false)}
+                    aria-label="Tutup pengaturan kurs"
+                    className="ui-text-muted hover:ui-text-main p-0.5 rounded"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] ui-text-muted block">
+                    1 USD = (Rupiah)
+                  </label>
+                  <div className="ui-subtle flex items-center gap-1.5 rounded-lg border ui-border px-2.5 py-1.5">
+                    <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
+                    <FormattedNumberInput
+                      min={1000}
+                      max={100000}
+                      step={100}
+                      value={usdIdrRate}
+                      onChange={(val) => {
+                        if (val >= 1000) setUsdIdrRate(val);
+                      }}
+                      className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
+                      ariaLabel="Kurs USD ke IDR"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {[15500, 16000, 16500, 17000, 18000].map((rate) => (
+                      <button
+                        key={rate}
+                        type="button"
+                        onClick={() => setUsdIdrRate(rate)}
+                        className={`rounded px-1.5 py-0.5 font-mono text-[10px] transition ${
+                          Math.round(usdIdrRate) === rate
+                            ? 'bg-emerald-600 text-white font-bold'
+                            : 'ui-subtle ui-text-secondary hover:ui-text-main'
+                        }`}
+                      >
+                        {(rate / 1000).toFixed(1)}k
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[10px] ui-text-muted leading-snug">
+                  Tersinkron otomatis dengan kurs global di Header &amp; dipakai seluruh kalkulasi Menu Rebalancer.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {rebalancerSubMode === 'smart-dca' ? (
@@ -965,6 +1155,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           holdings={holdings}
           inputMode={inputMode}
           usdIdrRate={usdIdrRate}
+          rebalancerCurrency={activeCurrency}
           monthlySavingsMenu1Idr={monthlySavingsMenu1Idr}
           enableIdxLotRounding={enableIdxLotRounding}
           filterDustTrades={filterDustTrades}
@@ -1006,12 +1197,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     Mulai Belanja Perdana Portofolio
                   </h3>
                   <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
-                    Saldo Rp 0
+                    Saldo {isUsdMode ? '$0' : 'Rp 0'}
                   </span>
                 </div>
                 <p className="text-xs ui-text-muted max-w-2xl leading-relaxed">
                   Portofolio Anda saat ini masih kosong. Siapkan daftar belanja perdana dari Modal Awal Menu 1 (
-                  <strong className="text-emerald-500 dark:text-emerald-400">{formatIdr(initialCapitalMenu1Idr, true)}</strong>)
+                  <strong className="text-emerald-500 dark:text-emerald-400">
+                    {formatRebalancerMoneyWithIdr(initialCapitalMenu1Idr, activeCurrency, usdIdrRate, true)}
+                  </strong>)
                   sesuai racikan <strong className="ui-text-main font-semibold">{activePortfolioName}</strong>, atau baca panduan SOP eksekusi.
                 </p>
               </div>
@@ -1077,7 +1270,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   : 'border-zinc-500/30 bg-zinc-500/10 ui-text-secondary'
               }`}
             >
-              {isHoldingsSyncedWithMenu1 ? `SYNC M1 (${formatIdr(initialCapitalMenu1Idr, true)})` : 'Manual'}
+              {isHoldingsSyncedWithMenu1
+                ? `SYNC M1 (${formatRebalancerMoney(initialCapitalMenu1Idr, activeCurrency, usdIdrRate, true)})`
+                : 'Manual'}
             </span>
             <span className="hidden md:inline-flex items-center gap-1 text-[11px] ui-text-muted">
               • Target: <strong className="ui-text-main font-semibold truncate max-w-[200px]">{activePortfolioName}</strong>
@@ -1539,19 +1734,31 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-0.5">
                       {/* Skala Cepat */}
                       <div className="space-y-1.5">
-                        <span className="text-[11px] font-semibold ui-text-main block">
-                          Skalakan Total Portofolio:
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold ui-text-main block">
+                            Skalakan Total Portofolio ({activeCurrency}):
+                          </span>
+                          {isUsdMode && (
+                            <span className="ui-text-muted font-mono text-[10px] tabular-nums">
+                              ≈ {formatIdr(quickTotalIdr, true)}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5">
                           <div className="ui-subtle flex flex-1 items-center gap-1 rounded-md border px-2 py-1">
-                            <span className="ui-text-muted font-mono text-[10px]">Rp</span>
-                            <FormattedNumberInput
-                              step={10_000_000}
+                            <span className="ui-text-muted font-mono text-[10px]">
+                              {isUsdMode ? '$' : 'Rp'}
+                            </span>
+                            <CurrencyNumberInput
+                              stepIdr={10_000_000}
+                              stepUsd={500}
                               min={0}
-                              value={quickTotalIdr}
-                              onChange={(val) => setQuickTotalIdr(val)}
+                              valueIdr={quickTotalIdr}
+                              onChangeIdr={(val) => setQuickTotalIdr(val)}
+                              currency={activeCurrency}
+                              usdIdrRate={usdIdrRate}
                               className="ui-text-main w-full bg-transparent font-mono text-xs font-bold focus:outline-none"
-                              ariaLabel="Quick Scale Total Value"
+                              ariaLabel={`Quick Scale Total Value in ${activeCurrency}`}
                             />
                           </div>
                           <button
@@ -1566,18 +1773,29 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-1 text-[10px]">
-                          {[50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map(
-                            (presetTotal) => (
-                              <button
-                                key={presetTotal}
-                                type="button"
-                                onClick={() => setQuickTotalIdr(presetTotal)}
-                                className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
-                              >
-                                {formatIdr(presetTotal, true)}
-                              </button>
-                            )
-                          )}
+                          {isUsdMode
+                            ? [5_000, 10_000, 50_000, 100_000].map((presetUsd) => (
+                                <button
+                                  key={presetUsd}
+                                  type="button"
+                                  onClick={() => setQuickTotalIdr(usdToIdr(presetUsd, usdIdrRate))}
+                                  className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
+                                >
+                                  ${presetUsd / 1_000}K
+                                </button>
+                              ))
+                            : [50_000_000, 100_000_000, 500_000_000, 1_000_000_000].map(
+                                (presetTotal) => (
+                                  <button
+                                    key={presetTotal}
+                                    type="button"
+                                    onClick={() => setQuickTotalIdr(presetTotal)}
+                                    className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:ui-text-main"
+                                  >
+                                    {formatIdr(presetTotal, true)}
+                                  </button>
+                                )
+                              )}
                         </div>
                       </div>
 
@@ -1744,11 +1962,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             Nilai Porto Saat Ini (Post-Shock)
           </div>
           <div className="ui-text-main mt-1 font-mono text-xl font-bold">
-            {formatIdr(rebalanceResult.postShockTotalIdr)}
+            <CurrencyAmount
+              amountIdr={rebalanceResult.postShockTotalIdr}
+              currency={activeCurrency}
+              usdIdrRate={usdIdrRate}
+            />
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="ui-text-muted">
-              Awal: {formatIdr(rebalanceResult.initialTotalIdr, true)}
+              Awal:{' '}
+              {formatRebalancerMoneyWithIdr(
+                rebalanceResult.initialTotalIdr,
+                activeCurrency,
+                usdIdrRate,
+                true
+              )}
             </span>
             {pnlFromShockIdr !== 0 && (
               <span
@@ -1774,7 +2002,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
         >
           <div className="flex items-center justify-between gap-1">
             <span className="ui-text-muted text-xs font-medium">
-              Top-Up Kas Baru (DCA Injection)
+              Top-Up Kas Baru ({activeCurrency})
             </span>
             <button
               type="button"
@@ -1782,7 +2010,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               title={
                 isFixedBudgetMode
                   ? 'Mode Kunci Anggaran AKTIF: Kas Baru otomatis terpotong saat Anda mengisi saldo aset yang sudah dibeli'
-                  : 'Aktifkan untuk mengunci total modal (misal Rp 25 Juta) agar kas baru otomatis terpotong saat beli bertahap'
+                  : 'Aktifkan untuk mengunci total modal agar kas baru otomatis terpotong saat beli bertahap'
               }
               className={`flex shrink-0 items-center gap-1 whitespace-nowrap px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
                 isFixedBudgetMode
@@ -1806,48 +2034,70 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
                     title="Ambil nilai Modal Awal dari Menu 1"
                   >
-                    Sync M1 ({formatIdr(initialCapitalMenu1Idr, true)})
+                    Sync M1 ({formatRebalancerMoney(initialCapitalMenu1Idr, activeCurrency, usdIdrRate, true)})
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
-                  <FormattedNumberInput
-                    step={1_000_000}
+                  <span className="ui-text-muted font-mono text-xs font-semibold">
+                    {isUsdMode ? '$' : 'Rp'}
+                  </span>
+                  <CurrencyNumberInput
+                    stepIdr={1_000_000}
+                    stepUsd={100}
                     min={0}
-                    value={fixedTotalBudgetIdr ?? initialCapitalMenu1Idr}
-                    onChange={(val) => setFixedTotalBudgetIdr?.(val)}
+                    valueIdr={fixedTotalBudgetIdr ?? initialCapitalMenu1Idr}
+                    onChangeIdr={(val) => setFixedTotalBudgetIdr?.(val)}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
                     className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
-                    ariaLabel="Target Total Budget in IDR"
+                    ariaLabel={`Target Total Budget in ${activeCurrency}`}
                   />
                 </div>
+                {isUsdMode && (
+                  <div className="mt-0.5 text-right font-mono text-[10px] ui-text-muted tabular-nums">
+                    ≈ {formatIdr(fixedTotalBudgetIdr ?? initialCapitalMenu1Idr)}
+                  </div>
+                )}
               </div>
 
               {/* Breakdown: Terisi vs Sisa Kas Otomatis */}
               <div className="rounded-lg bg-black/10 dark:bg-black/25 p-2 text-[11px] space-y-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <span className="ui-text-muted">Aset Terisi Saat Ini:</span>
-                  <span className="font-mono font-medium ui-text-main">
-                    {formatIdr(rebalanceResult.initialTotalIdr)}
+                  <span className="font-mono font-medium ui-text-main text-right">
+                    <CurrencyAmount
+                      amountIdr={rebalanceResult.initialTotalIdr}
+                      currency={activeCurrency}
+                      usdIdrRate={usdIdrRate}
+                      className="items-end"
+                    />
                   </span>
                 </div>
-                <div className="flex items-center justify-between border-t ui-border pt-1">
+                <div className="flex items-start justify-between gap-2 border-t ui-border pt-1">
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                     <span>Sisa Kas Belanja:</span>
                     <span className="text-[9px] px-1 rounded bg-emerald-500/20 font-mono font-bold">
                       Auto
                     </span>
                   </span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatIdr(cashInjectionIdr)}
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-right">
+                    <CurrencyAmount
+                      amountIdr={cashInjectionIdr}
+                      currency={activeCurrency}
+                      usdIdrRate={usdIdrRate}
+                      className="items-end"
+                    />
                   </span>
                 </div>
                 {rebalanceResult.initialTotalIdr >
                   (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr) && (
                   <div className="text-[10px] text-amber-500 pt-0.5">
                     Terisi melebihi target (+
-                    {formatIdr(
+                    {formatRebalancerMoneyWithIdr(
                       rebalanceResult.initialTotalIdr -
-                        (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr)
+                        (fixedTotalBudgetIdr ?? initialCapitalMenu1Idr),
+                      activeCurrency,
+                      usdIdrRate
                     )}
                     )
                   </div>
@@ -1857,16 +2107,26 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           ) : (
             <>
               <div className="mt-1 flex items-center gap-1.5">
-                <span className="ui-text-muted font-mono text-xs font-semibold">Rp</span>
-                <FormattedNumberInput
-                  step={1_000_000}
+                <span className="ui-text-muted font-mono text-xs font-semibold">
+                  {isUsdMode ? '$' : 'Rp'}
+                </span>
+                <CurrencyNumberInput
+                  stepIdr={1_000_000}
+                  stepUsd={100}
                   min={0}
-                  value={cashInjectionIdr}
-                  onChange={(val) => setCashInjectionIdr(val)}
+                  valueIdr={cashInjectionIdr}
+                  onChangeIdr={(val) => setCashInjectionIdr(val)}
+                  currency={activeCurrency}
+                  usdIdrRate={usdIdrRate}
                   className="ui-input w-full rounded px-2 py-1 font-mono text-sm font-semibold"
-                  ariaLabel="Top-up Cash Injection in IDR"
+                  ariaLabel={`Top-up Cash Injection in ${activeCurrency}`}
                 />
               </div>
+              {isUsdMode && (
+                <div className="mt-0.5 text-right font-mono text-[10px] ui-text-muted tabular-nums">
+                  ≈ {formatIdr(cashInjectionIdr)}
+                </div>
+              )}
               <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
                 <button
                   type="button"
@@ -1878,18 +2138,33 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       : 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                   }`}
                 >
-                  +DCA Menu 1 ({formatIdr(monthlySavingsMenu1Idr, true)})
+                  +DCA Menu 1 ({formatRebalancerMoney(monthlySavingsMenu1Idr, activeCurrency, usdIdrRate, true)})
                 </button>
-                {[0, 5_000_000, 10_000_000, 50_000_000].map((presetCash) => (
-                  <button
-                    key={presetCash}
-                    type="button"
-                    onClick={() => setCashInjectionIdr(presetCash)}
-                    className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
-                  >
-                    {presetCash === 0 ? 'Reset 0' : `+${presetCash / 1_000_000}Jt`}
-                  </button>
-                ))}
+                {isUsdMode
+                  ? [0, 100, 500, 1_000, 5_000].map((presetUsd) => (
+                      <button
+                        key={presetUsd}
+                        type="button"
+                        onClick={() => setCashInjectionIdr(usdToIdr(presetUsd, usdIdrRate))}
+                        className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
+                      >
+                        {presetUsd === 0
+                          ? 'Reset $0'
+                          : presetUsd >= 1_000
+                            ? `+$${presetUsd / 1_000}K`
+                            : `+$${presetUsd}`}
+                      </button>
+                    ))
+                  : [0, 5_000_000, 10_000_000, 50_000_000].map((presetCash) => (
+                      <button
+                        key={presetCash}
+                        type="button"
+                        onClick={() => setCashInjectionIdr(presetCash)}
+                        className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono"
+                      >
+                        {presetCash === 0 ? 'Reset 0' : `+${presetCash / 1_000_000}Jt`}
+                      </button>
+                    ))}
               </div>
             </>
           )}
@@ -2069,7 +2344,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                   >
                     <span>
                       • {rebalanceResult.unallocatedCashRemainderIdr < 0 ? 'Defisit Kas: ' : 'Sisa Kas Belum Terpakai: '}
-                      {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}
+                      {formatRebalancerMoneyWithIdr(
+                        Math.abs(rebalanceResult.unallocatedCashRemainderIdr),
+                        activeCurrency,
+                        usdIdrRate
+                      )}
                       {rebalanceResult.unallocatedCashRemainderIdr < 0 ? ' (Perlu Top-Up)' : ''}
                     </span>
                     {rebalanceResult.unallocatedCashRemainderIdr < 0 && (
@@ -2295,16 +2574,41 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 </button>
               </div>
 
-              {/* Toggle Uji Drop Harga & Modal Beli */}
+              {/* Toggle Avg Price (Modal Beli Rata-Rata & P&L) */}
               <button
                 type="button"
+                aria-pressed={effectiveShowAvgBuyPrice}
+                onClick={handleToggleShowAvgBuyPrice}
+                className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                  effectiveShowAvgBuyPrice
+                    ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
+                    : 'ui-subtle ui-text-secondary hover:ui-text-main'
+                }`}
+                title={
+                  effectiveShowAvgBuyPrice
+                    ? 'Sembunyikan input Avg Price & badge P&L (data avg tetap tersimpan aman)'
+                    : 'Tampilkan input Avg Price & badge P&L. Saat OFF, kalkulasi fokus ke nilai sekarang saja.'
+                }
+              >
+                {effectiveShowAvgBuyPrice ? (
+                  <Eye className="h-3 w-3" />
+                ) : (
+                  <EyeOff className="h-3 w-3" />
+                )}
+                <span>Avg Price</span>
+              </button>
+
+              {/* Toggle Uji Drop Harga */}
+              <button
+                type="button"
+                aria-pressed={showPriceSimControls}
                 onClick={() => setShowPriceSimControls((prev) => !prev)}
                 className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition ${
                   showPriceSimControls
                     ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold'
                     : 'ui-subtle ui-text-secondary hover:ui-text-main'
                 }`}
-                title="Tampilkan / sembunyikan tombol simulasi drop harga"
+                title="Tampilkan / sembunyikan tombol simulasi drop harga (-10% s/d -50%)"
               >
                 <SlidersHorizontal className="h-3 w-3" />
                 <span>{showPriceSimControls ? 'Tutup Uji' : 'Uji Drop'}</span>
@@ -2352,7 +2656,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       Instrumen &amp; Harga Spot
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
-                      Input Posisi Awal
+                      Input Posisi Awal{holdingEntryMode === 'nominal' ? ` (${isUsdMode ? 'USD' : 'Rp'})` : ''}
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Nilai Saat Ini
@@ -2361,7 +2665,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       Now vs Target
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
-                      Target (Rp)
+                      Target ({isUsdMode ? 'USD' : 'Rp'})
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Action (Jual / Beli)
@@ -2465,14 +2769,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   <div className="flex items-center justify-between gap-1">
                                     <span className="ui-text-main font-bold text-xs">{item.symbol}</span>
                                     <div className="flex items-center gap-1">
-                                      {item.unrealizedGainPercent !== undefined && (
+                                      {effectiveShowAvgBuyPrice && item.unrealizedGainPercent !== undefined && (
                                         <span
                                           className={`rounded px-1 py-0.2 font-mono text-[9px] font-bold ${
                                             item.unrealizedGainPercent >= 0
                                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                                               : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
                                           }`}
-                                          title={`Unrealized P&L: ${item.unrealizedGainPercent >= 0 ? '+' : ''}${item.unrealizedGainPercent}% (${formatIdr(item.unrealizedGainIdr ?? 0)})`}
+                                          title={`Unrealized P&L: ${item.unrealizedGainPercent >= 0 ? '+' : ''}${item.unrealizedGainPercent}% (${formatRebalancerMoneyWithIdr(item.unrealizedGainIdr ?? 0, activeCurrency, usdIdrRate)})`}
                                         >
                                           P&L {item.unrealizedGainPercent >= 0 ? '+' : ''}{item.unrealizedGainPercent}%
                                         </span>
@@ -2545,79 +2849,84 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                     </button>
                                   </div>
 
-                                  {/* Quick Drop Chips & Modal Beli (Collapsible via showPriceSimControls, or keep visible if actively modified) */}
-                                   {(showPriceSimControls ||
-                                     h.avgBuyPrice !== undefined ||
-                                     Math.abs(h.currentPrice - (asset?.defaultPrice ?? 1)) > 0.01) && (
-                                     <div className="pt-1 mt-1 border-t border-black/5 dark:border-white/5 space-y-1">
-                                       {/* Quick Drop Chips: [-10%] [-20%] [-35%] [-50%] */}
-                                    <div className="flex items-center gap-1 pt-0.5">
-                                      <span className="ui-text-muted text-[9px] select-none">Drop:</span>
-                                      {[10, 20, 35, 50].map((dropPct) => {
-                                        const defaultP = asset?.defaultPrice ?? 1;
-                                        const discountedPrice = Number(
-                                          (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
-                                        );
-                                        const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
-                                        return (
+                                  {/* Quick Drop Chips (controlled independently via Uji Drop / active custom price) */}
+                                  {(showPriceSimControls ||
+                                    Math.abs(h.currentPrice - (asset?.defaultPrice ?? 1)) > 0.01) && (
+                                    <div className="pt-1 mt-1 border-t border-black/5 dark:border-white/5">
+                                      <div className="flex items-center gap-1 pt-0.5">
+                                        <span className="ui-text-muted text-[9px] select-none">Drop:</span>
+                                        {[10, 20, 35, 50].map((dropPct) => {
+                                          const defaultP = asset?.defaultPrice ?? 1;
+                                          const discountedPrice = Number(
+                                            (defaultP * (1 - dropPct / 100)).toFixed(asset?.currency === 'USD' && defaultP < 10 ? 4 : 2)
+                                          );
+                                          const isActive = Math.abs(h.currentPrice - discountedPrice) < 0.01;
+                                          return (
+                                            <button
+                                              key={dropPct}
+                                              type="button"
+                                              onClick={() =>
+                                                onUpdateHolding(item.assetId, {
+                                                  currentPrice: discountedPrice,
+                                                })
+                                              }
+                                              className={`rounded px-1 py-0.2 font-mono text-[9px] transition ${
+                                                isActive
+                                                  ? 'bg-rose-500 text-white font-bold'
+                                                  : 'ui-subtle ui-text-muted hover:text-rose-500'
+                                              }`}
+                                              title={`Simulasi harga anjlok -${dropPct}% menjadi ${formatPriceDisplay(discountedPrice, asset?.currency)}`}
+                                            >
+                                              -{dropPct}%
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Feature 5: Optional Avg Buy Price (controlled independently via Avg Price toggle) */}
+                                  {effectiveShowAvgBuyPrice && (
+                                    <div className="pt-1 mt-1 border-t border-black/5 dark:border-white/5">
+                                      <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
+                                        <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
+                                        <span className="ui-text-muted font-mono text-[9px] select-none">
+                                          {asset?.currency === 'USD' ? '$' : 'Rp'}
+                                        </span>
+                                        <input
+                                          type="number"
+                                          step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                          min={0}
+                                          placeholder="Modal Beli"
+                                          value={h.avgBuyPrice ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value ? Number(e.target.value) : undefined;
+                                            onUpdateHolding(item.assetId, {
+                                              avgBuyPrice: val && val > 0 ? val : undefined,
+                                            });
+                                          }}
+                                          className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
+                                          style={{ width: asset?.currency === 'USD' ? '5.5rem' : '6.25rem' }}
+                                          aria-label={`Harga modal beli rata-rata ${item.symbol}`}
+                                        />
+                                        {h.avgBuyPrice && (
                                           <button
-                                            key={dropPct}
                                             type="button"
                                             onClick={() =>
                                               onUpdateHolding(item.assetId, {
-                                                currentPrice: discountedPrice,
+                                                avgBuyPrice: undefined,
                                               })
                                             }
-                                            className={`rounded px-1 py-0.2 font-mono text-[9px] transition ${
-                                              isActive
-                                                ? 'bg-rose-500 text-white font-bold'
-                                                : 'ui-subtle ui-text-muted hover:text-rose-500'
-                                            }`}
-                                            title={`Simulasi harga anjlok -${dropPct}% menjadi ${formatPriceDisplay(discountedPrice, asset?.currency)}`}
+                                            aria-label="Hapus modal beli"
+                                            className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
+                                            title="Hapus modal beli"
                                           >
-                                            -{dropPct}%
+                                            ✕
                                           </button>
-                                        );
-                                      })}
+                                        )}
+                                      </div>
                                     </div>
-  
-                                    {/* Feature 5: Optional Avg Buy Price (Modal Beli Rata-Rata) */}
-                                    <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
-                                      <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
-                                      <input
-                                        type="number"
-                                        step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
-                                        min={0}
-                                        placeholder="Modal Beli"
-                                        value={h.avgBuyPrice ?? ''}
-                                        onChange={(e) => {
-                                          const val = e.target.value ? Number(e.target.value) : undefined;
-                                          onUpdateHolding(item.assetId, {
-                                            avgBuyPrice: val && val > 0 ? val : undefined,
-                                          });
-                                        }}
-                                        className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
-                                        style={{ width: asset?.currency === 'USD' ? '5.75rem' : '6.75rem' }}
-                                        aria-label={`Harga modal beli rata-rata ${item.symbol}`}
-                                      />
-                                      {h.avgBuyPrice && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            onUpdateHolding(item.assetId, {
-                                              avgBuyPrice: undefined,
-                                            })
-                                          }
-                                          aria-label="Hapus modal beli"
-                                          className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
-                                          title="Hapus modal beli"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
-                                    </div>
-                                     </div>
-                                   )}
+                                  )}
                                 </div>
                               </div>
                             );
@@ -2627,18 +2936,31 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         <td className="ui-border border-b px-2 py-2 text-right">
                           {holdingEntryMode === 'nominal' ? (
                             <div className="flex flex-col items-end gap-1">
-                              <FormattedNumberInput
-                                step={1_000_000}
-                                min={0}
-                                value={h.currentValueIdr}
-                                onChange={(val) =>
-                                  onUpdateHolding(item.assetId, {
-                                    currentValueIdr: val,
-                                  })
-                                }
-                                className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-medium"
-                                ariaLabel={`Nominal value in IDR for ${item.symbol}`}
-                              />
+                              <div className="flex items-center gap-1">
+                                {isUsdMode && (
+                                  <span className="ui-text-muted font-mono text-[10px] select-none">$</span>
+                                )}
+                                <CurrencyNumberInput
+                                  stepIdr={1_000_000}
+                                  stepUsd={100}
+                                  min={0}
+                                  valueIdr={h.currentValueIdr}
+                                  onChangeIdr={(val) =>
+                                    onUpdateHolding(item.assetId, {
+                                      currentValueIdr: val,
+                                    })
+                                  }
+                                  currency={activeCurrency}
+                                  usdIdrRate={usdIdrRate}
+                                  className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-medium"
+                                  ariaLabel={`Nominal value in ${activeCurrency} for ${item.symbol}`}
+                                />
+                              </div>
+                              {isUsdMode && (
+                                <span className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                  ≈ {formatIdr(h.currentValueIdr, true)}
+                                </span>
+                              )}
                               <div className="flex items-center gap-1 text-[9px]">
                                 <button
                                   type="button"
@@ -2664,7 +2986,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   }
                                   className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-rose-500"
                                 >
-                                  Rp 0
+                                  {isUsdMode ? '$0' : 'Rp 0'}
                                 </button>
                               </div>
                             </div>
@@ -2704,8 +3026,15 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   %
                                 </span>
                               </div>
-                              <span className="ui-text-muted font-mono text-[10px]">
-                                ≈ {formatIdr(h.currentValueIdr, true)}
+                              <span className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                <CurrencyAmount
+                                  amountIdr={h.currentValueIdr}
+                                  currency={activeCurrency}
+                                  usdIdrRate={usdIdrRate}
+                                  compact
+                                  prefix="≈ "
+                                  className="items-end"
+                                />
                               </span>
                             </div>
                           ) : (
@@ -2748,7 +3077,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </td>
 
                         <td className="ui-border ui-text-secondary border-b px-2 py-2 text-right font-mono whitespace-nowrap">
-                          <div>{formatIdr(item.postShockValueIdr)}</div>
+                          <div>
+                            <CurrencyAmount
+                              amountIdr={item.postShockValueIdr}
+                              currency={activeCurrency}
+                              usdIdrRate={usdIdrRate}
+                              className="items-end"
+                            />
+                          </div>
                           {h.shockPercent !== 0 && (
                             <div
                               className={`text-[10px] ${
@@ -2801,7 +3137,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </td>
 
                         <td className="ui-border ui-text-main border-b px-2 py-2 text-right font-mono font-semibold whitespace-nowrap">
-                          {formatIdr(item.targetValueIdr)}
+                          <CurrencyAmount
+                            amountIdr={item.targetValueIdr}
+                            currency={activeCurrency}
+                            usdIdrRate={usdIdrRate}
+                            className="items-end"
+                          />
                         </td>
 
                         <td className="ui-border border-b px-2 py-2 text-right">
@@ -2809,13 +3150,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             <div className="inline-flex flex-col items-end rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">
                               <div className="flex items-center gap-1 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
                                 <ArrowUpRight className="h-3.5 w-3.5" />
-                                <span>BUY {formatIdr(item.tradeAmountIdr)}</span>
+                                <span>
+                                  BUY {formatRebalancerMoney(item.tradeAmountIdr, activeCurrency, usdIdrRate)}
+                                </span>
                               </div>
+                              {isUsdMode && (
+                                <div className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                  ≈ {formatIdr(item.tradeAmountIdr)}
+                                </div>
+                              )}
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {item.isNominalOnly
                                   ? 'Nominal Murni'
                                   : asset?.currency === 'USD'
-                                    ? `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
+                                    ? isUsdMode
+                                      ? `≈ ${item.tradeUnits} unit`
+                                      : `${formatUsd(item.tradeAmountUsd)} (${item.tradeUnits} u)`
                                     : item.tradeLotsInteger !== undefined ? (
                                       <div className="flex items-center gap-1">
                                         <span>≈ {item.tradeLotsInteger} Lot ({item.tradeLotsInteger * 100} lbr)</span>
@@ -2870,13 +3220,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 item.estimatedFeeIdr !== undefined &&
                                 item.estimatedFeeIdr > 0 && (
                                   <div className="font-mono text-[9px] text-amber-600 dark:text-amber-400">
-                                    Fee: ≈ {formatIdr(item.estimatedFeeIdr)}
+                                    Fee: ≈ {formatRebalancerMoneyWithIdr(item.estimatedFeeIdr, activeCurrency, usdIdrRate)}
                                   </div>
                                 )}
                               {item.tradeLotsRemainderIdr !== undefined &&
                                 Math.abs(item.tradeLotsRemainderIdr) > 100 && (
                                   <div className="ui-text-muted font-mono text-[9px]">
-                                    Sisa: {formatIdr(item.tradeLotsRemainderIdr)}
+                                    Sisa: {formatRebalancerMoneyWithIdr(item.tradeLotsRemainderIdr, activeCurrency, usdIdrRate)}
                                   </div>
                                 )}
                             </div>
@@ -2885,14 +3235,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               <div className="flex items-center gap-1 font-mono text-xs font-bold text-rose-700 dark:text-rose-300">
                                 <ArrowDownRight className="h-3.5 w-3.5" />
                                 <span>
-                                  SELL {formatIdr(Math.abs(item.tradeAmountIdr))}
+                                  SELL {formatRebalancerMoney(Math.abs(item.tradeAmountIdr), activeCurrency, usdIdrRate)}
                                 </span>
                               </div>
+                              {isUsdMode && (
+                                <div className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                  ≈ {formatIdr(Math.abs(item.tradeAmountIdr))}
+                                </div>
+                              )}
                               <div className="ui-text-muted font-mono text-[10px]">
                                 {item.isNominalOnly
                                   ? 'Nominal Murni'
                                   : asset?.currency === 'USD'
-                                    ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
+                                    ? isUsdMode
+                                      ? `≈ ${Math.abs(item.tradeUnits)} unit`
+                                      : `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
                                     : item.tradeLotsInteger !== undefined ? (
                                       <div className="flex items-center gap-1">
                                         <span>≈ {Math.abs(item.tradeLotsInteger)} Lot ({Math.abs(item.tradeLotsInteger * 100)} lbr)</span>
@@ -2948,7 +3305,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 item.estimatedFeeIdr > 0 && (
                                   <div className="font-mono text-[9px] text-amber-600 dark:text-amber-400">
                                     Fee &amp; Pajak: ≈{' '}
-                                    {formatIdr(item.estimatedFeeIdr)}
+                                    {formatRebalancerMoneyWithIdr(item.estimatedFeeIdr, activeCurrency, usdIdrRate)}
                                   </div>
                                 )}
                             </div>
@@ -3021,14 +3378,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             <span className="ui-text-muted font-normal">
                               • {item.name}
                             </span>
-                            {item.unrealizedGainPercent !== undefined && (
+                            {effectiveShowAvgBuyPrice && item.unrealizedGainPercent !== undefined && (
                               <span
                                 className={`rounded px-1 py-0.2 font-mono text-[9px] font-bold ${
                                   item.unrealizedGainPercent >= 0
                                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                                     : 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
                                 }`}
-                                title={`Unrealized P&L: ${item.unrealizedGainPercent >= 0 ? '+' : ''}${item.unrealizedGainPercent}% (${formatIdr(item.unrealizedGainIdr ?? 0)})`}
+                                title={`Unrealized P&L: ${item.unrealizedGainPercent >= 0 ? '+' : ''}${item.unrealizedGainPercent}% (${formatRebalancerMoneyWithIdr(item.unrealizedGainIdr ?? 0, activeCurrency, usdIdrRate)})`}
                               >
                                 P&L {item.unrealizedGainPercent >= 0 ? '+' : ''}{item.unrealizedGainPercent}%
                               </span>
@@ -3040,7 +3397,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                 <div className="flex items-center gap-1.5 pt-1">
                                   <span
                                     className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-sky-600 dark:text-sky-400 border border-sky-500/20 select-none"
-                                    title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal Rupiah."
+                                    title="Aset bebas harga pasar. Dikelola murni berdasarkan saldo nominal."
                                   >
                                     Nominal Murni
                                   </span>
@@ -3130,44 +3487,46 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   </button>
                                 </div>
 
-                                {/* Feature 5: Optional Avg Buy Price (Modal Beli Rata-Rata) */}
-                                <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
-                                  <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
-                                  <span className="ui-text-muted font-mono text-[9px] select-none">
-                                    {asset?.currency === 'USD' ? '$' : 'Rp'}
-                                  </span>
-                                  <input
-                                    type="number"
-                                    step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
-                                    min={0}
-                                    placeholder="Modal Beli"
-                                    value={h.avgBuyPrice ?? ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value ? Number(e.target.value) : undefined;
-                                      onUpdateHolding(item.assetId, {
-                                        avgBuyPrice: val && val > 0 ? val : undefined,
-                                      });
-                                    }}
-                                    className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
-                                    style={{ width: asset?.currency === 'USD' ? '5.75rem' : '6.75rem' }}
-                                    aria-label={`Harga modal beli rata-rata ${item.symbol}`}
-                                  />
-                                  {h.avgBuyPrice && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
+                                {/* Feature 5: Optional Avg Buy Price (controlled via Avg Price toggle) */}
+                                {effectiveShowAvgBuyPrice && (
+                                  <div className="flex items-center gap-1 pt-0.5" title="Harga modal beli rata-rata untuk tracking Unrealized P&L & proteksi selective-profit-trim">
+                                    <span className="ui-text-muted font-mono text-[9px] select-none">Avg:</span>
+                                    <span className="ui-text-muted font-mono text-[9px] select-none">
+                                      {asset?.currency === 'USD' ? '$' : 'Rp'}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      step={asset?.currency === 'USD' ? (h.currentPrice < 10 ? '0.01' : '1') : '25'}
+                                      min={0}
+                                      placeholder="Modal Beli"
+                                      value={h.avgBuyPrice ?? ''}
+                                      onChange={(e) => {
+                                        const val = e.target.value ? Number(e.target.value) : undefined;
                                         onUpdateHolding(item.assetId, {
-                                          avgBuyPrice: undefined,
-                                        })
-                                      }
-                                      aria-label="Hapus modal beli"
-                                        className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
-                                      title="Hapus modal beli"
-                                    >
-                                      ✕
-                                    </button>
-                                  )}
-                                </div>
+                                          avgBuyPrice: val && val > 0 ? val : undefined,
+                                        });
+                                      }}
+                                      className="ui-input rounded px-1.5 py-0.5 font-mono text-[10px] text-right"
+                                      style={{ width: asset?.currency === 'USD' ? '5.75rem' : '6.75rem' }}
+                                      aria-label={`Harga modal beli rata-rata ${item.symbol}`}
+                                    />
+                                    {h.avgBuyPrice && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          onUpdateHolding(item.assetId, {
+                                            avgBuyPrice: undefined,
+                                          })
+                                        }
+                                        aria-label="Hapus modal beli"
+                                          className="ui-text-muted hover:text-rose-500 p-1.5 rounded transition text-[10px]"
+                                        title="Hapus modal beli"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
 
                                 {/* Quick Drop Chips */}
                                 <div className="flex items-center gap-1">
@@ -3206,11 +3565,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
 
                       {item.action === 'BUY' ? (
                         <span className="rounded border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                          BUY {formatIdr(item.tradeAmountIdr, true)}
+                          BUY {formatRebalancerMoney(item.tradeAmountIdr, activeCurrency, usdIdrRate, true)}
                         </span>
                       ) : item.action === 'SELL' ? (
                         <span className="rounded border border-rose-500/40 bg-rose-500/15 px-2 py-0.5 font-mono text-xs font-bold text-rose-700 dark:text-rose-300">
-                          SELL {formatIdr(Math.abs(item.tradeAmountIdr), true)}
+                          SELL {formatRebalancerMoney(Math.abs(item.tradeAmountIdr), activeCurrency, usdIdrRate, true)}
                         </span>
                       ) : (
                         <div className="flex flex-col items-end">
@@ -3275,24 +3634,32 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       <div className="flex items-center justify-between gap-2">
                         <span className="ui-text-secondary font-medium">
                           {holdingEntryMode === 'nominal'
-                            ? 'Nilai Saat Ini (Rp):'
+                            ? `Nilai Saat Ini (${isUsdMode ? 'USD' : 'Rp'}):`
                             : holdingEntryMode === 'percent'
                               ? 'Porsi Saat Ini (%):'
                               : 'Jumlah Unit:'}
                         </span>
                         {holdingEntryMode === 'nominal' ? (
-                          <FormattedNumberInput
-                            step={1_000_000}
-                            min={0}
-                            value={h.currentValueIdr}
-                            onChange={(val) =>
-                              onUpdateHolding(item.assetId, {
-                                currentValueIdr: val,
-                              })
-                            }
-                            className="ui-input w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
-                            ariaLabel={`Nominal value in IDR for ${item.symbol}`}
-                          />
+                          <div className="flex items-center gap-1">
+                            {isUsdMode && (
+                              <span className="ui-text-muted font-mono text-[11px] select-none">$</span>
+                            )}
+                            <CurrencyNumberInput
+                              stepIdr={1_000_000}
+                              stepUsd={100}
+                              min={0}
+                              valueIdr={h.currentValueIdr}
+                              onChangeIdr={(val) =>
+                                onUpdateHolding(item.assetId, {
+                                  currentValueIdr: val,
+                                })
+                              }
+                              currency={activeCurrency}
+                              usdIdrRate={usdIdrRate}
+                              className="ui-input w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                              ariaLabel={`Nominal value in ${activeCurrency} for ${item.symbol}`}
+                            />
+                          </div>
                         ) : holdingEntryMode === 'percent' ? (
                           <div className="flex items-center gap-1">
                             <input
@@ -3363,6 +3730,11 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
                         )}
                       </div>
+                      {isUsdMode && (
+                        <div className="mt-1 text-right font-mono text-[10px] ui-text-muted tabular-nums">
+                          ≈ {formatIdr(item.postShockValueIdr)}
+                        </div>
+                      )}
                       <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px]">
                         <button
                           type="button"
@@ -3377,11 +3749,13 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           className="ui-subtle ui-text-secondary rounded px-1.5 py-0.5 font-mono hover:text-emerald-600"
                         >
                           =Default Menu 1 (
-                          {formatIdr(
+                          {formatRebalancerMoney(
                             Math.round(
                               initialCapitalMenu1Idr *
                                 ((targetWeights[item.assetId] ?? 0) / 100)
                             ),
+                            activeCurrency,
+                            usdIdrRate,
                             true
                           )}
                           )
@@ -3396,7 +3770,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           }
                           className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:text-rose-500"
                         >
-                          Reset Rp 0
+                          Reset {isUsdMode ? '$0' : 'Rp 0'}
                         </button>
                       </div>
                     </div>
@@ -3436,10 +3810,16 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       </div>
                       <div className="ui-card rounded p-1.5">
                         <div className="ui-text-muted text-[9px] uppercase">
-                          Target Rp
+                          Target {isUsdMode ? 'USD' : 'Rp'}
                         </div>
                         <div className="ui-text-main font-bold">
-                          {formatIdr(item.targetValueIdr, true)}
+                          <CurrencyAmount
+                            amountIdr={item.targetValueIdr}
+                            currency={activeCurrency}
+                            usdIdrRate={usdIdrRate}
+                            compact
+                            className="items-center"
+                          />
                         </div>
                       </div>
                     </div>
@@ -3452,15 +3832,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                             : 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-start justify-between gap-2">
                           <span className="font-bold">
-                            {item.action === 'BUY' ? 'Beli:' : 'Jual:'}{' '}
-                            {formatIdr(Math.abs(item.tradeAmountIdr))}
+                            <CurrencyAmount
+                              amountIdr={Math.abs(item.tradeAmountIdr)}
+                              currency={activeCurrency}
+                              usdIdrRate={usdIdrRate}
+                              prefix={item.action === 'BUY' ? 'Beli: ' : 'Jual: '}
+                            />
                           </span>
                           <div className="flex items-center gap-1">
                             <span className="text-[10px]">
                               {asset?.currency === 'USD'
-                                ? `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
+                                ? isUsdMode
+                                  ? `≈ ${Math.abs(item.tradeUnits)} unit`
+                                  : `${formatUsd(Math.abs(item.tradeAmountUsd))} (${Math.abs(item.tradeUnits)} u)`
                                 : item.tradeLotsInteger !== undefined
                                   ? `≈ ${Math.abs(item.tradeLotsInteger)} Lot (${Math.abs(item.tradeLotsInteger * 100)} lbr)`
                                   : item.tradeLots !== undefined
@@ -3516,14 +3902,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           item.estimatedFeeIdr > 0 && (
                             <div className="flex justify-between text-[10px] text-amber-600 dark:text-amber-400">
                               <span>Fee &amp; Pajak:</span>
-                              <span>≈ {formatIdr(item.estimatedFeeIdr)}</span>
+                              <span>≈ {formatRebalancerMoneyWithIdr(item.estimatedFeeIdr, activeCurrency, usdIdrRate)}</span>
                             </div>
                           )}
                         {item.tradeLotsRemainderIdr !== undefined &&
                           Math.abs(item.tradeLotsRemainderIdr) > 100 && (
                             <div className="ui-text-muted flex justify-between text-[10px]">
                               <span>Sisa kas pecahan:</span>
-                              <span>{formatIdr(item.tradeLotsRemainderIdr)}</span>
+                              <span>{formatRebalancerMoneyWithIdr(item.tradeLotsRemainderIdr, activeCurrency, usdIdrRate)}</span>
                             </div>
                           )}
                       </div>
@@ -3542,7 +3928,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               </div>
               <p className="ui-text-muted text-[11px]">
                 Klik tombol di kanan untuk otomatis memperbarui nilai posisi awal ke
-                Target (Rp), mereset shock ke 0%, dan mencatat ke Jurnal Rebalancing.
+                Target ({isUsdMode ? 'USD' : 'Rp'}), mereset shock ke 0%, dan mencatat ke Jurnal Rebalancing.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -3588,7 +3974,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 rebalanceResult.unallocatedCashRemainderIdr < -100 && (
                   <span className="inline-flex items-center gap-1 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2 py-1 text-[11px] font-mono font-bold text-rose-500">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    <span>Defisit: {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}</span>
+                    <span>
+                      Defisit:{' '}
+                      {formatRebalancerMoneyWithIdr(
+                        Math.abs(rebalanceResult.unallocatedCashRemainderIdr),
+                        activeCurrency,
+                        usdIdrRate
+                      )}
+                    </span>
                   </span>
                 )}
               <button
@@ -3677,38 +4070,59 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               Ringkasan Arus Kas Rebalancing
             </h3>
             <div className="mt-3 space-y-2.5 text-xs">
-              <div className="ui-border flex justify-between border-b pb-2">
+              <div className="ui-border flex items-start justify-between gap-2 border-b pb-2">
                 <span className="ui-text-muted">Total Aset Dijual:</span>
-                <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">
-                  {formatIdr(rebalanceResult.totalSellIdr)}
+                <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.totalSellIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
-              <div className="ui-border flex justify-between border-b pb-2">
+              <div className="ui-border flex items-start justify-between gap-2 border-b pb-2">
                 <span className="ui-text-muted">Top-Up Kas (DCA):</span>
-                <span className="ui-text-main font-mono font-semibold">
-                  {formatIdr(rebalanceResult.cashInjectionIdr)}
+                <span className="ui-text-main font-mono font-semibold text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.cashInjectionIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
-              <div className="ui-border flex justify-between border-b pb-2">
+              <div className="ui-border flex items-start justify-between gap-2 border-b pb-2">
                 <span className="ui-text-muted">Total Aset Dibeli:</span>
-                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                  {formatIdr(rebalanceResult.totalBuyIdr)}
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.totalBuyIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
               {enableBrokerFees &&
                 rebalanceResult.totalEstimatedFeeIdr !== undefined &&
                 rebalanceResult.totalEstimatedFeeIdr > 0 && (
-                  <div className="ui-border flex justify-between border-b pb-2 text-amber-600 dark:text-amber-400">
+                  <div className="ui-border flex items-start justify-between gap-2 border-b pb-2 text-amber-600 dark:text-amber-400">
                     <span>Estimasi Fee Broker &amp; Pajak:</span>
-                    <span className="font-mono font-semibold">
-                      ≈ {formatIdr(rebalanceResult.totalEstimatedFeeIdr)}
+                    <span className="font-mono font-semibold text-right">
+                      <CurrencyAmount
+                        amountIdr={rebalanceResult.totalEstimatedFeeIdr}
+                        currency={activeCurrency}
+                        usdIdrRate={usdIdrRate}
+                        prefix="≈ "
+                        className="items-end"
+                      />
                     </span>
                   </div>
                 )}
               {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
                 Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 && (
                   <div
-                    className={`ui-border flex items-center justify-between border-b pb-2 ${
+                    className={`ui-border flex items-start justify-between gap-2 border-b pb-2 ${
                       rebalanceResult.unallocatedCashRemainderIdr < 0
                         ? 'text-rose-500 font-bold'
                         : 'text-emerald-600 dark:text-emerald-400'
@@ -3719,9 +4133,14 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         ? 'Defisit Kas (Kekurangan Dana):'
                         : 'Sisa Kas Belum Terpakai:'}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-semibold">
-                        {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-mono font-semibold text-right">
+                        <CurrencyAmount
+                          amountIdr={rebalanceResult.unallocatedCashRemainderIdr}
+                          currency={activeCurrency}
+                          usdIdrRate={usdIdrRate}
+                          className="items-end"
+                        />
                       </span>
                       {rebalanceResult.unallocatedCashRemainderIdr < 0 && (
                         <button
@@ -3742,19 +4161,19 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
               {/* Mini Visual Cash Flow Balance Meter */}
               {rebalanceResult.finalTargetTotalIdr > 0 && (
                 <div className="rounded-lg bg-black/5 dark:bg-white/5 p-2.5 space-y-1.5 border ui-border">
-                  <div className="flex items-center justify-between text-[11px]">
+                  <div className="flex items-center justify-between text-[11px] gap-2">
                     <span className="ui-text-muted font-medium">Keseimbangan Kas:</span>
                     {rebalanceResult.unallocatedCashRemainderIdr !== undefined &&
                     Math.abs(rebalanceResult.unallocatedCashRemainderIdr) > 100 ? (
                       rebalanceResult.unallocatedCashRemainderIdr < 0 ? (
-                        <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Defisit {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr))}
+                        <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1 text-right">
+                          <AlertTriangle className="h-3 w-3 shrink-0" />
+                          Defisit {formatRebalancerMoney(Math.abs(rebalanceResult.unallocatedCashRemainderIdr), activeCurrency, usdIdrRate)}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          <Check className="h-3 w-3" />
-                          Sisa Kas {formatIdr(rebalanceResult.unallocatedCashRemainderIdr)}
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-right">
+                          <Check className="h-3 w-3 shrink-0" />
+                          Sisa Kas {formatRebalancerMoney(rebalanceResult.unallocatedCashRemainderIdr, activeCurrency, usdIdrRate)}
                         </span>
                       )
                     ) : (
@@ -3783,17 +4202,26 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       );
                     })()}
                   </div>
-                  <div className="flex justify-between text-[10px] ui-text-muted font-mono">
-                    <span>Kas Masuk: {formatIdr(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr)}</span>
-                    <span>Kas Keluar: {formatIdr(rebalanceResult.totalBuyIdr)}</span>
+                  <div className="flex justify-between gap-2 text-[10px] ui-text-muted font-mono">
+                    <span>
+                      Masuk: {formatRebalancerMoney(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr, activeCurrency, usdIdrRate, isUsdMode)}
+                    </span>
+                    <span>
+                      Keluar: {formatRebalancerMoney(rebalanceResult.totalBuyIdr, activeCurrency, usdIdrRate, isUsdMode)}
+                    </span>
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-between pt-1 text-sm font-bold">
+              <div className="flex items-start justify-between gap-2 pt-1 text-sm font-bold">
                 <span className="ui-text-main">Nilai Akhir Portfolio:</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                  {formatIdr(rebalanceResult.finalTargetTotalIdr)}
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.finalTargetTotalIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
             </div>
@@ -3904,11 +4332,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     {formatIdr(step.limitPriceIdr)}
                   </td>
                   <td className="ui-border ui-text-main border-b px-3 py-2.5 text-right font-mono font-semibold">
-                    {formatIdr(step.postCrashPortfolioIdr, true)}
+                    <CurrencyAmount
+                      amountIdr={step.postCrashPortfolioIdr}
+                      currency={activeCurrency}
+                      usdIdrRate={usdIdrRate}
+                      compact
+                      className="items-end"
+                    />
                   </td>
                   <td className="ui-border border-b px-3 py-2.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    BUY {formatIdr(step.rebalanceBuyAmountIdr)}
-                    {selectedLadderAsset?.currency === 'USD' && (
+                    <CurrencyAmount
+                      amountIdr={step.rebalanceBuyAmountIdr}
+                      currency={activeCurrency}
+                      usdIdrRate={usdIdrRate}
+                      prefix="BUY "
+                      className="items-end"
+                    />
+                    {!isUsdMode && selectedLadderAsset?.currency === 'USD' && (
                       <div className="ui-text-muted text-[10px] font-normal">
                         ({formatUsd(step.rebalanceBuyAmountIdr / Math.max(1, usdIdrRate))})
                       </div>
@@ -3920,7 +4360,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       : `${step.rebalanceBuyUnits} unit`}
                   </td>
                   <td className="ui-border ui-text-secondary border-b px-3 py-2.5 text-right font-mono">
-                    {formatIdr(step.fundingFromDefensiveIdr)}
+                    <CurrencyAmount
+                      amountIdr={step.fundingFromDefensiveIdr}
+                      currency={activeCurrency}
+                      usdIdrRate={usdIdrRate}
+                      className="items-end"
+                    />
                   </td>
                 </tr>
               ))}
@@ -4001,7 +4446,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             {historyChartData.length > 1 && (
               <div className="ui-subtle rounded-lg p-4 lg:col-span-5">
                 <div className="ui-text-main mb-2 text-xs font-semibold">
-                  Kurva Net Worth Riwayat Rebalance (Juta Rp)
+                  {isUsdMode
+                    ? 'Kurva Net Worth Riwayat Rebalance (USD)'
+                    : 'Kurva Net Worth Riwayat Rebalance (Juta Rp)'}
                 </div>
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -4013,7 +4460,9 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       <YAxis
                         stroke="#71717a"
                         fontSize={10}
-                        tickFormatter={(v) => `${v}Jt`}
+                        tickFormatter={(v) =>
+                          isUsdMode ? formatUsd(Number(v), true) : `${v}Jt`
+                        }
                       />
                       <Tooltip
                         contentStyle={{
@@ -4025,14 +4474,23 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         }}
                         itemStyle={{ color: 'var(--text-main)' }}
                         labelStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
-                        formatter={(val: number) => [
-                          `Rp ${val.toLocaleString('id-ID')} Juta`,
-                          'Total Portfolio',
-                        ]}
+                        formatter={(val: number, _name: string, props: any) => {
+                          if (isUsdMode) {
+                            const idrVal = props?.payload?.NetWorthIdr ?? usdToIdr(val, usdIdrRate);
+                            return [
+                              `${formatUsd(val)} (≈ ${formatIdr(idrVal)})`,
+                              'Total Portfolio',
+                            ];
+                          }
+                          return [
+                            `Rp ${val.toLocaleString('id-ID')} Juta`,
+                            'Total Portfolio',
+                          ];
+                        }}
                       />
                       <Area
                         type="monotone"
-                        dataKey="NetWorthJuta"
+                        dataKey={isUsdMode ? 'NetWorthUsd' : 'NetWorthJuta'}
                         stroke="var(--accent-primary)"
                         fill="var(--accent-primary)"
                         fillOpacity={0.18}
@@ -4074,17 +4532,22 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         <td className="ui-border border-b px-3 py-2">
                           <div className="ui-text-main font-semibold">{h.note}</div>
                           <div className="ui-text-muted text-[10px]">
-                            Top-Up: {formatIdr(h.cashInjectedIdr, true)} • Beli:{' '}
-                            {formatIdr(h.totalBuyIdr, true)}
+                            Top-Up: {formatRebalancerMoney(h.cashInjectedIdr, activeCurrency, usdIdrRate, true)} • Beli:{' '}
+                            {formatRebalancerMoney(h.totalBuyIdr, activeCurrency, usdIdrRate, true)}
                             {h.unspentCashRemainderIdr !== undefined && h.unspentCashRemainderIdr > 0 && (
                               <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                                • Sisa Kas: {formatIdr(h.unspentCashRemainderIdr, true)}
+                                • Sisa Kas: {formatRebalancerMoney(h.unspentCashRemainderIdr, activeCurrency, usdIdrRate, true)}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="ui-border border-b px-3 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatIdr(h.totalValueAfterIdr)}
+                        <td className="ui-border border-b px-3 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                          <CurrencyAmount
+                            amountIdr={h.totalValueAfterIdr}
+                            currency={activeCurrency}
+                            usdIdrRate={usdIdrRate}
+                            className="items-end"
+                          />
                         </td>
                         <td className="ui-border border-b px-3 py-2">
                           <div className="flex flex-wrap gap-1">
@@ -4268,26 +4731,52 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
             </div>
 
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-3.5 space-y-2 text-xs">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start gap-2">
                 <span className="ui-text-secondary">Total Beli yang Diinginkan:</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatIdr(rebalanceResult.totalBuyIdr)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="ui-text-secondary">Kas Tersedia (Jual + DCA):</span>
-                <span className="font-mono font-bold ui-text-main">
-                  {formatIdr(rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr)}
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.totalBuyIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
-              <div className="border-t border-rose-500/20 pt-2 flex justify-between items-center text-rose-600 dark:text-rose-400 font-bold">
+              <div className="flex justify-between items-start gap-2">
+                <span className="ui-text-secondary">Kas Tersedia (Jual + DCA):</span>
+                <span className="font-mono font-bold ui-text-main text-right">
+                  <CurrencyAmount
+                    amountIdr={rebalanceResult.totalSellIdr + rebalanceResult.cashInjectionIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
+                </span>
+              </div>
+              <div className="border-t border-rose-500/20 pt-2 flex justify-between items-start gap-2 text-rose-600 dark:text-rose-400 font-bold">
                 <span>Kekurangan Dana (Defisit):</span>
-                <span className="font-mono text-sm">
-                  {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}
+                <span className="font-mono text-sm text-right">
+                  <CurrencyAmount
+                    amountIdr={Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0)}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
             </div>
 
             <p className="text-xs ui-text-secondary leading-relaxed">
-              Apakah Anda akan melakukan <strong>top-up kas sebesar {formatIdr(Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0))}</strong> ke portofolio / RDN untuk menutup kekurangan dana ini sebelum menerapkan rebalance?
+              Apakah Anda akan melakukan{' '}
+              <strong>
+                top-up kas sebesar{' '}
+                {formatRebalancerMoneyWithIdr(
+                  Math.abs(rebalanceResult.unallocatedCashRemainderIdr ?? 0),
+                  activeCurrency,
+                  usdIdrRate
+                )}
+              </strong>{' '}
+              ke portofolio / RDN untuk menutup kekurangan dana ini sebelum menerapkan rebalance?
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
@@ -4347,16 +4836,26 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                 <span className="ui-text-secondary">Catatan:</span>
                 <span className="font-medium ui-text-main">{undoTargetEntry.note}</span>
               </div>
-              <div className="flex justify-between items-center border-t ui-border pt-1.5">
+              <div className="flex justify-between items-start gap-2 border-t ui-border pt-1.5">
                 <span className="ui-text-secondary">Total Portofolio Saat Dicatat:</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatIdr(undoTargetEntry.totalValueAfterIdr)}
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-right">
+                  <CurrencyAmount
+                    amountIdr={undoTargetEntry.totalValueAfterIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start gap-2">
                 <span className="ui-text-secondary">Akan Dikembalikan ke Total:</span>
-                <span className="font-mono font-bold ui-text-main">
-                  {formatIdr(undoTargetEntry.totalValueBeforeIdr)}
+                <span className="font-mono font-bold ui-text-main text-right">
+                  <CurrencyAmount
+                    amountIdr={undoTargetEntry.totalValueBeforeIdr}
+                    currency={activeCurrency}
+                    usdIdrRate={usdIdrRate}
+                    className="items-end"
+                  />
                 </span>
               </div>
             </div>
