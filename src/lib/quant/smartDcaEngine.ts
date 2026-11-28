@@ -9,6 +9,7 @@ import {
 } from './types';
 import { getSentimentZone } from './tacticalValuationEngine';
 import { roundToIdxTick } from './rebalancerEngine';
+import { historicalCurrentDrawdownFromPeakPct } from './historicalModel';
 import {
   AssetIndicatorConfluence,
   CycleIndicatorState,
@@ -158,7 +159,7 @@ export const CURATED_VALUATION_BENCHMARKS: Record<
   }
 > = {
   BTC: {
-    athPriceUsd: 73750,
+    athPriceUsd: 109000,
     benchmarkDrawdownAth: 15.0,
   },
   ETH: {
@@ -166,7 +167,7 @@ export const CURATED_VALUATION_BENCHMARKS: Record<
     benchmarkDrawdownAth: 45.0,
   },
   SOL: {
-    athPriceUsd: 260,
+    athPriceUsd: 295,
     benchmarkDrawdownAth: 35.0,
   },
   BBCA: {
@@ -311,18 +312,26 @@ export function calculateValuationScore(
     // Fear & Greed discount: when FnG is 20 (Fear), discount score is 80 (100 - 20)
     const fngDiscountScore = Math.max(0, Math.min(100, 100 - fngScore));
 
-    // Calculate ATH drawdown
-    let athDd = override?.drawdownAth ?? benchmark.benchmarkDrawdownAth ?? 20.0;
-    if (override?.drawdownAth === undefined && benchmark.athPriceUsd && currentPriceNative) {
-      let targetPriceNative = currentPriceNative;
-      if (asset.currency === 'IDR') {
-        const rate = usdIdrRate > 0 ? usdIdrRate : 16000;
-        targetPriceNative = currentPriceNative / rate;
+    // Calculate ATH drawdown: prefer real bundled 5Y price history before curated benchmark fallback
+    let athDd = override?.drawdownAth;
+    if (athDd === undefined) {
+      const histPeakDd = historicalCurrentDrawdownFromPeakPct(asset.id);
+      if (histPeakDd !== null) {
+        athDd = histPeakDd;
+      } else {
+        athDd = benchmark.benchmarkDrawdownAth ?? 20.0;
+        if (benchmark.athPriceUsd && currentPriceNative) {
+          let targetPriceNative = currentPriceNative;
+          if (asset.currency === 'IDR') {
+            const rate = usdIdrRate > 0 ? usdIdrRate : 16000;
+            targetPriceNative = currentPriceNative / rate;
+          }
+          athDd = Math.max(
+            0,
+            Number((((benchmark.athPriceUsd - targetPriceNative) / benchmark.athPriceUsd) * 100).toFixed(1))
+          );
+        }
       }
-      athDd = Math.max(
-        0,
-        Number((((benchmark.athPriceUsd - targetPriceNative) / benchmark.athPriceUsd) * 100).toFixed(1))
-      );
     }
     // 0% DD = score 0, 70%+ DD = score 100
     const athDdScore = Math.max(0, Math.min(100, Math.round((athDd / 70.0) * 100)));
@@ -394,7 +403,10 @@ export function calculateValuationScore(
 
     // 52W Drawdown: 0% DD = 0 score, 25%+ DD = 100 score
     const dd52w =
-      override?.drawdown52w ?? benchmark.benchmarkDrawdown52w ?? 10.0;
+      override?.drawdown52w ??
+      historicalCurrentDrawdownFromPeakPct(asset.id, 52) ??
+      benchmark.benchmarkDrawdown52w ??
+      10.0;
     const dd52wScore = Math.max(0, Math.min(100, Math.round((dd52w / 25.0) * 100)));
 
     const compositeScore = Math.round(0.6 * peScore + 0.4 * dd52wScore);
@@ -458,7 +470,10 @@ export function calculateValuationScore(
     const peScore = Math.max(0, Math.min(100, Math.round(50 + peDiscountPct * 1.5)));
 
     const dd52w =
-      override?.drawdown52w ?? benchmark.benchmarkDrawdown52w ?? 6.0;
+      override?.drawdown52w ??
+      historicalCurrentDrawdownFromPeakPct(asset.id, 52) ??
+      benchmark.benchmarkDrawdown52w ??
+      6.0;
     // US large-cap 20% DD is bear market territory = score 100
     const dd52wScore = Math.max(0, Math.min(100, Math.round((dd52w / 20.0) * 100)));
 
@@ -505,7 +520,10 @@ export function calculateValuationScore(
     );
 
     const athDd =
-      override?.drawdownAth ?? benchmark.benchmarkDrawdownAth ?? 3.5;
+      override?.drawdownAth ??
+      historicalCurrentDrawdownFromPeakPct(asset.id) ??
+      benchmark.benchmarkDrawdownAth ??
+      3.5;
     // Gold 15% DD from ATH is a major dip = score 100
     const athDdScore = Math.max(0, Math.min(100, Math.round((athDd / 15.0) * 100)));
 

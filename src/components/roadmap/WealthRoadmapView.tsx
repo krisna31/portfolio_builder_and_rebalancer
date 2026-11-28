@@ -378,8 +378,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         initialCapitalIdr: initialCapitalIdr > 0 ? initialCapitalIdr : 100_000_000,
         baseCagrPercent: solvedMetrics.cagr,
         maxDrawdownPercent: solvedMetrics.maxDrawdown,
+        assets: allAssets,
+        weights: activeWeights,
       }),
-    [initialCapitalIdr, solvedMetrics.cagr, solvedMetrics.maxDrawdown]
+    [initialCapitalIdr, solvedMetrics.cagr, solvedMetrics.maxDrawdown, allAssets, activeWeights]
   );
 
   const freqChartData = freqBacktest.series.map((pt) => ({
@@ -403,6 +405,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         numSimulations: 500,
         annualStepUpPercent: annualStepUpPct,
         annualInflationPercent,
+        goalBasis:
+          monteCarloDisplayMode === 'real' && annualInflationPercent > 0
+            ? 'real'
+            : 'nominal',
       }),
     [
       initialCapitalIdr,
@@ -413,6 +419,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
       displayYears,
       annualStepUpPct,
       annualInflationPercent,
+      monteCarloDisplayMode,
     ]
   );
 
@@ -1221,20 +1228,32 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
                 <div className="p-3 rounded-lg ui-card border ui-border">
                   <div className="text-[11px] ui-text-muted">Hasil P10 (Ujian Bear)</div>
                   <div className="mt-0.5 text-base font-bold font-mono text-rose-600 dark:text-rose-400">
-                    {formatIdr(monteCarloResult.bearFinalWealthIdr, true)}
+                    {formatIdr(
+                      isRealMonteCarlo
+                        ? (monteCarloResult.series[monteCarloResult.series.length - 1]?.p10Real ??
+                            monteCarloResult.bearFinalWealthIdr)
+                        : monteCarloResult.bearFinalWealthIdr,
+                      true
+                    )}
                   </div>
                   <div className="text-[10px] ui-text-muted mt-0.5">
-                    10% terburuk
+                    10% terburuk{isRealMonteCarlo ? ' (riil)' : ''}
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg ui-card border ui-border">
                   <div className="text-[11px] ui-text-muted">Hasil P90 (Kondisi Bull)</div>
                   <div className="mt-0.5 text-base font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    {formatIdr(monteCarloResult.bullFinalWealthIdr, true)}
+                    {formatIdr(
+                      isRealMonteCarlo
+                        ? (monteCarloResult.series[monteCarloResult.series.length - 1]?.p90Real ??
+                            monteCarloResult.bullFinalWealthIdr)
+                        : monteCarloResult.bullFinalWealthIdr,
+                      true
+                    )}
                   </div>
                   <div className="text-[10px] ui-text-muted mt-0.5">
-                    10% terbaik
+                    10% terbaik{isRealMonteCarlo ? ' (riil)' : ''}
                   </div>
                 </div>
               </div>
@@ -1976,6 +1995,17 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
               Kuartalan: {formatIdr(freqBacktest.finalQuarterlyIdr)}
             </span>
+            <span
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-medium ${
+                freqBacktest.isHistorical
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+              }`}
+            >
+              {freqBacktest.isHistorical
+                ? `Data Aktual 5Y IDR (${freqBacktest.windowStart} – ${freqBacktest.windowEnd})`
+                : 'Estimasi Parametrik (Histori < 2 Thn)'}
+            </span>
           </div>
 
           <button
@@ -1992,7 +2022,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
         {collapsedSections.backtest ? (
           <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
             <span className="ui-text-muted">
-              Kuartalan (3M): <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(freqBacktest.finalQuarterlyIdr)}</strong> (DD -{solvedMetrics.maxDrawdown}%)
+              Kuartalan (3M): <strong className="text-emerald-600 dark:text-emerald-400">{formatIdr(freqBacktest.finalQuarterlyIdr)}</strong> (DD -{freqBacktest.quarterlyMaxDdPercent ?? solvedMetrics.maxDrawdown}%)
             </span>
             <span className="ui-text-secondary">
               Bulanan: <strong className="ui-text-main">{formatIdr(freqBacktest.finalMonthlyIdr)}</strong> | Tahunan: <strong className="ui-text-main">{formatIdr(freqBacktest.finalAnnualIdr)}</strong> | Buy&amp;Hold: <strong className="text-rose-500">{formatIdr(freqBacktest.finalBuyHoldIdr)}</strong>
@@ -2008,8 +2038,8 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <div className="mt-1 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
               {formatIdr(freqBacktest.finalQuarterlyIdr)}
             </div>
-            <div className="ui-text-muted mt-0.5 text-[11px]">
-              Max Drawdown: -{solvedMetrics.maxDrawdown}%
+            <div className="ui-text-muted mt-0.5 font-mono text-[11px]">
+              Max Drawdown: -{freqBacktest.quarterlyMaxDdPercent ?? solvedMetrics.maxDrawdown}%
             </div>
           </div>
 
@@ -2018,8 +2048,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <div className="ui-text-main mt-1 font-mono text-lg font-bold">
               {formatIdr(freqBacktest.finalMonthlyIdr)}
             </div>
-            <div className="ui-text-muted mt-0.5 text-[11px]">
-              Frekuensi tinggi (biaya transaksi lebih sering)
+            <div className="ui-text-muted mt-0.5 font-mono text-[11px]">
+              {freqBacktest.monthlyMaxDdPercent !== undefined
+                ? `Max Drawdown: -${freqBacktest.monthlyMaxDdPercent}%`
+                : 'Frekuensi tinggi (biaya transaksi lebih sering)'}
             </div>
           </div>
 
@@ -2028,8 +2060,10 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <div className="ui-text-main mt-1 font-mono text-lg font-bold">
               {formatIdr(freqBacktest.finalAnnualIdr)}
             </div>
-            <div className="ui-text-muted mt-0.5 text-[11px]">
-              Disiplin minimal (1x per tahun)
+            <div className="ui-text-muted mt-0.5 font-mono text-[11px]">
+              {freqBacktest.annualMaxDdPercent !== undefined
+                ? `Max Drawdown: -${freqBacktest.annualMaxDdPercent}%`
+                : 'Disiplin minimal (1x per tahun)'}
             </div>
           </div>
 
@@ -2040,7 +2074,7 @@ export const WealthRoadmapView: React.FC<WealthRoadmapViewProps> = ({
             <div className="ui-text-secondary mt-1 font-mono text-lg font-bold">
               {formatIdr(freqBacktest.finalBuyHoldIdr)}
             </div>
-            <div className=" mt-0.5 font-mono text-[11px] text-rose-600 dark:text-rose-400">
+            <div className="mt-0.5 font-mono text-[11px] text-rose-600 dark:text-rose-400">
               Max Drawdown: -{freqBacktest.buyHoldMaxDdPercent}%
             </div>
           </div>

@@ -10,9 +10,14 @@ import { formatIdr, getRiskTierBadge } from '../../lib/formatters';
 import { FormattedNumberInput } from '../FormattedNumberInput';
 import { simulateWealthToGoal } from '../../lib/quant/wealthSimulator';
 import { findStrictDominatingPresets, MetricsModel } from '../../lib/quant/riskParitySolver';
+import {
+  AssumptionPresetMode,
+  historicalRealizedCagrPct,
+} from '../../lib/quant/historicalModel';
 import { CORE_AND_EXPANDED_ASSETS } from '../../data/presets';
 import {
   lookupCustomYahooTicker,
+  MarketDataSnapshot,
   POPULAR_TICKER_ESTIMATES,
   TickerLookupResult,
 } from '../../services/priceFeed';
@@ -97,6 +102,9 @@ interface PortfolioBuilderViewProps {
   setSolverMode: (m: 'calibrated-video' | 'euler-covariance') => void;
   metricsModel?: MetricsModel;
   setMetricsModel?: (m: MetricsModel) => void;
+  assumptionPreset?: AssumptionPresetMode;
+  onApplyAssumptionPreset?: (mode: AssumptionPresetMode) => void;
+  marketSnapshotMetrics?: MarketDataSnapshot['assets'] | null;
   activeWeights: Record<string, number>;
   onManualWeightChange: (assetId: string, newWeight: number) => void;
   onNormalizeManualWeights: (strategy?: 'proportional' | 'equal') => void;
@@ -161,6 +169,9 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
   setSolverMode,
   metricsModel = 'historical',
   setMetricsModel,
+  assumptionPreset = 'conservative-forward',
+  onApplyAssumptionPreset,
+  marketSnapshotMetrics = null,
   activeWeights,
   onManualWeightChange,
   onNormalizeManualWeights,
@@ -896,7 +907,7 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                       onClick={onResetAssetAssumptions}
                       className="rounded bg-amber-500/15 px-1.5 py-0.5 font-sans font-semibold text-amber-600 hover:bg-amber-500/25 dark:text-amber-400"
                     >
-                      Reset Asumsi 5Y Video
+                      Reset Asumsi
                     </button>
                   )}
                 </div>
@@ -2494,16 +2505,46 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="ui-text-secondary text-xs font-semibold">
-                3. Bobot Modal (%), Asumsi Return Aset (%/thn) & Kontribusi CAGR:
+                3. Bobot Modal (%), Asumsi Return Aset (%/thn) &amp; Kontribusi CAGR:
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {onApplyAssumptionPreset && (
+                  <div
+                    className="ui-subtle inline-flex items-center gap-0.5 rounded-md p-0.5 border text-[11px]"
+                    title="Pilih rezim asumsi CAGR & risiko aset"
+                  >
+                    <span className="ui-text-muted px-1 text-[10px] font-medium hidden sm:inline">
+                      Asumsi:
+                    </span>
+                    {(
+                      [
+                        { id: 'conservative-forward', label: 'Konservatif' },
+                        { id: 'realized-5y', label: 'Realisasi 5Y' },
+                        { id: 'video-baseline', label: 'Video 2019–24' },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => onApplyAssumptionPreset(opt.id)}
+                        className={`rounded px-1.5 py-0.5 font-medium transition ${
+                          assumptionPreset === opt.id
+                            ? 'ui-card ui-text-main font-semibold shadow-2xs'
+                            : 'ui-text-muted hover:ui-text-main'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {hasCustomAssetAssumptions && (
                   <button
                     type="button"
                     onClick={onResetAssetAssumptions}
                     className="rounded bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 hover:bg-amber-500/25 dark:text-amber-400"
                   >
-                    Reset Asumsi 5Y Video
+                    Reset Asumsi
                   </button>
                 )}
                 {/* Visual Reactive Status Badge for 100% Weight */}
@@ -2861,6 +2902,21 @@ export const PortfolioBuilderView: React.FC<PortfolioBuilderViewProps> = ({
                             aria-label={`Asumsi CAGR tahunan ${asset.shortName}`}
                           />
                           <span className="ui-text-muted font-mono">%/thn</span>
+                          {(() => {
+                            const realized5y =
+                              marketSnapshotMetrics?.[asset.id]?.cagr5y ??
+                              historicalRealizedCagrPct(asset.id);
+                            if (realized5y === null || realized5y === undefined) return null;
+                            return (
+                              <span
+                                className="ui-subtle ui-text-muted rounded px-1 py-0.25 font-mono text-[9px]"
+                                title="Realisasi CAGR 5 tahun terakhir dari snapshot/histori"
+                              >
+                                5Y: {realized5y >= 0 ? '+' : ''}
+                                {realized5y.toFixed(1)}%
+                              </span>
+                            );
+                          })()}
                           {asset.id === 'RDPT' && rdptPromoActive && (
                             <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                               (+3% Promo = {effectiveCagr.toFixed(1)}%)

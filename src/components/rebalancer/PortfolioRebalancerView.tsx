@@ -223,7 +223,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
   const [isSyncingFng, setIsSyncingFng] = useState(false);
   const [fngSyncMessage, setFngSyncMessage] = useState<string | null>(null);
   const [showDeficitConfirmModal, setShowDeficitConfirmModal] = useState(false);
+  const [showShockCommitConfirmModal, setShowShockCommitConfirmModal] = useState(false);
   const optionsMenuRef = React.useRef<HTMLDivElement>(null);
+
+  const hasActiveShock = allAssets.some(
+    (a) => Math.abs(holdings[a.id]?.shockPercent ?? 0) > 0.001
+  );
 
   const handleSyncCryptoFearAndGreed = async () => {
     setIsSyncingFng(true);
@@ -617,7 +622,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     }
   };
 
-  const handleApplyAndRecord = () => {
+  const commitPlanOrAskDeficit = () => {
     const rawDeficit = rebalanceResult.unallocatedCashRemainderIdr ?? 0;
     if (rawDeficit < -100) {
       setShowDeficitConfirmModal(true);
@@ -627,6 +632,24 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
     setRebalanceNoteInput('');
     setCommittedBanner(true);
     setTimeout(() => setCommittedBanner(false), 2500);
+  };
+
+  const handleApplyAndRecord = () => {
+    if (hasActiveShock) {
+      setShowShockCommitConfirmModal(true);
+      return;
+    }
+    commitPlanOrAskDeficit();
+  };
+
+  const handleConfirmShockAndContinue = () => {
+    setShowShockCommitConfirmModal(false);
+    commitPlanOrAskDeficit();
+  };
+
+  const handleResetShockAndCancelCommit = () => {
+    onApplyShockScenario('reset');
+    setShowShockCommitConfirmModal(false);
   };
 
   const handleConfirmDeficitTopUpAndCommit = () => {
@@ -879,17 +902,18 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
       ? (pnlFromShockIdr / rebalanceResult.initialTotalIdr) * 100
       : 0;
 
-  // Escape closes the options popover and the deficit confirmation dialog (standard menu/dialog keyboard contract)
+  // Escape closes the options popover and confirmation dialogs (standard menu/dialog keyboard contract)
   useEffect(() => {
-    if (!isOptionsMenuOpen && !showDeficitConfirmModal) return;
+    if (!isOptionsMenuOpen && !showDeficitConfirmModal && !showShockCommitConfirmModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setIsOptionsMenuOpen(false);
       setShowDeficitConfirmModal(false);
+      setShowShockCommitConfirmModal(false);
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOptionsMenuOpen, showDeficitConfirmModal]);
+  }, [isOptionsMenuOpen, showDeficitConfirmModal, showShockCommitConfirmModal]);
 
   const historyChartData = [...rebalanceHistory]
     .reverse()
@@ -4160,6 +4184,60 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
           />
         )}
       </React.Suspense>
+
+      {/* Stress-Test Shock Active Confirmation Modal */}
+      {showShockCommitConfirmModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="shock-commit-modal-title"
+          onClick={() => setShowShockCommitConfirmModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-200"
+        >
+          <div
+            tabIndex={-1}
+            className="relative w-full max-w-md ui-card ui-border rounded-xl shadow-md p-6 space-y-4 outline-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 id="shock-commit-modal-title" className="text-sm font-bold ui-text-main">
+                  Simulasi Stress-Test Masih Aktif
+                </h3>
+                <p className="text-xs ui-text-muted">
+                  Komit sekarang akan menyimpan harga pasca-shock ke holding asli
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3.5 space-y-1.5 text-xs ui-text-secondary leading-relaxed">
+              <p>
+                Beberapa aset masih memiliki <strong>Shock Simulasi (%)</strong> aktif. Jika Anda menerapkan rebalance ini sekarang, saldo &amp; harga holding asli Anda akan ditimpa dengan harga hasil simulasi stress-test.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleResetShockAndCancelCommit}
+                className="px-3.5 py-2 rounded-lg ui-subtle ui-border hover:opacity-90 ui-text-main text-xs font-semibold transition"
+              >
+                Reset Shock ke 0% &amp; Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmShockAndContinue}
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition shadow-sm"
+              >
+                Tetap Terapkan (Harga Simulasi)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feature 2 & Decision 1: Soft-Lock Overbudget Deficit Confirmation Modal */}
       {showDeficitConfirmModal && (

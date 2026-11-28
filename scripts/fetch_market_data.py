@@ -98,12 +98,22 @@ def compute_metrics(closes: list[float]) -> dict:
     if not (math.isfinite(cagr) and math.isfinite(max_dd) and math.isfinite(vol)):
         return {}
 
+    high_5y = max(closes)
+    closes_52w = closes[-52:] if len(closes) >= 52 else closes
+    high_52w = max(closes_52w)
+    dd_from_5y_high = ((high_5y - last_p) / high_5y) * 100.0 if high_5y > 0 else 0.0
+    dd_52w = ((high_52w - last_p) / high_52w) * 100.0 if high_52w > 0 else 0.0
+
     return {
         "price": round(last_p, 2),
         "cagr5y": round(cagr, 2),
         "maxDrawdown5y": round(max_dd, 2),
         "volatility5y": round(vol, 2),
         "dataYears": round(years, 1),
+        "high5y": round(high_5y, 2),
+        "high52w": round(high_52w, 2),
+        "drawdownFrom5yHigh": round(dd_from_5y_high, 2),
+        "drawdown52w": round(dd_52w, 2),
     }
 
 

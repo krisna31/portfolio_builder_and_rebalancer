@@ -4,6 +4,7 @@ import {
   ValuationSentimentConfig,
 } from './types';
 import { getSentimentZone } from './tacticalValuationEngine';
+import { historicalCurrentDrawdownFromPeakPct } from './historicalModel';
 
 export type ComparisonOperator = '<=' | '>=' | '<' | '>';
 
@@ -964,17 +965,29 @@ export function getAssetIndicatorConfluence(params: {
       }
 
       if (
-        (def.id === 'ath_drawdown_crypto' || def.id === 'ath_drawdown_gold') &&
-        currentPriceNative &&
-        asset.defaultPrice &&
+        (def.id === 'ath_drawdown_crypto' || def.id === 'gold_drawdown_ath') &&
+        override?.currentValue === undefined &&
         marketDataOverride?.drawdownAth === undefined &&
         (tacticalConfig?.cryptoScore === undefined || tacticalConfig.cryptoScore > 25)
       ) {
-        // Estimate live ATH drawdown
-        const peak = Math.max(currentPriceNative, asset.defaultPrice * 1.25);
-        if (peak > 0) {
-          const dd = Math.max(0, ((peak - currentPriceNative) / peak) * 100);
-          currentVal = Number(dd.toFixed(1));
+        const histPeakDd = historicalCurrentDrawdownFromPeakPct(asset.id);
+        if (histPeakDd !== null) {
+          currentVal = histPeakDd;
+        } else if (currentPriceNative && asset.defaultPrice) {
+          const peak = Math.max(currentPriceNative, asset.defaultPrice * 1.25);
+          if (peak > 0) {
+            const dd = Math.max(0, ((peak - currentPriceNative) / peak) * 100);
+            currentVal = Number(dd.toFixed(1));
+          }
+        }
+      } else if (
+        (def.id === 'drawdown_52w_idx' || def.id === 'drawdown_52w_us') &&
+        override?.currentValue === undefined &&
+        marketDataOverride?.drawdown52w === undefined
+      ) {
+        const hist52wDd = historicalCurrentDrawdownFromPeakPct(asset.id, 52);
+        if (hist52wDd !== null) {
+          currentVal = hist52wDd;
         }
       }
     }

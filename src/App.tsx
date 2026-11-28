@@ -29,7 +29,16 @@ import {
   buildRebalanceCommitResult,
   calculateRebalancePlan,
 } from './lib/quant/rebalancerEngine';
-import { fetchLiveMarketPrices } from './services/priceFeed';
+import {
+  applyAssumptionPreset,
+  AssumptionPresetMode,
+  BUNDLED_MARKET_HISTORY,
+} from './lib/quant/historicalModel';
+import {
+  fetchLiveMarketPrices,
+  fetchMarketDataSnapshot,
+  MarketDataSnapshot,
+} from './services/priceFeed';
 import { fetchLiveCryptoFearAndGreed } from './lib/quant/tacticalValuationEngine';
 import { startInteractiveTour, stopInteractiveTour } from './services/tourGuide';
 import { Header, SavedPortfolioSnapshot } from './components/Header';
@@ -134,6 +143,7 @@ interface PersistedAppState {
   convictionRiskPercent?: number;
   solverMode?: 'calibrated-video' | 'euler-covariance';
   metricsModel?: MetricsModel;
+  assumptionPreset?: AssumptionPresetMode;
   selectedUniverseIds?: string[];
   pinnedPresetIds?: string[];
   lockedAssetIds?: string[];
@@ -298,6 +308,35 @@ function AuthenticatedQuantPorto({
     return 'builder';
   });
 
+  const [assumptionPreset, setAssumptionPreset] = useState<AssumptionPresetMode>(() => {
+    if (
+      initialSaved?.assumptionPreset === 'conservative-forward' ||
+      initialSaved?.assumptionPreset === 'realized-5y' ||
+      initialSaved?.assumptionPreset === 'video-baseline'
+    ) {
+      return initialSaved.assumptionPreset;
+    }
+    return Array.isArray(initialSaved?.allAssets) && initialSaved.allAssets.length > 0
+      ? 'video-baseline'
+      : 'conservative-forward';
+  });
+
+  const [marketSnapshotMetrics, setMarketSnapshotMetrics] = useState<
+    MarketDataSnapshot['assets'] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMarketDataSnapshot().then((snap) => {
+      if (!cancelled && snap?.assets) {
+        setMarketSnapshotMetrics(snap.assets);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Asset Universe (8 Core Video Benchmarks + Expanded IDX/US/Crypto + User Custom Assets)
   const [allAssets, setAllAssets] = useState<AssetDefinition[]>(() => {
     if (Array.isArray(initialSaved?.allAssets) && initialSaved.allAssets.length > 0) {
@@ -330,7 +369,10 @@ function AuthenticatedQuantPorto({
       );
       return [...merged, ...additions];
     }
-    return CORE_AND_EXPANDED_ASSETS;
+    return applyAssumptionPreset(CORE_AND_EXPANDED_ASSETS, 'conservative-forward', {
+      baseAssets: CORE_AND_EXPANDED_ASSETS,
+      history: BUNDLED_MARKET_HISTORY,
+    });
   });
 
   // Dynamic Slot Map for the 8 Table Columns (allows replacing e.g. BBCA -> PTBA across all 15 rows!)
@@ -960,6 +1002,7 @@ function AuthenticatedQuantPorto({
           convictionRiskPercent,
           solverMode,
           metricsModel,
+          assumptionPreset,
           selectedUniverseIds,
           holdings,
           initialCapitalIdr,
@@ -1003,6 +1046,7 @@ function AuthenticatedQuantPorto({
     convictionRiskPercent,
     solverMode,
     metricsModel,
+    assumptionPreset,
     selectedUniverseIds,
     holdings,
     initialCapitalIdr,
@@ -1034,9 +1078,18 @@ function AuthenticatedQuantPorto({
     smartDcaLastRefreshSuccessAt,
   ]);
 
-  // Check if user customized any asset's assumed CAGR or Max Drawdown relative to baseline 5Y video data
+  // Check if user customized any asset's assumed CAGR or Max Drawdown relative to the active assumption preset
   const hasCustomAssetAssumptions = useMemo(() => {
-    const baseMap = new Map(CORE_AND_EXPANDED_ASSETS.map((a) => [a.id, a]));
+    const presetBaseline = applyAssumptionPreset(
+      CORE_AND_EXPANDED_ASSETS,
+      assumptionPreset,
+      {
+        baseAssets: CORE_AND_EXPANDED_ASSETS,
+        snapshotMetrics: marketSnapshotMetrics,
+        history: BUNDLED_MARKET_HISTORY,
+      }
+    );
+    const baseMap = new Map(presetBaseline.map((a) => [a.id, a]));
     return allAssets.some((a) => {
       const base = baseMap.get(a.id);
       if (!base) return true;
@@ -1045,7 +1098,18 @@ function AuthenticatedQuantPorto({
         Math.abs(a.maxDrawdown - base.maxDrawdown) > 0.01
       );
     });
-  }, [allAssets]);
+  }, [allAssets, assumptionPreset, marketSnapshotMetrics]);
+
+  const handleApplyAssumptionPreset = (mode: AssumptionPresetMode) => {
+    setAssumptionPreset(mode);
+    setAllAssets((prev) =>
+      applyAssumptionPreset(prev, mode, {
+        baseAssets: CORE_AND_EXPANDED_ASSETS,
+        snapshotMetrics: marketSnapshotMetrics,
+        history: BUNDLED_MARKET_HISTORY,
+      })
+    );
+  };
 
   const handleUpdateAssetAssumption = (
     assetId: string,
@@ -1057,13 +1121,11 @@ function AuthenticatedQuantPorto({
   };
 
   const handleResetAssetAssumptions = () => {
-    const baseMap = new Map(CORE_AND_EXPANDED_ASSETS.map((a) => [a.id, a]));
     setAllAssets((prev) =>
-      prev.map((a) => {
-        const base = baseMap.get(a.id);
-        return base
-          ? { ...a, cagr: base.cagr, maxDrawdown: base.maxDrawdown }
-          : a;
+      applyAssumptionPreset(prev, assumptionPreset, {
+        baseAssets: CORE_AND_EXPANDED_ASSETS,
+        snapshotMetrics: marketSnapshotMetrics,
+        history: BUNDLED_MARKET_HISTORY,
       })
     );
   };
@@ -1569,6 +1631,9 @@ function AuthenticatedQuantPorto({
       setPriceSourceText(res.sourceSummary);
       setLastUpdatedText(res.updatedAt);
       setSmartDcaLastRefreshSuccessAt(nowStr);
+      if (res.snapshotMetricsByAssetId) {
+        setMarketSnapshotMetrics(res.snapshotMetricsByAssetId);
+      }
 
       if (liveFng && liveFng.score !== undefined) {
         setTacticalConfig((prev) => ({
@@ -2205,6 +2270,7 @@ function AuthenticatedQuantPorto({
           convictionRiskPercent,
           solverMode,
           metricsModel,
+          assumptionPreset,
           selectedUniverseIds,
           pinnedPresetIds,
           customTableRows,
@@ -2367,6 +2433,13 @@ function AuthenticatedQuantPorto({
       if (d1.solverMode) setSolverMode(d1.solverMode);
       if (d1.metricsModel === 'historical' || d1.metricsModel === 'video-replica')
         setMetricsModel(d1.metricsModel);
+      if (
+        d1.assumptionPreset === 'conservative-forward' ||
+        d1.assumptionPreset === 'realized-5y' ||
+        d1.assumptionPreset === 'video-baseline'
+      ) {
+        setAssumptionPreset(d1.assumptionPreset);
+      }
       if (Array.isArray(d1.selectedUniverseIds))
         setSelectedUniverseIds(d1.selectedUniverseIds);
       if (Array.isArray(d1.pinnedPresetIds))
@@ -2952,6 +3025,9 @@ function AuthenticatedQuantPorto({
             setSolverMode={setSolverMode}
             metricsModel={metricsModel}
             setMetricsModel={setMetricsModel}
+            assumptionPreset={assumptionPreset}
+            onApplyAssumptionPreset={handleApplyAssumptionPreset}
+            marketSnapshotMetrics={marketSnapshotMetrics}
             activeWeights={activeWeights}
             onManualWeightChange={handleManualWeightChange}
             onNormalizeManualWeights={handleNormalizeManualWeights}

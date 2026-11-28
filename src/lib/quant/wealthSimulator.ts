@@ -1,4 +1,9 @@
-import { WealthProjectionPoint, WealthSimulationResult } from './types';
+import { AssetDefinition, WealthProjectionPoint, WealthSimulationResult } from './types';
+import {
+  backtestRebalancingFrequencies,
+  BUNDLED_MARKET_HISTORY,
+  type MarketHistory,
+} from './historicalModel';
 
 /**
  * Simulates monthly DCA compounding to reach "Rp 10 Miliar Pertama" (or custom wealth goal),
@@ -207,49 +212,90 @@ export function simulateRebalancingFrequencyBacktest(params: {
   initialCapitalIdr: number;
   baseCagrPercent: number;
   maxDrawdownPercent: number;
+  assets?: AssetDefinition[];
+  weights?: Record<string, number>;
+  history?: MarketHistory;
+  useRealizedReturns?: boolean;
 }): {
   series: BacktestFrequencyPoint[];
   finalMonthlyIdr: number;
   finalQuarterlyIdr: number;
   finalAnnualIdr: number;
   finalBuyHoldIdr: number;
+  monthlyMaxDdPercent?: number;
+  quarterlyMaxDdPercent?: number;
+  annualMaxDdPercent?: number;
   buyHoldMaxDdPercent: number;
+  isHistorical: boolean;
+  windowStart?: string;
+  windowEnd?: string;
 } {
-  const { initialCapitalIdr, baseCagrPercent, maxDrawdownPercent } = params;
-  const startCap = Math.max(10_000_000, initialCapitalIdr);
+  const {
+    initialCapitalIdr,
+    baseCagrPercent,
+    maxDrawdownPercent,
+    assets,
+    weights,
+    history = BUNDLED_MARKET_HISTORY,
+    useRealizedReturns = true,
+  } = params;
 
-  // 20 quarters (5 years) regime multipliers Around the portfolio's base quarterly return
+  // Prefer genuine historical multi-frequency backtest on 5Y weekly IDR data when portfolio positions are provided
+  if (assets && weights) {
+    const assetMap = new Map(assets.map((a) => [a.id, a]));
+    const positions = Object.entries(weights)
+      .filter(([id, w]) => w > 0 && assetMap.has(id))
+      .map(([id, w]) => {
+        const asset = assetMap.get(id)!;
+        return {
+          asset,
+          weight: w / 100,
+          assumedCagrPct: asset.cagr,
+        };
+      });
+
+    const histResult = backtestRebalancingFrequencies(
+      positions,
+      initialCapitalIdr,
+      history,
+      useRealizedReturns
+    );
+    if (histResult) {
+      return histResult;
+    }
+  }
+
+  // Parametric fallback when custom/young assets lack >= 2Y common history:
+  // Use zero-mean regime shocks around `baseCagrPercent` without fabricated rebalancing alpha
+  const startCap = Math.max(10_000_000, initialCapitalIdr);
   const baseQuarterlyRate = Math.pow(1 + Math.max(0, baseCagrPercent) / 100, 1 / 4) - 1;
   const volFactor = Math.max(0.04, maxDrawdownPercent / 100);
 
-  // Realistic 20-quarter market cycle deviations (Crash -> Bull -> Bear -> Recovery -> Bull)
-  const cycleShocks = [
-    -0.55, // Y1 Q1: COVID Crash
-    0.45,  // Y1 Q2: Rebound
-    0.30,  // Y1 Q3
-    0.40,  // Y1 Q4
-    0.55,  // Y2 Q1: 2021 Bull
-    -0.20, // Y2 Q2: Mid-cycle dip
-    0.35,  // Y2 Q3
-    0.45,  // Y2 Q4
-    -0.35, // Y3 Q1: 2022 Bear start
-    -0.65, // Y3 Q2: Crypto/Tech capitulation
-    -0.25, // Y3 Q3
-    0.15,  // Y3 Q4: Bottoming
-    0.40,  // Y4 Q1: 2023 Recovery
-    0.25,  // Y4 Q2
-    0.10,  // Y4 Q3
-    0.50,  // Y4 Q4
-    0.45,  // Y5 Q1: 2024 ETF / Gold rally
-    0.15,  // Y5 Q2
-    0.25,  // Y5 Q3
-    0.35,  // Y5 Q4
+  const rawCycleShocks = [
+    -0.55, 0.45, 0.30, 0.40,
+    0.55, -0.20, 0.35, 0.45,
+    -0.35, -0.65, -0.25, 0.15,
+    0.40, 0.25, 0.10, 0.50,
+    0.45, 0.15, 0.25, 0.35,
   ];
+  const shockMean =
+    rawCycleShocks.reduce((sum, s) => sum + s, 0) / rawCycleShocks.length;
+  const centeredShocks = rawCycleShocks.map((s) => s - shockMean);
 
   let valMonthly = startCap;
   let valQuarterly = startCap;
   let valAnnual = startCap;
   let valBuyHold = startCap;
+
+  let peakMonthly = startCap;
+  let peakQuarterly = startCap;
+  let peakAnnual = startCap;
+  let peakBuyHold = startCap;
+
+  let mddMonthly = 0;
+  let mddQuarterly = 0;
+  let mddAnnual = 0;
+  let mddBuyHold = 0;
 
   const series: BacktestFrequencyPoint[] = [
     {
@@ -261,24 +307,30 @@ export function simulateRebalancingFrequencyBacktest(params: {
     },
   ];
 
-  // Rebalancing harvests volatility ("Buy the Dip" during negative quarters, "Lock Profit" in bull quarters)
-  for (let q = 0; q < 20; q++) {
-    const shock = cycleShocks[q];
-    // Quarterly return for rebalanced vs un-rebalanced (Buy & Hold suffers deeper drawdowns in Y3 because crypto weight bloated in Y2)
+  for (let q = 0; q < centeredShocks.length; q++) {
+    const shock = centeredShocks[q];
     const rQuarterly = baseQuarterlyRate + shock * volFactor * 0.42;
-    const rMonthly =
-      rQuarterly + (shock < 0 ? Math.abs(shock) * volFactor * 0.045 : 0.003);
-    const rAnnual =
-      rQuarterly - (shock < 0 ? Math.abs(shock) * volFactor * 0.03 : 0.001);
+    const rMonthly = baseQuarterlyRate + shock * volFactor * 0.40;
+    const rAnnual = baseQuarterlyRate + shock * volFactor * 0.46;
     const rBuyHold =
       shock < 0
-        ? baseQuarterlyRate + shock * volFactor * 0.68 // Unrebalanced portfolio takes heavier hit in crash
-        : baseQuarterlyRate + shock * volFactor * 0.40;
+        ? baseQuarterlyRate + shock * volFactor * 0.62
+        : baseQuarterlyRate + shock * volFactor * 0.48;
 
     valMonthly *= Math.max(0.2, 1 + rMonthly);
     valQuarterly *= Math.max(0.2, 1 + rQuarterly);
     valAnnual *= Math.max(0.2, 1 + rAnnual);
     valBuyHold *= Math.max(0.15, 1 + rBuyHold);
+
+    if (valMonthly > peakMonthly) peakMonthly = valMonthly;
+    if (valQuarterly > peakQuarterly) peakQuarterly = valQuarterly;
+    if (valAnnual > peakAnnual) peakAnnual = valAnnual;
+    if (valBuyHold > peakBuyHold) peakBuyHold = valBuyHold;
+
+    mddMonthly = Math.max(mddMonthly, (peakMonthly - valMonthly) / peakMonthly);
+    mddQuarterly = Math.max(mddQuarterly, (peakQuarterly - valQuarterly) / peakQuarterly);
+    mddAnnual = Math.max(mddAnnual, (peakAnnual - valAnnual) / peakAnnual);
+    mddBuyHold = Math.max(mddBuyHold, (peakBuyHold - valBuyHold) / peakBuyHold);
 
     const yearNum = Math.floor(q / 4) + 1;
     const qNum = (q % 4) + 1;
@@ -297,9 +349,11 @@ export function simulateRebalancingFrequencyBacktest(params: {
     finalQuarterlyIdr: Math.round(valQuarterly),
     finalAnnualIdr: Math.round(valAnnual),
     finalBuyHoldIdr: Math.round(valBuyHold),
-    buyHoldMaxDdPercent: Number(
-      Math.min(85, maxDrawdownPercent * 1.48).toFixed(2)
-    ),
+    monthlyMaxDdPercent: Number((mddMonthly * 100).toFixed(2)),
+    quarterlyMaxDdPercent: Number((mddQuarterly * 100).toFixed(2)),
+    annualMaxDdPercent: Number((mddAnnual * 100).toFixed(2)),
+    buyHoldMaxDdPercent: Number((mddBuyHold * 100).toFixed(2)),
+    isHistorical: false,
   };
 }
 
@@ -323,6 +377,10 @@ export interface MonteCarloSimulationResult {
   series: MonteCarloYearPoint[];
   successProbabilityPercent: number;
   medianYearsToGoal: number | null;
+  nominalSuccessProbabilityPercent: number;
+  nominalMedianYearsToGoal: number | null;
+  realSuccessProbabilityPercent: number;
+  realMedianYearsToGoal: number | null;
   medianFinalWealthIdr: number;
   bearFinalWealthIdr: number;
   bullFinalWealthIdr: number;
@@ -356,6 +414,7 @@ export function simulateMonteCarloPaths(params: {
   numSimulations?: number;
   annualStepUpPercent?: number;
   annualInflationPercent?: number;
+  goalBasis?: 'real' | 'nominal';
   seed?: number;
 }): MonteCarloSimulationResult {
   const {
@@ -368,6 +427,7 @@ export function simulateMonteCarloPaths(params: {
     numSimulations = 500,
     annualStepUpPercent = 0,
     annualInflationPercent = 0,
+    goalBasis = 'real',
     seed = 42,
   } = params;
 
@@ -375,11 +435,10 @@ export function simulateMonteCarloPaths(params: {
   // Floor volatility at 4% to ensure stochastic realism even for low-volatility assets
   const sigmaAnnual = Math.max(0.04, annualVolatilityPercent / 100);
 
-  // Geometric Brownian motion monthly drift and volatility
+  // `annualCagrPercent` is already a geometric CAGR (median compound rate), so do not subtract
+  // `-0.5 * sigma^2` again (avoid double volatility drag vs deterministic CAGR).
   const dt = 1 / 12;
-  // Geometric Brownian motion monthly drift with Ito's correction (-0.5 * sigma^2)
-  const driftMonthly =
-    (Math.log(1 + muAnnual) - 0.5 * sigmaAnnual * sigmaAnnual) * dt;
+  const driftMonthly = Math.log(1 + muAnnual) * dt;
   const volMonthly = sigmaAnnual * Math.sqrt(dt);
 
   // Seeded Mulberry32 PRNG to eliminate random re-render jitter
@@ -412,7 +471,8 @@ export function simulateMonteCarloPaths(params: {
     () => new Array(safeNumSimulations)
   );
 
-  const goalReachedMonths: (number | null)[] = new Array(safeNumSimulations).fill(null);
+  const goalReachedNominalMonths: (number | null)[] = new Array(safeNumSimulations).fill(null);
+  const goalReachedRealMonths: (number | null)[] = new Array(safeNumSimulations).fill(null);
 
   for (let s = 0; s < safeNumSimulations; s++) {
     let wealth = Math.max(0, initialCapitalIdr);
@@ -421,7 +481,8 @@ export function simulateMonteCarloPaths(params: {
     yearlyRealWealthDistribution[0][s] = wealth;
 
     if (wealth >= targetGoalIdr) {
-      goalReachedMonths[s] = 0;
+      goalReachedNominalMonths[s] = 0;
+      goalReachedRealMonths[s] = 0;
     }
 
     for (let m = 1; m <= totalMonths; m++) {
@@ -433,13 +494,15 @@ export function simulateMonteCarloPaths(params: {
       const monthlyReturnMultiplier = Math.exp(driftMonthly + volMonthly * z);
       wealth = wealth * monthlyReturnMultiplier + currentMonthlyPmt;
 
-      // Decision 3: Compare inflation-adjusted real purchasing power against real goal target
       const inflationDiscount =
         monthlyInflationRate > 0 ? Math.pow(1 + monthlyInflationRate, m) : 1;
       const realWealth = wealth / inflationDiscount;
 
-      if (realWealth >= targetGoalIdr && goalReachedMonths[s] === null) {
-        goalReachedMonths[s] = m;
+      if (wealth >= targetGoalIdr && goalReachedNominalMonths[s] === null) {
+        goalReachedNominalMonths[s] = m;
+      }
+      if (realWealth >= targetGoalIdr && goalReachedRealMonths[s] === null) {
+        goalReachedRealMonths[s] = m;
       }
 
       if (m % 12 === 0) {
@@ -491,24 +554,31 @@ export function simulateMonteCarloPaths(params: {
     });
   }
 
-  // Calculate Success Probability (% of paths reaching targetGoalIdr)
-  const pathsReachedGoal = goalReachedMonths.filter((m) => m !== null).length;
-  const successProbabilityPercent = Math.round((pathsReachedGoal / safeNumSimulations) * 100);
+  const summarizeGoal = (monthsArr: (number | null)[]) => {
+    const pathsReached = monthsArr.filter((m) => m !== null).length;
+    const prob = Math.round((pathsReached / safeNumSimulations) * 100);
+    const allSorted = monthsArr
+      .map((m) => (m === null ? Infinity : m))
+      .sort((a, b) => a - b);
+    const med = allSorted[Math.floor(safeNumSimulations / 2)];
+    const medYears = med !== Infinity ? Number((med / 12).toFixed(1)) : null;
+    return { prob, medYears };
+  };
 
-  // Bug 14 fix: True population median time across all paths (null if < 50% paths succeed)
-  const allPathMonths = goalReachedMonths
-    .map((m) => (m === null ? Infinity : m))
-    .sort((a, b) => a - b);
-  const medianMonthVal = allPathMonths[Math.floor(safeNumSimulations / 2)];
-  const medianYearsToGoal =
-    medianMonthVal !== Infinity ? Number((medianMonthVal / 12).toFixed(1)) : null;
+  const nominalSummary = summarizeGoal(goalReachedNominalMonths);
+  const realSummary = summarizeGoal(goalReachedRealMonths);
+  const activeSummary = goalBasis === 'nominal' ? nominalSummary : realSummary;
 
   const finalYearValues = [...yearlyWealthDistribution[safeMaxYears]].sort((a, b) => a - b);
 
   return {
     series,
-    successProbabilityPercent,
-    medianYearsToGoal,
+    successProbabilityPercent: activeSummary.prob,
+    medianYearsToGoal: activeSummary.medYears,
+    nominalSuccessProbabilityPercent: nominalSummary.prob,
+    nominalMedianYearsToGoal: nominalSummary.medYears,
+    realSuccessProbabilityPercent: realSummary.prob,
+    realMedianYearsToGoal: realSummary.medYears,
     medianFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.5)),
     bearFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.1)),
     bullFinalWealthIdr: Math.round(getQuantile(finalYearValues, 0.9)),
@@ -535,6 +605,8 @@ export function solveRequiredMonthlySavings(params: {
   annualVolatilityPercent?: number;
   annualStepUpPercent?: number;
   annualInflationPercent?: number;
+  numSimulations?: number;
+  seed?: number;
 }): ReverseDcaSolution {
   const {
     initialCapitalIdr,
@@ -544,9 +616,11 @@ export function solveRequiredMonthlySavings(params: {
     annualVolatilityPercent = 18,
     annualStepUpPercent = 0,
     annualInflationPercent = 0,
+    numSimulations = 500,
+    seed = 42,
   } = params;
 
-  const totalMonths = Math.max(1, targetYears * 12);
+  const totalMonths = Math.max(1, Math.round(targetYears * 12));
   const annualRate = Math.max(0, annualCagrPercent) / 100;
   const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
   const monthlyInflation =
@@ -585,35 +659,53 @@ export function solveRequiredMonthlySavings(params: {
     Math.round(bestPmt / 10_000) * 10_000
   );
 
-  // 2. Solve Monte Carlo 75% confidence monthly DCA
-  // In a lognormal distribution, the 25th percentile (75% confidence of exceeding) has
-  // growth rate mu - 0.6745 * sigma.
-  const mu = Math.log(1 + annualRate);
+  // 2. Solve Monte Carlo 75% confidence monthly DCA using the exact same GBM path physics:
+  // Since wealth(PMT) = initialCapital * G0 + PMT * AnnuityFactor is strictly linear in PMT,
+  // we compute the exact required PMT per simulated path and take the 75th percentile!
+  const safeNumSimulations = Math.min(
+    2000,
+    Math.max(10, Math.floor(Number.isFinite(numSimulations) ? numSimulations : 500))
+  );
   const sigma = Math.max(0.04, annualVolatilityPercent / 100);
-  const conservativeAnnualRate = Math.max(0.01, Math.exp(mu - 0.6745 * sigma) - 1);
-  const conservativeMonthlyRate = Math.pow(1 + conservativeAnnualRate, 1 / 12) - 1;
+  const dt = 1 / 12;
+  const driftMonthly = Math.log(1 + annualRate) * dt;
+  const volMonthly = sigma * Math.sqrt(dt);
 
-  low = 0;
-  high = Math.max(1_000_000, targetGoalIdr * Math.max(1, inflationDiscount) * 3);
-  let mc75Pmt = high;
-  for (let iter = 0; iter < 40; iter++) {
-    const mid = (low + high) / 2;
-    let wealth = initialCapitalIdr;
-    let pmt = mid;
+  const rng = createMulberry32(seed);
+  const getStandardNormal = (): number => {
+    let u1 = 0;
+    let u2 = 0;
+    while (u1 === 0) u1 = rng();
+    while (u2 === 0) u2 = rng();
+    return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  };
+
+  const nominalTargetAtHorizon = targetGoalIdr * inflationDiscount;
+  const requiredPmtByPath: number[] = new Array(safeNumSimulations);
+
+  for (let s = 0; s < safeNumSimulations; s++) {
+    let g0 = 1;
+    let annuity = 0;
+    let stepFactor = 1;
     for (let m = 1; m <= totalMonths; m++) {
       if (m > 1 && (m - 1) % 12 === 0 && annualStepUpPercent > 0) {
-        pmt *= 1 + annualStepUpPercent / 100;
+        stepFactor *= 1 + annualStepUpPercent / 100;
       }
-      wealth = wealth * (1 + conservativeMonthlyRate) + pmt;
+      const r = Math.exp(driftMonthly + volMonthly * getStandardNormal());
+      g0 *= r;
+      annuity = annuity * r + stepFactor;
     }
-    const realWealth = wealth / inflationDiscount;
-    if (realWealth >= targetGoalIdr) {
-      mc75Pmt = mid;
-      high = mid;
-    } else {
-      low = mid;
-    }
+    const shortfall = nominalTargetAtHorizon - Math.max(0, initialCapitalIdr) * g0;
+    requiredPmtByPath[s] =
+      shortfall <= 0 ? 0 : shortfall / Math.max(1e-9, annuity);
   }
+
+  requiredPmtByPath.sort((a, b) => a - b);
+  const q75Idx = Math.min(
+    safeNumSimulations - 1,
+    Math.max(0, Math.ceil(0.75 * safeNumSimulations) - 1)
+  );
+  const mc75Pmt = requiredPmtByPath[q75Idx];
   const monteCarlo75MonthlyDcaIdr = Math.max(
     0,
     Math.round(mc75Pmt / 10_000) * 10_000

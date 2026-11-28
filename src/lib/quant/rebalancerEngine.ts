@@ -15,9 +15,11 @@ import { formatIdr } from '../formatters';
  * Calculates exact portfolio rebalancing instructions (Buy / Sell / Hold), supporting:
  * 1. Nominal Value (IDR) OR Units * Price (with automatic USD -> IDR conversion)
  * 2. Simulated Market Crash / Bull Run shocks per asset (e.g., BTC +200%, BBCA -10%, or Crypto -50%)
- * 3. Two Rebalance Modes:
+ * 3. Four Rebalance Modes:
  *    - `sell-and-buy`: Standard full rebalance (sell overweight winners, buy underweight dips + deploy any new cash)
- *    - `buy-only-dca`: Cash injection only (never sell existing assets; allocate new cash to the most underweight assets first)
+ *    - `buy-only-dca`: Cash injection only (never sell existing assets; allocate new cash proportionally across underweight deficits)
+ *    - `selective-profit-trim`: Trim only profitable overweight positions above the drift threshold
+ *    - `trim-defensive-first`: Draw from overweight defensive sleeves (RDPT/RDPU) before trimming growth assets
  * 4. Drift threshold alerts (absolute % or relative % drift)
  * 5. IDX 100-share lot calculation vs fractional US/Crypto units
  */
@@ -114,6 +116,7 @@ export function calculateRebalancePlan(params: {
       asset,
       holding: h,
       initialValIdr,
+      initialUnitPriceIdr: unitPriceIdr,
       postShockValIdr,
       postShockUnitPriceIdr,
     };
@@ -463,7 +466,7 @@ export function calculateRebalancePlan(params: {
       unrealizedGainPercent = Number((((spotNative - avgBuyPrice) / avgBuyPrice) * 100).toFixed(2));
       const unitsHeld =
         inputMode === 'nominal'
-          ? item.initialValIdr / Math.max(1e-6, item.postShockUnitPriceIdr)
+          ? item.initialValIdr / Math.max(1e-6, item.initialUnitPriceIdr)
           : (item.holding.units ?? 0);
       const fxRate = item.asset.currency === 'USD' ? usdIdrRate : 1;
       unrealizedGainIdr = Math.round((spotNative - avgBuyPrice) * unitsHeld * fxRate);
@@ -682,11 +685,11 @@ export function roundToIdxTick(
  * Generates a Pre-Planned Rebalance-Driven Crash Buying Ladder (`-10%`, `-20%`, `-35%`, `-50%`)
  * for a chosen target asset (e.g., `BTC`, `ETH`, `PTBA`, `AADI`, `BBCA`, `QQQ`).
  *
- * At each crash tier:
- * - Assumes the chosen asset (and correlated peers in the same category) drops by `dropPercent`,
- *   while defensive anchors (`RDPT`, `RDPU`, `GLD`) remain stable.
- * - Uses `calculateRebalancePlan` to compute the exact Rupiah amount & Units/IDX Lots to BUY
- *   at that limit price by shifting funds out of `RDPT`/`GLD` to restore the target portfolio weight!
+ * Each tier is evaluated independently from current holdings (not cumulative across earlier tiers):
+ * - Assumes the chosen asset (and correlated peers in the same category) drops by `dropPercent` from
+ *   current spot, while defensive anchors (`RDPT`, `RDPU`, `GLD`) remain stable.
+ * - Uses `calculateRebalancePlan` to compute the Rupiah amount & Units/IDX Lots to BUY
+ *   at that limit price by shifting funds out of `RDPT`/`GLD` to restore the target portfolio weight.
  */
 export function generateCrashBuyingLadder(params: {
   targetAsset: AssetDefinition;

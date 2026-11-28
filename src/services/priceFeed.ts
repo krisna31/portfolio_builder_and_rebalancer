@@ -6,6 +6,8 @@ export interface LivePriceUpdateResult {
   updatedAt: string;
   sourceSummary: string;
   warnings?: string[];
+  snapshotMetricsByAssetId?: MarketDataSnapshot['assets'];
+  snapshotUpdatedAt?: string;
 }
 
 export interface PriceValidationResult {
@@ -65,8 +67,31 @@ export interface MarketDataSnapshot {
       cagr5y?: number;
       maxDrawdown5y?: number;
       volatility5y?: number;
+      dataYears?: number;
+      high5y?: number;
+      high52w?: number;
+      drawdownFrom5yHigh?: number;
+      drawdown52w?: number;
     }
   >;
+}
+
+/**
+ * Fetches the static GitHub Actions 5Y market snapshot (`./data/market-data.json`)
+ * without triggering rate-limited third-party live price APIs.
+ */
+export async function fetchMarketDataSnapshot(): Promise<MarketDataSnapshot | null> {
+  try {
+    const res = await fetch('./data/market-data.json', {
+      cache: 'no-store',
+      signal: createTimeoutSignal(6000),
+    });
+    if (!res.ok) return null;
+    const snapshot: MarketDataSnapshot = await res.json();
+    return snapshot && snapshot.assets ? snapshot : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface TickerLookupResult {
@@ -564,6 +589,8 @@ export async function fetchLiveMarketPrices(
 ): Promise<LivePriceUpdateResult> {
   const pricesByAssetId: Record<string, number> = {};
   const snapshotPrices: Record<string, number> = {};
+  let snapshotMetricsByAssetId: MarketDataSnapshot['assets'] | undefined;
+  let snapshotUpdatedAt: string | undefined;
   const warnings: string[] = [];
   let usdIdrRate = currentUsdIdr;
   let hasFreshSnapshot = false;
@@ -585,10 +612,14 @@ export async function fetchLiveMarketPrices(
       const snapshot: MarketDataSnapshot = await res.json();
       const snapTs = snapshot.updatedAt ? Date.parse(snapshot.updatedAt) : NaN;
       hasFreshSnapshot = Number.isFinite(snapTs) && Date.now() - snapTs <= 30 * 86_400_000;
+      if (snapshot.updatedAt) {
+        snapshotUpdatedAt = snapshot.updatedAt;
+      }
       if (snapshot.usdIdrRate && snapshot.usdIdrRate > 10000) {
         usdIdrRate = snapshot.usdIdrRate;
       }
       if (snapshot.assets) {
+        snapshotMetricsByAssetId = snapshot.assets;
         for (const [id, data] of Object.entries(snapshot.assets)) {
           if (data.price && data.price > 0) {
             pricesByAssetId[id] = data.price;
@@ -723,6 +754,8 @@ export async function fetchLiveMarketPrices(
     }),
     sourceSummary: sources.length > 0 ? sources.join(' + ') : 'Bundled Baseline Data',
     warnings: warnings.length > 0 ? warnings : undefined,
+    snapshotMetricsByAssetId,
+    snapshotUpdatedAt,
   };
 }
 

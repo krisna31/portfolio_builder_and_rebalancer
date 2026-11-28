@@ -327,6 +327,7 @@ export interface QuantPortoBackupPayload {
       convictionRiskPercent?: number;
       solverMode?: 'calibrated-video' | 'euler-covariance';
       metricsModel?: 'historical' | 'video-replica';
+      assumptionPreset?: 'conservative-forward' | 'realized-5y' | 'video-baseline';
       selectedUniverseIds?: string[];
       pinnedPresetIds?: string[];
       customTableRows?: PortfolioPreset[];
