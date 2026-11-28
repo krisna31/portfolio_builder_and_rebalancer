@@ -151,6 +151,8 @@ export interface HoldingEntry {
   notes?: string;
   /** Optional average purchase price in native currency for tracking unrealized P&L (Feature 5) */
   avgBuyPrice?: number;
+  /** Optional per-asset nominal input currency override ('IDR' | 'USD'); defaults to global rebalancer currency */
+  inputCurrency?: CurrencyCode;
 }
 
 export type RebalanceMode =

@@ -1047,6 +1047,7 @@ export function buildRebalanceCommitResult(
           isNominalOnly: isNominal,
           notes: existing?.notes,
           subSplits: existing?.subSplits,
+          inputCurrency: existing?.inputCurrency,
         };
       }
     }
@@ -1195,6 +1196,7 @@ export function buildRebalanceCommitResult(
         isNominalOnly: isNominal,
         subSplits: prevHold?.subSplits,
         notes: prevHold?.notes,
+        inputCurrency: prevHold?.inputCurrency,
       };
     }
   }

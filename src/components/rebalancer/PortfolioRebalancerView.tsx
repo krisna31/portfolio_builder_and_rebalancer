@@ -2656,7 +2656,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                       Instrumen &amp; Harga Spot
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
-                      Input Posisi Awal{holdingEntryMode === 'nominal' ? ` (${isUsdMode ? 'USD' : 'Rp'})` : ''}
+                      Input Posisi Awal
                     </th>
                     <th scope="col" className="ui-border border-b px-2 py-2 text-right whitespace-nowrap">
                       Nilai Saat Ini
@@ -2934,63 +2934,108 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                         </th>
 
                         <td className="ui-border border-b px-2 py-2 text-right">
-                          {holdingEntryMode === 'nominal' ? (
-                            <div className="flex flex-col items-end gap-1">
-                              <div className="flex items-center gap-1">
-                                {isUsdMode && (
-                                  <span className="ui-text-muted font-mono text-[10px] select-none">$</span>
-                                )}
-                                <CurrencyNumberInput
-                                  stepIdr={1_000_000}
-                                  stepUsd={100}
-                                  min={0}
-                                  valueIdr={h.currentValueIdr}
-                                  onChangeIdr={(val) =>
-                                    onUpdateHolding(item.assetId, {
-                                      currentValueIdr: val,
-                                    })
-                                  }
-                                  currency={activeCurrency}
-                                  usdIdrRate={usdIdrRate}
-                                  className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-medium"
-                                  ariaLabel={`Nominal value in ${activeCurrency} for ${item.symbol}`}
-                                />
+                          {holdingEntryMode === 'nominal' ? (() => {
+                            const assetInputCurrency: CurrencyCode = h.inputCurrency ?? activeCurrency;
+                            const isAssetInputUsd = assetInputCurrency === 'USD';
+                            return (
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center gap-1">
+                                  <div
+                                    role="group"
+                                    aria-label={`Mata uang input ${item.symbol}`}
+                                    className="ui-subtle inline-flex shrink-0 items-center rounded border ui-border p-0.5 text-[10px] font-mono"
+                                  >
+                                    <button
+                                      type="button"
+                                      aria-pressed={!isAssetInputUsd}
+                                      onClick={() =>
+                                        onUpdateHolding(item.assetId, {
+                                          inputCurrency: 'IDR',
+                                        })
+                                      }
+                                      className={`rounded px-1.5 py-0.5 font-bold transition ${
+                                        !isAssetInputUsd
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'ui-text-muted hover:ui-text-main'
+                                      }`}
+                                      title={`Input posisi ${item.symbol} dalam Rupiah (Rp)`}
+                                    >
+                                      Rp
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-pressed={isAssetInputUsd}
+                                      onClick={() =>
+                                        onUpdateHolding(item.assetId, {
+                                          inputCurrency: 'USD',
+                                        })
+                                      }
+                                      className={`rounded px-1.5 py-0.5 font-bold transition ${
+                                        isAssetInputUsd
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'ui-text-muted hover:ui-text-main'
+                                      }`}
+                                      title={`Input posisi ${item.symbol} dalam USD ($)`}
+                                    >
+                                      $
+                                    </button>
+                                  </div>
+                                  <CurrencyNumberInput
+                                    stepIdr={1_000_000}
+                                    stepUsd={100}
+                                    min={0}
+                                    valueIdr={h.currentValueIdr}
+                                    onChangeIdr={(val) =>
+                                      onUpdateHolding(item.assetId, {
+                                        currentValueIdr: val,
+                                      })
+                                    }
+                                    currency={assetInputCurrency}
+                                    usdIdrRate={usdIdrRate}
+                                    className="ui-input w-28 rounded px-2 py-1 text-right font-mono text-xs font-medium"
+                                    ariaLabel={`Nominal value in ${assetInputCurrency} for ${item.symbol}`}
+                                  />
+                                </div>
+                                {isAssetInputUsd ? (
+                                  <span className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                    ≈ {formatIdr(h.currentValueIdr, true)}
+                                  </span>
+                                ) : isUsdMode ? (
+                                  <span className="ui-text-muted font-mono text-[10px] tabular-nums">
+                                    ≈ {formatUsd(idrToUsd(h.currentValueIdr, usdIdrRate))}
+                                  </span>
+                                ) : null}
+                                <div className="flex items-center gap-1 text-[9px]">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onUpdateHolding(item.assetId, {
+                                        currentValueIdr: Math.round(
+                                          initialCapitalMenu1Idr *
+                                            ((targetWeights[item.assetId] ?? 0) / 100)
+                                        ),
+                                      })
+                                    }
+                                    title="Isi otomatis sesuai porsi Modal Awal Menu 1"
+                                    className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-emerald-600"
+                                  >
+                                    =Default M1
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onUpdateHolding(item.assetId, {
+                                        currentValueIdr: 0,
+                                      })
+                                    }
+                                    className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-rose-500"
+                                  >
+                                    {isAssetInputUsd ? '$0' : 'Rp 0'}
+                                  </button>
+                                </div>
                               </div>
-                              {isUsdMode && (
-                                <span className="ui-text-muted font-mono text-[10px] tabular-nums">
-                                  ≈ {formatIdr(h.currentValueIdr, true)}
-                                </span>
-                              )}
-                              <div className="flex items-center gap-1 text-[9px]">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onUpdateHolding(item.assetId, {
-                                      currentValueIdr: Math.round(
-                                        initialCapitalMenu1Idr *
-                                          ((targetWeights[item.assetId] ?? 0) / 100)
-                                      ),
-                                    })
-                                  }
-                                  title="Isi otomatis sesuai porsi Modal Awal Menu 1"
-                                  className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-emerald-600"
-                                >
-                                  =Default M1
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onUpdateHolding(item.assetId, {
-                                      currentValueIdr: 0,
-                                    })
-                                  }
-                                  className="ui-subtle ui-text-muted rounded px-1 py-0.5 hover:text-rose-500"
-                                >
-                                  {isUsdMode ? '$0' : 'Rp 0'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : holdingEntryMode === 'percent' ? (
+                            );
+                          })() : holdingEntryMode === 'percent' ? (
                             <div className="flex flex-col items-end gap-1">
                               <div className="flex items-center gap-1">
                                 <input
@@ -3630,20 +3675,70 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                     </div>
 
                     {/* Editable Input Row inside Card */}
+                    {(() => {
+                      const assetInputCurrency: CurrencyCode = h.inputCurrency ?? activeCurrency;
+                      const isAssetInputUsd = assetInputCurrency === 'USD';
+                      const cardActionCurrency =
+                        holdingEntryMode === 'nominal' ? assetInputCurrency : activeCurrency;
+                      return (
                     <div className="ui-card mt-3 rounded-lg p-2.5 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="ui-text-secondary font-medium">
-                          {holdingEntryMode === 'nominal'
-                            ? `Nilai Saat Ini (${isUsdMode ? 'USD' : 'Rp'}):`
-                            : holdingEntryMode === 'percent'
-                              ? 'Porsi Saat Ini (%):'
-                              : 'Jumlah Unit:'}
-                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="ui-text-secondary font-medium whitespace-nowrap">
+                            {holdingEntryMode === 'nominal'
+                              ? 'Nilai Saat Ini:'
+                              : holdingEntryMode === 'percent'
+                                ? 'Porsi Saat Ini (%):'
+                                : 'Jumlah Unit:'}
+                          </span>
+                          {holdingEntryMode === 'nominal' && (
+                            <div
+                              role="group"
+                              aria-label={`Mata uang input ${item.symbol}`}
+                              className="ui-subtle inline-flex shrink-0 items-center rounded border ui-border p-0.5 text-[10px] font-mono"
+                            >
+                              <button
+                                type="button"
+                                aria-pressed={!isAssetInputUsd}
+                                onClick={() =>
+                                  onUpdateHolding(item.assetId, {
+                                    inputCurrency: 'IDR',
+                                  })
+                                }
+                                className={`rounded px-1.5 py-0.5 font-bold transition ${
+                                  !isAssetInputUsd
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'ui-text-muted hover:ui-text-main'
+                                }`}
+                                title={`Input posisi ${item.symbol} dalam Rupiah (Rp)`}
+                              >
+                                Rp
+                              </button>
+                              <button
+                                type="button"
+                                aria-pressed={isAssetInputUsd}
+                                onClick={() =>
+                                  onUpdateHolding(item.assetId, {
+                                    inputCurrency: 'USD',
+                                  })
+                                }
+                                className={`rounded px-1.5 py-0.5 font-bold transition ${
+                                  isAssetInputUsd
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'ui-text-muted hover:ui-text-main'
+                                }`}
+                                title={`Input posisi ${item.symbol} dalam USD ($)`}
+                              >
+                                $
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         {holdingEntryMode === 'nominal' ? (
                           <div className="flex items-center gap-1">
-                            {isUsdMode && (
-                              <span className="ui-text-muted font-mono text-[11px] select-none">$</span>
-                            )}
+                            <span className="ui-text-muted font-mono text-[11px] select-none">
+                              {isAssetInputUsd ? '$' : 'Rp'}
+                            </span>
                             <CurrencyNumberInput
                               stepIdr={1_000_000}
                               stepUsd={100}
@@ -3654,10 +3749,10 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                                   currentValueIdr: val,
                                 })
                               }
-                              currency={activeCurrency}
+                              currency={assetInputCurrency}
                               usdIdrRate={usdIdrRate}
-                              className="ui-input w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
-                              ariaLabel={`Nominal value in ${activeCurrency} for ${item.symbol}`}
+                              className="ui-input w-32 sm:w-36 rounded px-2 py-1 text-right font-mono text-xs font-bold"
+                              ariaLabel={`Nominal value in ${assetInputCurrency} for ${item.symbol}`}
                             />
                           </div>
                         ) : holdingEntryMode === 'percent' ? (
@@ -3730,11 +3825,21 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           </div>
                         )}
                       </div>
-                      {isUsdMode && (
+                      {holdingEntryMode === 'nominal' ? (
+                        isAssetInputUsd ? (
+                          <div className="mt-1 text-right font-mono text-[10px] ui-text-muted tabular-nums">
+                            ≈ {formatIdr(item.postShockValueIdr)}
+                          </div>
+                        ) : isUsdMode ? (
+                          <div className="mt-1 text-right font-mono text-[10px] ui-text-muted tabular-nums">
+                            ≈ {formatUsd(idrToUsd(item.postShockValueIdr, usdIdrRate))}
+                          </div>
+                        ) : null
+                      ) : isUsdMode ? (
                         <div className="mt-1 text-right font-mono text-[10px] ui-text-muted tabular-nums">
                           ≈ {formatIdr(item.postShockValueIdr)}
                         </div>
-                      )}
+                      ) : null}
                       <div className="mt-1.5 flex items-center justify-end gap-1.5 text-[10px]">
                         <button
                           type="button"
@@ -3754,7 +3859,7 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                               initialCapitalMenu1Idr *
                                 ((targetWeights[item.assetId] ?? 0) / 100)
                             ),
-                            activeCurrency,
+                            cardActionCurrency,
                             usdIdrRate,
                             true
                           )}
@@ -3770,10 +3875,12 @@ export const PortfolioRebalancerView: React.FC<PortfolioRebalancerViewProps> = (
                           }
                           className="ui-subtle ui-text-muted rounded px-1.5 py-0.5 font-mono hover:text-rose-500"
                         >
-                          Reset {isUsdMode ? '$0' : 'Rp 0'}
+                          Reset {cardActionCurrency === 'USD' ? '$0' : 'Rp 0'}
                         </button>
                       </div>
                     </div>
+                      );
+                    })()}
 
                     {/* Weight & Target Comparison Row */}
                     <div className="mt-2.5 grid grid-cols-3 gap-2 text-center font-mono text-[11px]">

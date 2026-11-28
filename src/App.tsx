@@ -196,6 +196,10 @@ function sanitizePersistedAppState(data: unknown): PersistedAppState | null {
           currentValueIdr: Number.isFinite(h.currentValueIdr) ? h.currentValueIdr : 0,
           currentPrice: Number.isFinite(h.currentPrice) ? h.currentPrice : 0,
           shockPercent: Number.isFinite(h.shockPercent) ? h.shockPercent : 0,
+          inputCurrency:
+            h.inputCurrency === 'IDR' || h.inputCurrency === 'USD'
+              ? h.inputCurrency
+              : undefined,
         };
       }
     }
@@ -1740,6 +1744,7 @@ function AuthenticatedQuantPorto({
           isNominalOnly: isNominal,
           subSplits: prevA?.subSplits,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
         };
       }
       return next;
@@ -1904,6 +1909,7 @@ function AuthenticatedQuantPorto({
           shockPercent: 0,
           isNominalOnly: isNominal,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
           subSplits: prevA?.subSplits,
         };
       }
@@ -1932,6 +1938,7 @@ function AuthenticatedQuantPorto({
           shockPercent: 0,
           isNominalOnly: isNominal,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
           subSplits: prevA?.subSplits,
         };
       }
@@ -1963,6 +1970,7 @@ function AuthenticatedQuantPorto({
           shockPercent: 0,
           isNominalOnly: isNominal,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
           subSplits: prevA?.subSplits,
         };
       }
@@ -2009,6 +2017,7 @@ function AuthenticatedQuantPorto({
           isNominalOnly: isNominal,
           subSplits: prevA?.subSplits,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
         };
       }
       return next;
@@ -2049,6 +2058,7 @@ function AuthenticatedQuantPorto({
           isNominalOnly: isNominal,
           subSplits: prevA?.subSplits,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
         };
       }
       return next;
@@ -2944,6 +2954,7 @@ function AuthenticatedQuantPorto({
           shockPercent: 0,
           isNominalOnly: isNominal,
           notes: prevA?.notes,
+          inputCurrency: prevA?.inputCurrency,
           subSplits: prevA?.subSplits,
         };
       }

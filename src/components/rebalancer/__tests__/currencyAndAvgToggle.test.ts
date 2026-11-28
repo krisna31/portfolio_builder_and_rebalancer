@@ -215,4 +215,82 @@ describe('Backup Persistence for rebalancerCurrency and showAvgBuyPrice', () => 
     expect(parsed.data?.data.menu2_rebalancer.rebalancerCurrency).toBe('USD');
     expect(parsed.data?.data.menu2_rebalancer.showAvgBuyPrice).toBe(true);
   });
+
+  it('preserves per-asset inputCurrency overrides across rebalance commit and backup roundtrip', () => {
+    const btc = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'BTC')!;
+    const bbca = CORE_AND_EXPANDED_ASSETS.find((a) => a.id === 'BBCA')!;
+    const assets = [btc, bbca];
+    const targetWeights = { BTC: 50, BBCA: 50 };
+
+    const holdings: Record<string, HoldingEntry> = {
+      BTC: {
+        assetId: 'BTC',
+        currentValueIdr: 36_000_000, // $2,000 at 18,000
+        units: 0.02,
+        currentPrice: 100_000,
+        shockPercent: 0,
+        inputCurrency: 'USD',
+      },
+      BBCA: {
+        assetId: 'BBCA',
+        currentValueIdr: 64_000_000,
+        units: 6_400,
+        currentPrice: 10_000,
+        shockPercent: 0,
+        inputCurrency: 'IDR',
+      },
+    };
+
+    const plan = calculateRebalancePlan({
+      assets,
+      targetWeights,
+      holdings,
+      inputMode: 'nominal',
+      usdIdrRate: 18_000,
+      cashInjectionIdr: 0,
+      rebalanceMode: 'sell-and-buy',
+      driftThresholdAbsolutePercent: 3,
+      enableIdxLotRounding: true,
+    });
+
+    const commit = buildRebalanceCommitResult({
+      allAssets: assets,
+      holdings,
+      plan,
+      activeWeights: targetWeights,
+      rebalanceHistory: [],
+      inputMode: 'nominal',
+      usdIdrRate: 18_000,
+      rebalanceMode: 'sell-and-buy',
+      cashInjectionIdr: 0,
+      isFixedBudgetMode: false,
+      fixedTotalBudgetIdr: 0,
+      hasManualTableEdits: false,
+    });
+
+    expect(commit.nextHoldings.BTC.inputCurrency).toBe('USD');
+    expect(commit.nextHoldings.BBCA.inputCurrency).toBe('IDR');
+
+    const backupPayload = {
+      version: 2,
+      app: 'QuantPorto',
+      exportedAt: '2026-11-28T00:00:00.000Z',
+      data: {
+        menu1_builder: { activeWeights: targetWeights },
+        menu2_rebalancer: {
+          holdings: commit.nextHoldings,
+          rebalanceHistory: [commit.newEntry],
+          rebalancerCurrency: 'IDR',
+          showAvgBuyPrice: false,
+        },
+        menu3_simulator: {},
+        global: { usdIdrRate: 18_000, savedPortfolios: [] },
+      },
+    };
+
+    const parsed = parseBackupPayload(JSON.stringify(backupPayload));
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.data.menu2_rebalancer.holdings.BTC.inputCurrency).toBe('USD');
+    expect(parsed.data?.data.menu2_rebalancer.holdings.BBCA.inputCurrency).toBe('IDR');
+  });
 });
