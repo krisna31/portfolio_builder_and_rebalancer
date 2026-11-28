@@ -1,7 +1,7 @@
 {
-  "updatedAt": "2026-11-23T03:35:48.571516+00:00",
+  "updatedAt": "2026-11-28T06:40:06.490699+00:00",
   "source": "GitHub Actions Automated 5Y Rolling Market Data + Video Baseline",
-  "usdIdrRate": 18213,
+  "usdIdrRate": 18295,
   "assets": {
     "RDPU": {
       "price": 1850,
@@ -16,200 +16,312 @@
       "volatility5y": 4.1
     },
     "BBCA": {
-      "price": 5550.0,
-      "cagr5y": -2.22,
+      "price": 6000.0,
+      "cagr5y": -0.95,
       "maxDrawdown5y": 49.34,
-      "volatility5y": 22.22,
-      "dataYears": 5.0
+      "volatility5y": 22.5,
+      "dataYears": 5.0,
+      "high5y": 9830.14,
+      "high52w": 7895.95,
+      "drawdownFrom5yHigh": 38.96,
+      "drawdown52w": 24.01
     },
     "GLD": {
-      "price": 322.87,
-      "cagr5y": 14.06,
+      "price": 334.4,
+      "cagr5y": 14.89,
       "maxDrawdown5y": 33.26,
-      "volatility5y": 17.64,
-      "dataYears": 5.0
+      "volatility5y": 17.7,
+      "dataYears": 5.0,
+      "high5y": 483.75,
+      "high52w": 483.75,
+      "drawdownFrom5yHigh": 30.87,
+      "drawdown52w": 30.87
     },
     "SPY": {
-      "price": 689.81,
-      "cagr5y": 9.91,
+      "price": 728.32,
+      "cagr5y": 11.38,
       "maxDrawdown5y": 23.93,
-      "volatility5y": 16.76,
-      "dataYears": 5.0
+      "volatility5y": 16.92,
+      "dataYears": 5.0,
+      "high5y": 778.57,
+      "high52w": 778.57,
+      "drawdownFrom5yHigh": 6.45,
+      "drawdown52w": 6.45
     },
     "QQQ": {
-      "price": 608.45,
-      "cagr5y": 9.85,
+      "price": 650.99,
+      "cagr5y": 11.8,
       "maxDrawdown5y": 34.14,
-      "volatility5y": 22.25,
-      "dataYears": 5.0
+      "volatility5y": 22.43,
+      "dataYears": 5.0,
+      "high5y": 751.27,
+      "high52w": 751.27,
+      "drawdownFrom5yHigh": 13.35,
+      "drawdown52w": 13.35
     },
     "BTC": {
-      "price": 61537.41,
-      "cagr5y": 1.44,
+      "price": 59773.49,
+      "cagr5y": 0.86,
       "maxDrawdown5y": 71.54,
-      "volatility5y": 49.46,
-      "dataYears": 5.0
+      "volatility5y": 49.42,
+      "dataYears": 5.0,
+      "high5y": 123513.48,
+      "high52w": 93634.43,
+      "drawdownFrom5yHigh": 51.61,
+      "drawdown52w": 36.16
     },
     "ETH": {
-      "price": 1736.58,
-      "cagr5y": -16.45,
+      "price": 1658.72,
+      "cagr5y": -17.21,
       "maxDrawdown5y": 75.0,
-      "volatility5y": 66.72,
-      "dataYears": 5.0
+      "volatility5y": 66.68,
+      "dataYears": 5.0,
+      "high5y": 4779.65,
+      "high52w": 3281.16,
+      "drawdownFrom5yHigh": 65.3,
+      "drawdown52w": 49.45
     },
     "BMRI": {
-      "price": 3890.0,
-      "cagr5y": 9.46,
+      "price": 4020.0,
+      "cagr5y": 10.03,
       "maxDrawdown5y": 42.36,
-      "volatility5y": 30.19,
-      "dataYears": 5.0
+      "volatility5y": 30.22,
+      "dataYears": 5.0,
+      "high5y": 5881.24,
+      "high52w": 4771.84,
+      "drawdownFrom5yHigh": 31.65,
+      "drawdown52w": 15.76
     },
     "BBRI": {
-      "price": 3080.0,
-      "cagr5y": 0.8,
+      "price": 3100.0,
+      "cagr5y": 0.88,
       "maxDrawdown5y": 47.95,
-      "volatility5y": 27.63,
-      "dataYears": 5.0
+      "volatility5y": 27.64,
+      "dataYears": 5.0,
+      "high5y": 5071.86,
+      "high52w": 3672.44,
+      "drawdownFrom5yHigh": 38.88,
+      "drawdown52w": 15.59
     },
     "BBNI": {
-      "price": 3560.0,
-      "cagr5y": 6.39,
+      "price": 3610.0,
+      "cagr5y": 7.16,
       "maxDrawdown5y": 40.41,
-      "volatility5y": 30.79,
-      "dataYears": 5.0
+      "volatility5y": 30.78,
+      "dataYears": 5.0,
+      "high5y": 4983.97,
+      "high52w": 4233.87,
+      "drawdownFrom5yHigh": 27.57,
+      "drawdown52w": 14.74
     },
     "NISP": {
-      "price": 1155.0,
-      "cagr5y": 17.18,
+      "price": 1170.0,
+      "cagr5y": 17.83,
       "maxDrawdown5y": 24.79,
-      "volatility5y": 21.48,
-      "dataYears": 5.0
+      "volatility5y": 21.47,
+      "dataYears": 5.0,
+      "high5y": 1489.23,
+      "high52w": 1489.23,
+      "drawdownFrom5yHigh": 21.44,
+      "drawdown52w": 21.44
     },
     "AADI": {
-      "price": 9875.0,
-      "cagr5y": 17.29,
+      "price": 10575.0,
+      "cagr5y": 19.84,
       "maxDrawdown5y": 46.96,
-      "volatility5y": 47.72,
-      "dataYears": 2.0
+      "volatility5y": 47.71,
+      "dataYears": 2.0,
+      "high5y": 12225.0,
+      "high52w": 12225.0,
+      "drawdownFrom5yHigh": 13.5,
+      "drawdown52w": 13.5
     },
     "ADRO": {
-      "price": 2320.0,
-      "cagr5y": 34.68,
+      "price": 2430.0,
+      "cagr5y": 33.45,
       "maxDrawdown5y": 41.56,
-      "volatility5y": 37.45,
-      "dataYears": 5.0
+      "volatility5y": 37.28,
+      "dataYears": 5.0,
+      "high5y": 2720.0,
+      "high52w": 2720.0,
+      "drawdownFrom5yHigh": 10.66,
+      "drawdown52w": 10.66
     },
     "PTBA": {
-      "price": 2980.0,
-      "cagr5y": 21.05,
+      "price": 3000.0,
+      "cagr5y": 20.22,
       "maxDrawdown5y": 32.57,
-      "volatility5y": 32.23,
-      "dataYears": 5.0
+      "volatility5y": 32.19,
+      "dataYears": 5.0,
+      "high5y": 3300.0,
+      "high52w": 3300.0,
+      "drawdownFrom5yHigh": 9.09,
+      "drawdown52w": 9.09
     },
     "ITMG": {
-      "price": 24300.0,
-      "cagr5y": 20.47,
+      "price": 24900.0,
+      "cagr5y": 19.77,
       "maxDrawdown5y": 36.91,
-      "volatility5y": 29.35,
-      "dataYears": 5.0
+      "volatility5y": 29.27,
+      "dataYears": 5.0,
+      "high5y": 27701.45,
+      "high52w": 27701.45,
+      "drawdownFrom5yHigh": 10.11,
+      "drawdown52w": 10.11
     },
     "BREN": {
-      "price": 2190.0,
-      "cagr5y": -2.29,
+      "price": 2170.0,
+      "cagr5y": -2.56,
       "maxDrawdown5y": 84.73,
-      "volatility5y": 92.56,
-      "dataYears": 3.1
+      "volatility5y": 92.28,
+      "dataYears": 3.1,
+      "high5y": 11754.87,
+      "high52w": 9687.78,
+      "drawdownFrom5yHigh": 81.54,
+      "drawdown52w": 77.6
     },
     "AMMN": {
-      "price": 3160.0,
-      "cagr5y": 18.98,
+      "price": 3370.0,
+      "cagr5y": 21.13,
       "maxDrawdown5y": 76.03,
-      "volatility5y": 58.55,
-      "dataYears": 3.4
+      "volatility5y": 58.47,
+      "dataYears": 3.4,
+      "high5y": 12100.0,
+      "high52w": 8150.0,
+      "drawdownFrom5yHigh": 72.15,
+      "drawdown52w": 58.65
     },
     "TLKM": {
-      "price": 2070.0,
-      "cagr5y": -7.12,
+      "price": 2040.0,
+      "cagr5y": -7.66,
       "maxDrawdown5y": 47.29,
       "volatility5y": 30.53,
-      "dataYears": 5.0
+      "dataYears": 5.0,
+      "high5y": 3604.33,
+      "high52w": 3485.77,
+      "drawdownFrom5yHigh": 43.4,
+      "drawdown52w": 41.48
     },
     "SCHD": {
-      "price": 33.94,
-      "cagr5y": 9.47,
+      "price": 35.67,
+      "cagr5y": 10.69,
       "maxDrawdown5y": 16.61,
-      "volatility5y": 14.66,
-      "dataYears": 5.0
+      "volatility5y": 14.82,
+      "dataYears": 5.0,
+      "high5y": 36.12,
+      "high52w": 36.12,
+      "drawdownFrom5yHigh": 1.25,
+      "drawdown52w": 1.25
     },
     "SMH": {
-      "price": 400.06,
-      "cagr5y": 22.37,
+      "price": 440.06,
+      "cagr5y": 24.57,
       "maxDrawdown5y": 43.93,
-      "volatility5y": 35.12,
-      "dataYears": 5.0
+      "volatility5y": 35.37,
+      "dataYears": 5.0,
+      "high5y": 659.88,
+      "high52w": 659.88,
+      "drawdownFrom5yHigh": 33.31,
+      "drawdown52w": 33.31
     },
     "NVDA": {
-      "price": 125.53,
-      "cagr5y": 31.83,
-      "maxDrawdown5y": 64.33,
-      "volatility5y": 48.95,
-      "dataYears": 5.0
+      "price": 150.49,
+      "cagr5y": 37.38,
+      "maxDrawdown5y": 63.4,
+      "volatility5y": 49.66,
+      "dataYears": 5.0,
+      "high5y": 233.95,
+      "high52w": 233.95,
+      "drawdownFrom5yHigh": 35.67,
+      "drawdown52w": 35.67
     },
     "SOL": {
-      "price": 71.55,
-      "cagr5y": -18.51,
+      "price": 71.43,
+      "cagr5y": -18.54,
       "maxDrawdown5y": 95.03,
-      "volatility5y": 98.59,
-      "dataYears": 5.0
+      "volatility5y": 98.58,
+      "dataYears": 5.0,
+      "high5y": 252.92,
+      "high52w": 139.49,
+      "drawdownFrom5yHigh": 71.76,
+      "drawdown52w": 48.79
     },
     "PANI": {
-      "price": 3450.0,
-      "cagr5y": 90.59,
-      "maxDrawdown5y": 81.41,
-      "volatility5y": 107.06,
-      "dataYears": 5.0
+      "price": 3430.0,
+      "cagr5y": 104.3,
+      "maxDrawdown5y": 81.51,
+      "volatility5y": 106.1,
+      "dataYears": 5.0,
+      "high5y": 18554.66,
+      "high52w": 13690.0,
+      "drawdownFrom5yHigh": 81.51,
+      "drawdown52w": 74.95
     },
     "ASII": {
-      "price": 5300.0,
-      "cagr5y": 6.04,
+      "price": 5750.0,
+      "cagr5y": 8.33,
       "maxDrawdown5y": 36.27,
-      "volatility5y": 26.22,
-      "dataYears": 5.0
+      "volatility5y": 26.45,
+      "dataYears": 5.0,
+      "high5y": 6574.4,
+      "high52w": 6574.4,
+      "drawdownFrom5yHigh": 12.54,
+      "drawdown52w": 12.54
     },
     "ICBP": {
-      "price": 6950.0,
-      "cagr5y": -2.39,
+      "price": 7100.0,
+      "cagr5y": -1.58,
       "maxDrawdown5y": 54.45,
       "volatility5y": 26.28,
-      "dataYears": 5.0
+      "dataYears": 5.0,
+      "high5y": 12020.53,
+      "high52w": 8102.6,
+      "drawdownFrom5yHigh": 40.93,
+      "drawdown52w": 12.37
     },
     "ANTM": {
-      "price": 2610.0,
-      "cagr5y": 7.54,
+      "price": 2720.0,
+      "cagr5y": 8.43,
       "maxDrawdown5y": 50.46,
-      "volatility5y": 41.7,
-      "dataYears": 5.0
+      "volatility5y": 41.73,
+      "dataYears": 5.0,
+      "high5y": 4053.43,
+      "high52w": 4053.43,
+      "drawdownFrom5yHigh": 32.9,
+      "drawdown52w": 32.9
     },
     "UNTR": {
-      "price": 23900.0,
-      "cagr5y": 13.41,
+      "price": 23800.0,
+      "cagr5y": 12.4,
       "maxDrawdown5y": 30.9,
-      "volatility5y": 32.03,
-      "dataYears": 5.0
+      "volatility5y": 31.99,
+      "dataYears": 5.0,
+      "high5y": 30191.27,
+      "high52w": 30191.27,
+      "drawdownFrom5yHigh": 21.17,
+      "drawdown52w": 21.17
     },
     "BRIS": {
-      "price": 1160.0,
-      "cagr5y": -8.98,
+      "price": 1195.0,
+      "cagr5y": -7.17,
       "maxDrawdown5y": 66.73,
-      "volatility5y": 37.24,
-      "dataYears": 5.0
+      "volatility5y": 37.14,
+      "dataYears": 5.0,
+      "high5y": 3020.99,
+      "high52w": 2337.33,
+      "drawdownFrom5yHigh": 60.44,
+      "drawdown52w": 48.87
     },
     "VOO": {
-      "price": 635.54,
-      "cagr5y": 10.02,
+      "price": 669.79,
+      "cagr5y": 11.46,
       "maxDrawdown5y": 23.9,
-      "volatility5y": 16.7,
-      "dataYears": 5.0
+      "volatility5y": 16.84,
+      "dataYears": 5.0,
+      "high5y": 715.59,
+      "high52w": 715.59,
+      "drawdownFrom5yHigh": 6.4,
+      "drawdown52w": 6.4
     }
   }
 }
